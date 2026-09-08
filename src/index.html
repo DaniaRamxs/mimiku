@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mimiku</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+
+<div id="titlebar">
+  <span class="logo">mimiku</span>
+  <div class="controls">
+    <button onclick="minimize()">&#x2212;</button>
+    <button onclick="maximize()">&#x25A1;</button>
+    <button onclick="quit()" class="close">&#x2715;</button>
+  </div>
+</div>
+
+<div id="app">
+  <nav id="sidebar">
+    <button class="nav-item active" data-page="dashboard">⬡ Dashboard</button>
+    <button class="nav-item" data-page="mods">🛡 Mods</button>
+    <button class="nav-item" data-page="afk">😴 AFK</button>
+    <button class="nav-item" data-page="games">🎮 Minijuegos</button>
+    <button class="nav-item" data-page="arena">🏟 Arena</button>
+    <button class="nav-item" data-page="economy">◈ Economía</button>
+    <button class="nav-item" data-page="overlay">◉ Overlay</button>
+    <button class="nav-item" data-page="events">⚡ Eventos</button>
+    <button class="nav-item" data-page="cards">🃏 Cartas</button>
+    <button class="nav-item" data-page="mimics">✨ Mimics</button>
+    <button class="nav-item" data-page="levels">⭐ Niveles</button>
+    <button class="nav-item" data-page="emotes">🔊 Emotes</button>
+    <button class="nav-item" data-page="vtuber">🎭 VTuber</button>
+    <button class="nav-item" data-page="widgets">🧩 Widgets</button>
+    <button class="nav-item" data-page="settings">⚙ Ajustes</button>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-footer">Mimiku v0.1.0</div>
+  </nav>
+
+  <main id="content">
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="page active">
+      <div class="page-header"><h1>Dashboard</h1></div>
+      <div class="stats">
+        <div class="stat-card"><span class="label">Viewers</span><span class="value" id="stat-viewers">0</span></div>
+        <div class="stat-card"><span class="label">Puntos totales</span><span class="value" id="stat-points">0</span></div>
+        <div class="stat-card"><span class="label">Eventos</span><span class="value" id="stat-events">0</span></div>
+        <div class="stat-card"><span class="label">Canal</span><span class="value muted" id="stat-status">Offline</span></div>
+      </div>
+      <h2 class="section-title">Feed de eventos</h2>
+      <div id="feed"><p class="empty">Conecta Twitch en Ajustes para ver eventos en vivo…</p></div>
+    </div>
+
+    <!-- Mods -->
+    <div id="mods" class="page">
+      <div class="page-header">
+        <h1>Panel de Moderadores</h1>
+        <button class="btn-ghost" onclick="window.modsPage.refreshModList()">↻ Actualizar</button>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Mods conectados ahora</span></div>
+          <div id="mod-list"><p class="empty">No hay mods conectados.</p></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Comandos recibidos</span>
+            <button class="btn-ghost" onclick="window.modsPage.clearWidgets()">✕ Limpiar overlay</button>
+          </div>
+          <div id="mod-feed"><p class="empty">Sin comandos aún.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFK -->
+    <div id="afk" class="page">
+      <div class="page-header">
+        <h1>Modo AFK</h1>
+        <span id="afk-badge-status" class="afk-status-badge">En línea</span>
+      </div>
+      <p class="page-sub">Activa un contador comunitario y eventos idle mientras estás ausente</p>
+
+      <div class="afk-layout">
+        <div class="afk-col">
+          <div class="card-block" id="afk-config">
+            <p class="section-label">CONFIGURACIÓN</p>
+            <div class="lvl-field">
+              <label>Mensaje de regreso (lo verá el chat con !afk)</label>
+              <input id="afk-msg-input" type="text" placeholder="Vuelvo en 40 minutos">
+            </div>
+            <div style="display:flex;gap:12px">
+              <div class="lvl-field" style="flex:1">
+                <label>Meta del contador</label>
+                <input id="afk-goal-input" type="number" min="5" value="100">
+              </div>
+              <div class="lvl-field" style="flex:1">
+                <label>Penalización al romper (pts)</label>
+                <input id="afk-penalty-input" type="number" min="0" value="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="card-block" style="margin-top:1rem">
+            <p class="section-label">RECOMPENSAS AL LLEGAR A LA META</p>
+            <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Se disparan todas las que configures cuando el chat llega a la meta.</p>
+            <div class="lvl-field">
+              <label>Puntos a todos los activos (0 = desactivado)</label>
+              <input id="afk-reward-points" type="number" min="0" value="0">
+            </div>
+            <div class="lvl-field">
+              <label>Mensaje de celebración</label>
+              <input id="afk-reward-message" type="text" placeholder="¡Lo lograron! 🎉">
+            </div>
+            <div class="afk-reward-files">
+              <button class="btn-ghost" style="flex:1" onclick="window.afkPage.pickAfkReward('sound')">📁 Sonido</button>
+              <button class="btn-ghost" style="flex:1" onclick="window.afkPage.pickAfkReward('video')">📁 Video</button>
+            </div>
+            <div class="afk-file-labels">
+              <span id="afk-sound-label" class="afk-file-label"></span>
+              <span id="afk-video-label" class="afk-file-label"></span>
+            </div>
+          </div>
+
+          <button id="afk-toggle" class="btn-primary afk-toggle-btn" onclick="window.afkPage.toggleAfk()">▶ Activar modo AFK</button>
+        </div>
+
+        <div class="afk-col">
+          <div class="card-block">
+            <p class="section-label">CÓMO FUNCIONA</p>
+            <ul class="afk-rules">
+              <li><strong>Contador colaborativo:</strong> el chat escribe los números 1, 2, 3… hasta la meta.</li>
+              <li><strong>La misma persona no puede contar dos veces seguidas.</strong></li>
+              <li>Si alguien pone el número equivocado o repite, vuelve a 1 y se anuncia quién rompió.</li>
+              <li>Al llegar a la meta se disparan las recompensas (puntos, sonido, video).</li>
+              <li>El overlay muestra el contador en vivo con barra de progreso.</li>
+            </ul>
+          </div>
+          <div class="card-block" style="margin-top:1rem">
+            <p class="section-label">COMANDOS IDLE (solo en AFK)</p>
+            <ul class="afk-cmds">
+              <li><code>!afk</code> — muestra tu mensaje y cuánto llevas ausente</li>
+              <li><code>!contador</code> — muestra el progreso actual del conteo</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minijuegos -->
+    <div id="games" class="page">
+      <div class="page-header"><h1>Minijuegos</h1></div>
+
+      <div class="games-grid">
+
+        <!-- Blackjack -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">🃏 Blackjack</span>
+            <span id="bj-badge" class="game-badge">Cerrado</span>
+          </div>
+          <p class="desc">Los viewers apuestan puntos contra el dealer con comandos en el chat.</p>
+          <ul class="feature-list" style="margin-bottom:1rem">
+            <li><code>!bj [apuesta]</code> — entrar al juego</li>
+            <li><code>!hit</code> — pedir carta</li>
+            <li><code>!stand</code> — plantarse</li>
+            <li>Blackjack paga 2.5x | Victoria paga 2x</li>
+          </ul>
+          <p id="bj-hint" class="field-hint" style="margin-bottom:1rem">Abre el juego para que los viewers participen</p>
+          <button id="bj-toggle" class="btn-primary" onclick="window.gamesPage.toggleBj()">▶ Abrir Blackjack</button>
+          <div style="margin-top:1rem">
+            <p class="section-label">JUGADAS RECIENTES</p>
+            <div id="bj-feed" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto">
+              <p class="empty">Sin jugadas aún.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ruleta -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">🎡 Ruleta</span>
+            <span class="game-badge active">Siempre activa</span>
+          </div>
+          <p class="desc">Los viewers apuestan puntos en cualquier momento desde el chat.</p>
+          <ul class="feature-list" style="margin-bottom:1rem">
+            <li><code>!ruleta [pts] rojo</code> — apostar a rojo (2x)</li>
+            <li><code>!ruleta [pts] negro</code> — apostar a negro (2x)</li>
+            <li><code>!ruleta [pts] par</code> — apostar a par (2x)</li>
+            <li><code>!ruleta [pts] 7</code> — número exacto (35x)</li>
+          </ul>
+
+          <!-- Ruleta visual -->
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:1rem">
+            <div id="roulette-wheel" class="roulette-wheel">0</div>
+            <div style="font-size:12px;color:var(--text-muted)">
+              Último número<br>aparece aquí
+            </div>
+          </div>
+
+          <div style="margin-top:1rem">
+            <p class="section-label">APUESTAS RECIENTES</p>
+            <div id="roulette-feed" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto">
+              <p class="empty">Sin apuestas aún.</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Slots -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">🎰 Tragamonedas</span>
+            <span class="game-badge active">Siempre activo</span>
+          </div>
+          <p class="desc">Los viewers giran los reels apostando puntos desde el chat.</p>
+          <ul class="feature-list" style="margin-bottom:1rem">
+            <li><code>!slots [apuesta]</code> — girar los reels</li>
+            <li>Par (2 iguales) — paga 2x</li>
+            <li>Jackpot (3 iguales) — paga 10x</li>
+            <li>💎 o 7️⃣ triple — paga 20x</li>
+          </ul>
+          <div style="display:flex;gap:6px;margin-bottom:1rem">
+            <div class="slots-demo-reel">🍒</div>
+            <div class="slots-demo-reel">💎</div>
+            <div class="slots-demo-reel">🍋</div>
+          </div>
+          <div style="margin-top:1rem">
+            <p class="section-label">ÚLTIMAS TIRADAS</p>
+            <div id="slots-feed" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto">
+              <p class="empty">Sin tiradas aún.</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Cara o Cruz -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">🪙 Cara o Cruz</span>
+            <span class="game-badge active">Siempre activo</span>
+          </div>
+          <p class="desc">Los viewers apuestan puntos al azar — 50/50.</p>
+          <ul class="feature-list" style="margin-bottom:1rem">
+            <li><code>!moneda [apuesta]</code> — apostar puntos</li>
+            <li>CARA — ganás el doble de tu apuesta</li>
+            <li>CRUZ — perdés la apuesta</li>
+            <li>Probabilidad exacta: 50/50</li>
+          </ul>
+          <div style="display:flex;gap:8px;font-size:32px;margin-bottom:1rem">
+            <span title="Cara">🪙</span>
+            <span title="Cruz">🟤</span>
+          </div>
+          <div style="margin-top:1rem">
+            <p class="section-label">ÚLTIMAS TIRADAS</p>
+            <div id="coin-feed" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto">
+              <p class="empty">Sin tiradas aún.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- Arena -->
+    <div id="arena" class="page">
+      <div class="page-header">
+        <h1>Arena <span id="arena-status-label" class="afk-status-badge"></span></h1>
+        <p class="page-sub">Juegos en vivo para tu comunidad — empezando con Palabra Bomba 💣</p>
+      </div>
+
+      <!-- Setup: crear partida -->
+      <div id="arena-setup">
+        <div class="afk-layout">
+          <div class="afk-col">
+            <div class="card-block">
+              <p class="section-label">CATEGORÍA</p>
+              <select id="arena-category" class="event-select" style="width:100%">
+                <option value="libre">Libre</option>
+                <option value="animales">Animales</option>
+                <option value="paises">Países</option>
+                <option value="comida">Comida</option>
+                <option value="videojuegos">Videojuegos</option>
+                <option value="anime">Anime</option>
+                <option value="peliculas">Películas</option>
+                <option value="musica">Música</option>
+                <option value="tecnologia">Tecnología</option>
+                <option value="ciencia">Ciencia</option>
+              </select>
+            </div>
+            <div class="card-block" style="margin-top:1rem">
+              <p class="section-label">DIFICULTAD</p>
+              <div style="display:flex;gap:12px">
+                <div class="lvl-field" style="flex:1">
+                  <label>Tiempo inicial (s)</label>
+                  <input id="arena-start-time" type="number" min="3" value="15">
+                </div>
+                <div class="lvl-field" style="flex:1">
+                  <label>Reducción/ronda (s)</label>
+                  <input id="arena-reduction" type="number" min="0" value="1">
+                </div>
+                <div class="lvl-field" style="flex:1">
+                  <label>Tiempo mínimo (s)</label>
+                  <input id="arena-min-time" type="number" min="1" value="3">
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:4px">
+                <div class="lvl-field" style="flex:1">
+                  <label>Vidas por jugador ❤️</label>
+                  <input id="arena-lives" type="number" min="1" max="5" value="2">
+                </div>
+                <div class="lvl-field" style="flex:1">
+                  <label>Dificultad de sílabas</label>
+                  <select id="arena-syllable-level" class="event-select" style="width:100%">
+                    <option value="facil">Fácil</option>
+                    <option value="medio" selected>Medio</option>
+                    <option value="dificil">Difícil</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="afk-col">
+            <div class="card-block">
+              <p class="section-label">RECOMPENSA AL GANADOR</p>
+              <div class="lvl-field">
+                <label>Tipo</label>
+                <select id="arena-reward-type" class="event-select" style="width:100%">
+                  <option value="none">Sin recompensa</option>
+                  <option value="points">Puntos</option>
+                  <option value="card">Carta</option>
+                  <option value="box">Caja/Sobre</option>
+                  <option value="custom">Personalizada (texto)</option>
+                </select>
+              </div>
+              <div class="lvl-field">
+                <label>Valor (cantidad de puntos, o texto de la recompensa)</label>
+                <input id="arena-reward-value" type="text" placeholder="500">
+              </div>
+            </div>
+            <button class="btn-primary afk-toggle-btn" onclick="window.arenaPage.createArenaRoom()">💣 Crear partida</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lobby: jugadores esperando -->
+      <div id="arena-lobby" style="display:none">
+        <div class="arena-lobby-head">
+          <div>
+            <p class="section-label">CÓDIGO DE SALA</p>
+            <div id="arena-room-code" class="arena-code">-----</div>
+            <p id="arena-room-link" class="field-hint" style="font-size:12px;color:var(--text-muted);margin-top:6px"></p>
+          </div>
+          <div class="arena-lobby-actions">
+            <button class="btn-primary" style="width:auto;padding:11px 24px" onclick="window.arenaPage.startArenaGame()">▶ Comenzar (<span id="arena-player-count">0</span>)</button>
+            <button class="btn-ghost" style="width:auto;padding:11px 18px" onclick="window.arenaPage.finishArenaGame()">Finalizar</button>
+          </div>
+        </div>
+        <p class="section-label" style="margin-top:1.5rem">JUGADORES EN EL LOBBY</p>
+        <div id="arena-players-grid" class="arena-players-grid"></div>
+      </div>
+    </div>
+
+    <!-- Economía -->
+    <div id="economy" class="page">
+      <div class="page-header"><h1>Economía</h1></div>
+      <div class="economy-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Ranking</span>
+            <button class="btn-ghost" onclick="window.economyPage.renderRanking()">↻</button>
+          </div>
+          <div id="ranking-list"><p class="empty">Sin datos aún.</p></div>
+        </div>
+        <div class="economy-side">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Dar puntos</span></div>
+            <div class="form-group">
+              <label>Usuario<input id="grant-user" type="text" placeholder="username"></label>
+              <label>Puntos<input id="grant-amount" type="number" placeholder="100" min="-9999" max="9999"></label>
+              <button class="btn-primary" onclick="window.economyPage.grantPoints()">Aplicar</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Historial</span>
+              <button class="btn-ghost" onclick="window.economyPage.renderLog()">↻</button>
+            </div>
+            <div id="econ-log"><p class="empty">Sin transacciones.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay -->
+    <div id="overlay" class="page">
+      <div class="page-header"><h1>Overlay</h1></div>
+      <div class="panel" style="max-width:560px;margin-bottom:1rem">
+        <div class="panel-header"><span class="panel-title">Browser Source URL</span></div>
+        <p class="desc">Agrega esta URL como Browser Source en OBS Studio:</p>
+        <div class="url-box">
+          <span>http://localhost:7777/overlay</span>
+          <button onclick="window.overlayPage.copyUrl()">Copiar</button>
+        </div>
+      </div>
+      <div class="panel" style="max-width:560px;margin-bottom:1rem">
+        <div class="panel-header"><span class="panel-title">Probar alerta</span></div>
+        <button class="btn-primary" onclick="window.overlayPage.sendTestAlert()">Enviar alerta de prueba</button>
+      </div>
+      <div class="panel" style="max-width:560px;margin-bottom:1rem">
+        <div class="panel-header">
+          <span class="panel-title">👑 Rey del Chat</span>
+          <span id="king-badge-status" class="game-badge">Oculto</span>
+        </div>
+        <p class="desc">Muestra el viewer con más mensajes en el stream actual. Se actualiza automáticamente.</p>
+        <button class="btn-primary" id="btn-king-toggle" onclick="window.overlayPage.toggleKing()">👁 Mostrar en overlay</button>
+      </div>
+
+      <div class="panel" style="max-width:560px">
+        <div class="panel-header"><span class="panel-title">Ticker</span></div>
+        <div class="input-row">
+          <input id="ticker-text" type="text" placeholder="¡Bienvenidos al stream! ✦">
+          <button class="btn-primary" onclick="window.overlayPage.updateTicker()">Enviar</button>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Panel de Eventos -->
+    <div id="events" class="page">
+      <div class="page-header"><h1>Panel de Eventos</h1></div>
+
+      <div class="events-grid">
+
+        <!-- ECONOMÍA -->
+        <div class="events-section">
+          <p class="section-title">💰 Economía</p>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">🎉</span>
+              <div>
+                <div class="event-name">Lluvia de puntos</div>
+                <div class="event-desc">Todos los viewers reciben puntos</div>
+              </div>
+            </div>
+            <div class="event-controls">
+              <input id="ev-rain-amount" type="number" value="100" min="1" max="9999" placeholder="Cantidad">
+              <button class="btn-event" onclick="window.eventsPage.rainPoints()">🎉 Activar</button>
+            </div>
+          </div>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">💸</span>
+              <div>
+                <div class="event-name">Regalar 500 pts</div>
+                <div class="event-desc">500 puntos fijos para todos los viewers</div>
+              </div>
+            </div>
+            <button class="btn-event" onclick="window.eventsPage.gift500()">💸 Activar</button>
+          </div>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">🔥</span>
+              <div>
+                <div class="event-name">Multiplicador</div>
+                <div class="event-desc">Multiplica puntos ganados en el chat</div>
+              </div>
+              <span id="ev-mult-badge" class="event-badge">Inactivo</span>
+            </div>
+            <div class="event-controls">
+              <select id="ev-mult-value" class="event-select">
+                <option value="2">x2</option>
+                <option value="3">x3</option>
+                <option value="5">x5</option>
+              </select>
+              <input id="ev-mult-mins" type="number" value="5" min="1" max="60" placeholder="Minutos">
+              <button class="btn-event" onclick="window.eventsPage.activateMultiplier()">🔥 Activar</button>
+            </div>
+          </div>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">🧲</span>
+              <div>
+                <div class="event-name">Equilibrador</div>
+                <div class="event-desc">El viewer con menos puntos recibe un boost</div>
+              </div>
+            </div>
+            <button class="btn-event" onclick="window.eventsPage.activateEqualizer()">🧲 Activar</button>
+          </div>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">🏛</span>
+              <div>
+                <div class="event-name">Impuestos</div>
+                <div class="event-desc">Cobra un % de puntos a todos los viewers</div>
+              </div>
+            </div>
+            <div class="event-controls">
+              <select id="ev-tax-percent" class="event-select">
+                <option value="5">5%</option>
+                <option value="10" selected>10%</option>
+                <option value="15">15%</option>
+                <option value="20">20%</option>
+                <option value="50">50%</option>
+              </select>
+              <button class="btn-event danger" onclick="window.eventsPage.collectTax()">🏛 Cobrar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- JUEGOS -->
+        <div class="events-section">
+          <p class="section-title">🎮 Juegos</p>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">👾</span>
+              <div>
+                <div class="event-name">Invocar Boss</div>
+                <div class="event-desc">Minijuego colectivo — viewers usan !atacar</div>
+              </div>
+              <span id="ev-boss-badge" class="event-badge">Sin boss</span>
+            </div>
+            <div id="ev-boss-bar" class="event-progress" style="display:none">
+              <div class="event-progress-fill" style="background:var(--danger)"></div>
+            </div>
+            <div class="event-controls">
+              <input id="ev-boss-hp" type="number" value="5000" min="100" placeholder="HP del boss">
+              <button class="btn-event danger" onclick="window.eventsPage.spawnBoss()">👾 Invocar</button>
+            </div>
+          </div>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">🎟</span>
+              <div>
+                <div class="event-name">Lotería</div>
+                <div class="event-desc">Viewers compran boletos con !boleto</div>
+              </div>
+              <span id="ev-lottery-badge" class="event-badge">Inactiva</span>
+            </div>
+            <div class="event-controls">
+              <input id="ev-lottery-price" type="number" value="100" min="1" placeholder="Precio boleto">
+              <button class="btn-event" onclick="window.eventsPage.startLottery()">🎟 Iniciar</button>
+              <button class="btn-event success" onclick="window.eventsPage.drawLottery()">🏆 Sortear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTROL -->
+        <div class="events-section">
+          <p class="section-title">🛑 Control</p>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">🛑</span>
+              <div>
+                <div class="event-name">Congelar economía</div>
+                <div class="event-desc">Nadie gana puntos por 5 minutos</div>
+              </div>
+              <span id="ev-eco-badge" class="event-badge">Normal</span>
+            </div>
+            <button class="btn-event danger" onclick="window.eventsPage.freezeEconomy()">🛑 Congelar 5 min</button>
+          </div>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">❄</span>
+              <div>
+                <div class="event-name">Congelar apuestas</div>
+                <div class="event-desc">No se puede apostar por 5 minutos</div>
+              </div>
+              <span id="ev-bets-badge" class="event-badge">Normal</span>
+            </div>
+            <button class="btn-event danger" onclick="window.eventsPage.freezeBets()">❄ Congelar 5 min</button>
+          </div>
+
+          <div class="event-card">
+            <div class="event-card-header">
+              <span class="event-icon">🛡</span>
+              <div>
+                <div class="event-name">Escudo</div>
+                <div class="event-desc">Nadie puede robar por 5 minutos</div>
+              </div>
+              <span id="ev-shield-badge" class="event-badge">Inactivo</span>
+            </div>
+            <button class="btn-event success" onclick="window.eventsPage.activateShield()">🛡 Activar 5 min</button>
+          </div>
+        </div>
+
+        <!-- SORPRESA -->
+        <div class="events-section">
+          <p class="section-title">🌟 Sorpresa</p>
+
+          <div class="event-card big-event" onclick="window.eventsPage.randomEvent()">
+            <span class="big-event-icon">🌟</span>
+            <div class="big-event-name">Evento aleatorio</div>
+            <div class="big-event-desc">Activa un evento al azar</div>
+          </div>
+
+          <div class="event-card big-event chaos" onclick="window.eventsPage.chaosMode()">
+            <span class="big-event-icon">🎭</span>
+            <div class="big-event-name">Modo Caos</div>
+            <div class="big-event-desc">3 eventos simultáneos random</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    
+    <!-- Mimics -->
+    <div id="mimics" class="page">
+      <div class="page-header">
+        <h1>Mimics</h1>
+        <p class="page-sub">Crea momentos programables para tu stream</p>
+      </div>
+
+      <div class="mimics-toolbar">
+        <button class="btn-primary" style="width:auto;padding:10px 18px" onclick="window.mimicsPage.openMimicEditor()">+ Nuevo Mimic</button>
+        <button class="btn-ghost" style="width:auto;padding:10px 18px" onclick="window.mimicsPage.openBoxEditor()">+ Nueva Caja</button>
+        <button class="btn-ghost" style="width:auto;padding:10px 18px" onclick="window.mimicsPage.openGiftModal()">🎁 Regalar</button>
+      </div>
+
+      <p class="section-label" style="margin-top:1.5rem">MIS MIMICS</p>
+      <div id="mimics-grid" class="mimics-grid"><p class="empty">Cargando…</p></div>
+
+      <p class="section-label" style="margin-top:2rem">CAJAS DE MIMICS</p>
+      <div id="boxes-grid" class="boxes-grid"><p class="empty">Cargando…</p></div>
+    </div>
+
+    <!-- Cartas -->
+    <div id="cards" class="page">
+      <div class="page-header"><h1>Cartas y Sobres</h1></div>
+
+      <div class="two-col" style="align-items:start">
+
+        <!-- Cartas -->
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🃏 Crear carta</span>
+            </div>
+            <div class="form-group">
+              <label>Nombre<input id="card-name" type="text" placeholder="Carta épica del canal"></label>
+              <label>Descripción<input id="card-desc" type="text" placeholder="Una carta muy especial..."></label>
+              <label>Imagen
+                <div style="display:flex;gap:6px;align-items:center">
+                  <input id="card-img" type="url" placeholder="https://...jpg" style="flex:1">
+                  <button class="btn-ghost" onclick="document.getElementById('card-img-file').click()" style="white-space:nowrap;padding:8px 10px;font-size:12px">📁 Subir</button>
+                  <input id="card-img-file" type="file" accept="image/*" style="display:none" onchange="window.cardsPage.uploadCardImage(this.files[0])">
+                </div>
+                <p id="card-img-uploading" class="field-hint" style="display:none">Subiendo imagen…</p>
+              </label>
+              <label>Rareza
+                <select id="card-rarity" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none">
+                  <option value="comun">Común</option>
+                  <option value="raro">Raro</option>
+                  <option value="epico">Épico</option>
+                  <option value="legendario">Legendario</option>
+                </select>
+              </label>
+              <button class="btn-primary" onclick="window.cardsPage.createCard()">Crear carta</button>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:1rem">
+            <div class="panel-header">
+              <span class="panel-title">Cartas del canal</span>
+              <button class="btn-ghost" onclick="window.cardsPage.loadCards()">↻</button>
+            </div>
+            <div id="cards-list"><p class="empty">Cargando…</p></div>
+          </div>
+        </div>
+
+        <!-- Sobres -->
+        <div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">📦 Crear sobre</span></div>
+            <div class="form-group">
+              <label>Nombre<input id="pack-name" type="text" placeholder="Sobre Básico"></label>
+              <label>Descripción<input id="pack-desc" type="text" placeholder="3 cartas aleatorias"></label>
+              <label>Precio (puntos)<input id="pack-price" type="number" placeholder="200" min="1"></label>
+              <label>Tier
+                <select id="pack-tier" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none">
+                  <option value="basic">Básico (común/raro predomina)</option>
+                  <option value="premium">Premium (épico/legendario predomina)</option>
+                </select>
+              </label>
+              <button class="btn-primary" onclick="window.cardsPage.createPack()">Crear sobre</button>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:1rem">
+            <div class="panel-header">
+              <span class="panel-title">Sobres del canal</span>
+              <button class="btn-ghost" onclick="window.cardsPage.loadPacks()">↻</button>
+            </div>
+            <div id="packs-list"><p class="empty">Cargando…</p></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+
+    <!-- Emotes -->
+    <div id="emotes" class="page">
+      <div class="page-header">
+        <h1>Emotes con Sonido</h1>
+        <p class="page-sub">Cuando alguien use un emote en el chat, suena el audio que elijas</p>
+      </div>
+
+      <label class="emotes-master">
+        <input type="checkbox" id="emotes-enabled" checked onchange="window.emotesPage.toggleEnabled(this.checked)">
+        Sistema activado
+      </label>
+
+      <div class="card-block" style="margin-top:1rem">
+        <p class="section-label">AGREGAR SONIDO</p>
+        <div class="emote-add-row">
+          <input type="text" id="new-emote-name" placeholder="Nombre del emote (ej: MiCanalPog)">
+          <label class="emote-cd">cooldown <input type="number" id="new-emote-cd" min="0" value="5">s</label>
+          <button class="btn-primary" style="width:auto;padding:9px 18px" onclick="window.emotesPage.pickEmoteFile()">📁 Elegir audio y agregar</button>
+        </div>
+        <p class="field-hint" style="margin-top:8px;font-size:11px;color:var(--text-muted)">Escribe el nombre exacto del emote de tu canal, luego elige el archivo de audio (mp3, wav, ogg).</p>
+      </div>
+
+      <p class="section-label" style="margin-top:1.5rem">TUS SONIDOS</p>
+      <div id="emotes-list" class="emotes-list"><p class="empty">Cargando…</p></div>
+    </div>
+
+    <!-- Niveles -->
+    <div id="levels" class="page">
+      <div class="page-header">
+        <h1>Niveles</h1>
+        <p class="page-sub">Configura cómo los viewers ganan XP y suben de nivel</p>
+      </div>
+
+      <div class="levels-layout">
+        <div class="levels-col">
+          <div class="card-block">
+            <p class="section-label">GANANCIA DE XP</p>
+            <div class="lvl-field">
+              <label>XP por mensaje en chat</label>
+              <input id="lvl-xp-message" type="number" min="0" value="5">
+            </div>
+            <div class="lvl-field">
+              <label>XP cada 5 min viendo</label>
+              <input id="lvl-xp-5min" type="number" min="0" value="10">
+            </div>
+            <div class="lvl-field">
+              <label>Cooldown anti-spam (seg)</label>
+              <input id="lvl-cooldown" type="number" min="0" value="30">
+            </div>
+            <div class="lvl-field">
+              <label>Puntos de regalo al subir nivel</label>
+              <input id="lvl-reward" type="number" min="0" value="0">
+            </div>
+            <label class="lvl-check">
+              <input id="lvl-announce" type="checkbox" checked>
+              Anunciar subidas de nivel en el overlay
+            </label>
+            <button class="btn-primary" style="margin-top:14px" onclick="window.levelsPage.saveLevelConfig()">Guardar configuración</button>
+          </div>
+
+          <div class="card-block" style="margin-top:1rem">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <p class="section-label" style="margin:0">TÍTULOS / PRESTIGIOS</p>
+              <button class="btn-ghost" style="width:auto;padding:6px 12px;font-size:12px" onclick="window.levelsPage.addTitle()">+ Título</button>
+            </div>
+            <div id="titles-list" class="titles-list" style="margin-top:10px"></div>
+            <button class="btn-primary" style="margin-top:12px" onclick="window.levelsPage.saveTitles()">Guardar títulos</button>
+          </div>
+        </div>
+
+        <div class="levels-col">
+          <div class="card-block">
+            <p class="section-label">RANKING DE XP</p>
+            <div id="levels-leaderboard" class="levels-lb"><p class="empty-small">Cargando…</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- VTuber -->
+    <div id="vtuber" class="page">
+      <div class="page-header">
+        <h1>VTuber <span id="vts-status" class="afk-status-badge">Desconectado</span></h1>
+        <p class="page-sub">Conecta VTube Studio para las ruletas de ítem y avatar en tus Mimics</p>
+      </div>
+
+      <div class="card-block">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <p class="section-label" style="margin:0">CONEXIÓN</p>
+            <p class="field-hint" style="font-size:12px;color:var(--text-muted);margin-top:4px">Abre VTube Studio, activa la API de plugins (puerto 8001) y pulsa conectar. Acepta el popup que aparece en VTS.</p>
+          </div>
+          <button class="btn-primary" style="width:auto;padding:10px 22px" onclick="window.vtuberPage.connectVts()">Conectar VTube Studio</button>
+        </div>
+      </div>
+
+      <div class="afk-layout" style="margin-top:1rem">
+        <div class="afk-col">
+          <div class="card-block">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <p class="section-label" style="margin:0">🎰 RULETA DE ÍTEMS</p>
+              <button class="btn-ghost" style="width:auto;padding:6px 12px;font-size:12px" onclick="window.vtuberPage.testItem()">▶ Probar</button>
+            </div>
+            <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin:6px 0 10px">Accesorios que aparecen sobre tu modelo actual y se quitan solos.</p>
+            <div class="lvl-field">
+              <label>Duración del ítem (segundos)</label>
+              <input id="vts-item-duration" type="number" min="1" value="30">
+            </div>
+            <div id="vts-item-pool" class="vts-pool"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn-ghost" style="flex:1;padding:8px;font-size:12px" onclick="window.vtuberPage.addItem()">+ Ítem manual</button>
+              <button class="btn-ghost" style="flex:1;padding:8px;font-size:12px" onclick="window.vtuberPage.discoverItems()">🔍 Descubrir de VTS</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="afk-col">
+          <div class="card-block">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <p class="section-label" style="margin:0">🎭 RULETA DE AVATARES</p>
+              <button class="btn-ghost" style="width:auto;padding:6px 12px;font-size:12px" onclick="window.vtuberPage.testAvatar()">▶ Probar</button>
+            </div>
+            <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin:6px 0 10px">Cambia tu modelo completo al azar. Se queda hasta el próximo giro.</p>
+            <div id="vts-model-pool" class="vts-pool"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn-ghost" style="flex:1;padding:8px;font-size:12px" onclick="window.vtuberPage.addModel()">+ Modelo manual</button>
+              <button class="btn-ghost" style="flex:1;padding:8px;font-size:12px" onclick="window.vtuberPage.discoverModels()">🔍 Descubrir de VTS</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vts-discovered"></div>
+
+      <button class="btn-primary afk-toggle-btn" onclick="window.vtuberPage.saveVtsConfig()">Guardar configuración</button>
+    </div>
+
+    <!-- Widgets -->
+    <div id="widgets" class="page">
+      <div class="page-header">
+        <h1>Widgets</h1>
+        <p class="page-sub">Elementos visuales que reaccionan en vivo a tu chat</p>
+      </div>
+
+      <div class="panel" style="max-width:640px">
+        <div class="panel-header">
+          <span class="panel-title">🧑‍🤝‍🧑 Avatares de chat</span>
+          <button class="btn-ghost" onclick="window.widgetsPage.testAvatars()">▶ Probar</button>
+        </div>
+        <p class="desc">Cada vez que alguien escribe en el chat, aparece su avatar, nombre y nivel de Mimiku en el overlay.</p>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-av-enabled">
+          Activado
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Posición</label>
+            <select id="wg-av-position" class="event-select" style="width:100%">
+              <option value="bottom-left">Abajo izquierda</option>
+              <option value="bottom-right">Abajo derecha</option>
+              <option value="top-left">Arriba izquierda</option>
+              <option value="top-right">Arriba derecha</option>
+            </select>
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Duración (segundos)</label>
+            <input id="wg-av-duration" type="number" min="2" max="30" value="6">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Cooldown por usuario (seg)</label>
+            <input id="wg-av-cooldown" type="number" min="0" max="120" value="15">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Máximo en pantalla</label>
+            <input id="wg-av-max-stack" type="number" min="1" max="15" value="5">
+          </div>
+        </div>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-av-show-level">
+          Mostrar nivel de Mimiku
+        </label>
+
+        <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-top:1rem;margin-bottom:8px">
+          Las fotos disponibles se obtienen de perfiles ya guardados localmente. Mimiku nunca solicita un Client Secret al streamer.
+        </p>
+
+        <button class="btn-primary" style="margin-top:14px" onclick="window.widgetsPage.saveAvatarsConfig()">Guardar configuración</button>
+      </div>
+
+      <div class="panel" style="max-width:640px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">💡 Ideas para próximos widgets</span></div>
+        <ul class="feature-list">
+          <li>🔥 Racha de mensajes — destaca quién lleva más días seguidos escribiendo</li>
+          <li>🎯 Barra de meta de subs/puntos con progreso en vivo</li>
+          <li>🆕 Ticker de nuevos seguidores recientes</li>
+          <li>💬 Nube de palabras más usadas del chat</li>
+          <li>🕒 Countdown para el próximo evento o mimic</li>
+          <li>📊 Mini leaderboard flotante (top 3 de puntos/XP en vivo)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Ajustes -->
+    <div id="settings" class="page">
+      <div class="page-header"><h1>Ajustes</h1></div>
+      <div class="panel" style="max-width:480px">
+        <div class="panel-header"><span class="panel-title">Perfil y conexión Twitch</span></div>
+        <div class="form-group">
+          <label>Nombre del streamer<input id="streamer-display-name" type="text" placeholder="Tu nombre público"></label>
+          <label>Canal<input id="channel" type="text" placeholder="tu_canal"></label>
+          <label>OAuth Token
+            <input id="token" type="password" placeholder="oauth:xxxxxxxxxxxxxxxxxxxx">
+            <span class="field-hint">Obtén tu token en twitchapps.com/tmi</span>
+          </label>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="window.settingsPage.saveSettings()">Guardar y conectar</button>
+            <button class="btn-ghost" onclick="window.settingsPage.disconnectTwitch()">Desconectar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="max-width:480px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Importación heredada de Mimiku 1</span></div>
+        <p class="desc">Opcional. Usa únicamente una instancia Supabase perteneciente al streamer para importar datos antiguos. Mimiku 2.0 no incluye una cuenta cloud del desarrollador.</p>
+        <div class="form-group">
+          <label class="lvl-check"><input id="legacy-cloud-enabled" type="checkbox"> Habilitar puente heredado</label>
+          <label>URL de Supabase<input id="legacy-cloud-url" type="url" placeholder="https://tu-proyecto.supabase.co"></label>
+          <label>Clave pública anon<input id="legacy-cloud-key" type="password" placeholder="No se muestra después de guardarla"></label>
+          <span class="field-hint">Estado: <strong id="legacy-cloud-status">No configurado</strong></span>
+          <button class="btn-ghost" onclick="window.settingsPage.saveLegacyCloudConfig()">Guardar puente heredado</button>
+        </div>
+        <button class="btn-primary" onclick="window.settingsPage.importFromMimiku1()" id="btn-sync">Importar desde Mimiku 1</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+
+<!-- Modal: Editor de Mimic -->
+<div id="mimic-editor-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card mimic-editor-card">
+    <div class="modal-header">
+      <h2 id="mimic-editor-title">Nuevo Mimic</h2>
+      <button class="modal-close" onclick="window.mimicsPage.closeMimicEditor()">✕</button>
+    </div>
+    <div class="mimic-editor-body">
+      <div class="mimic-editor-left">
+        <label class="field-label">Nombre</label>
+        <input id="mimic-name" type="text" placeholder="Ej: Explosión épica">
+        <label class="field-label" style="margin-top:10px">Descripción</label>
+        <input id="mimic-desc" type="text" placeholder="Qué hace este Mimic">
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <div style="flex:1">
+            <label class="field-label">Icono</label>
+            <input id="mimic-icon" type="text" placeholder="✨" maxlength="2">
+          </div>
+          <div style="flex:1">
+            <label class="field-label">Rareza</label>
+            <select id="mimic-rarity" class="event-select" style="width:100%">
+              <option value="comun">Común</option>
+              <option value="raro">Raro</option>
+              <option value="epico">Épico</option>
+              <option value="legendario">Legendario</option>
+              <option value="evento">Evento</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label class="field-label">Cooldown (s)</label>
+            <input id="mimic-cooldown" type="number" value="30" min="0">
+          </div>
+        </div>
+
+        <label class="field-label" style="margin-top:16px">Agregar bloque a la secuencia</label>
+        <div class="block-palette">
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('image')"><span>🎞</span>GIF/Imagen</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('video')"><span>🎬</span>Video</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('sound')"><span>🔊</span>Sonido</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('message')"><span>💬</span>Mensaje</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('effect')"><span>✨</span>Efecto</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('emoji_rain')"><span>🌧</span>Lluvia emoji</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('shake')"><span>📳</span>Sacudir</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('flash')"><span>⚡</span>Flash</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('rain_points')"><span>💰</span>Lluvia pts</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('mini_challenge')"><span>🎯</span>Mini-reto</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('streamer_challenge')"><span>🏆</span>Reto streamer</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('economy_event')"><span>📊</span>Evento econ.</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('vts_item')"><span>🎰</span>Ruleta ítem</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('vts_avatar')"><span>🎭</span>Ruleta avatar</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('xp')"><span>⭐</span>XP</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('points')"><span>🪙</span>Puntos</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('wait')"><span>⏱</span>Esperar</button>
+        </div>
+      </div>
+      <div class="mimic-editor-right">
+        <label class="field-label">Secuencia de acciones</label>
+        <div id="sequence-list" class="sequence-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" style="width:auto;padding:9px 18px" onclick="window.mimicsPage.closeMimicEditor()">Cancelar</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px" onclick="window.mimicsPage.saveMimic()">Guardar Mimic</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editor de Caja -->
+<div id="box-editor-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:420px">
+    <div class="modal-header">
+      <h2>Nueva Caja</h2>
+      <button class="modal-close" onclick="window.mimicsPage.closeBoxEditor()">✕</button>
+    </div>
+    <div style="padding:20px">
+      <label class="field-label">Nombre</label>
+      <input id="box-name" type="text" placeholder="Ej: Caja Misteriosa">
+      <label class="field-label" style="margin-top:10px">Descripción</label>
+      <input id="box-desc" type="text" placeholder="Qué contiene">
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <div style="flex:1">
+          <label class="field-label">Icono</label>
+          <input id="box-icon" type="text" value="🎁" maxlength="2">
+        </div>
+        <div style="flex:1">
+          <label class="field-label">Precio (pts)</label>
+          <input id="box-price" type="number" value="500" min="1">
+        </div>
+        <div style="flex:1">
+          <label class="field-label"># Mimics</label>
+          <input id="box-count" type="number" value="3" min="1" max="10">
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px">
+        <label class="field-label" style="margin:0">PROBABILIDAD POR RAREZA</label>
+        <span style="font-size:12px;color:var(--text-muted)">Total: <strong id="odds-total">100%</strong></span>
+      </div>
+      <div class="odds-presets">
+        <button class="odds-preset-btn" onclick="window.mimicsPage.applyOddsPreset('normal')">Normal</button>
+        <button class="odds-preset-btn" onclick="window.mimicsPage.applyOddsPreset('generosa')">Generosa</button>
+        <button class="odds-preset-btn" onclick="window.mimicsPage.applyOddsPreset('premium')">Premium</button>
+        <button class="odds-preset-btn" onclick="window.mimicsPage.applyOddsPreset('legendaria')">Legendaria</button>
+      </div>
+      <div class="odds-grid">
+        <div class="odds-row">
+          <span class="odds-label" style="color:#a1a1aa">⚪ Común</span>
+          <input id="odds-comun" type="number" value="60" min="0" max="100" oninput="window.mimicsPage.updateOddsTotal()">
+          <span class="odds-pct">%</span>
+        </div>
+        <div class="odds-row">
+          <span class="odds-label" style="color:#3b82f6">🔵 Raro</span>
+          <input id="odds-raro" type="number" value="25" min="0" max="100" oninput="window.mimicsPage.updateOddsTotal()">
+          <span class="odds-pct">%</span>
+        </div>
+        <div class="odds-row">
+          <span class="odds-label" style="color:#a855f7">🟣 Épico</span>
+          <input id="odds-epico" type="number" value="12" min="0" max="100" oninput="window.mimicsPage.updateOddsTotal()">
+          <span class="odds-pct">%</span>
+        </div>
+        <div class="odds-row">
+          <span class="odds-label" style="color:#f59e0b">🟡 Legendario</span>
+          <input id="odds-legendario" type="number" value="3" min="0" max="100" oninput="window.mimicsPage.updateOddsTotal()">
+          <span class="odds-pct">%</span>
+        </div>
+      </div>
+      <p id="box-rarity-info" class="field-hint" style="margin-top:8px;font-size:11px;color:var(--text-muted)"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" style="width:auto;padding:9px 18px" onclick="window.mimicsPage.closeBoxEditor()">Cancelar</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px" onclick="window.mimicsPage.saveBox()">Crear Caja</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Regalar (streamer) -->
+<div id="gift-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:440px">
+    <div class="modal-header">
+      <h2>🎁 Regalar Mimic</h2>
+      <button class="modal-close" onclick="window.mimicsPage.closeGiftModal()">✕</button>
+    </div>
+    <div style="padding:20px">
+      <label class="field-label">Mimic a regalar</label>
+      <select id="gift-mimic-select" class="event-select" style="width:100%"></select>
+
+      <label class="field-label" style="margin-top:14px">Destinatarios</label>
+      <select id="gift-target" class="event-select" style="width:100%" onchange="window.mimicsPage.updateGiftTarget()">
+        <option value="all">Todos los viewers activos</option>
+        <option value="first_n">Los primeros N viewers</option>
+        <option value="user">Un viewer específico</option>
+      </select>
+
+      <div id="gift-firstn-row" class="lvl-field" style="margin-top:12px;display:none">
+        <label>Cantidad de viewers</label>
+        <input id="gift-firstn" type="number" min="1" value="10">
+      </div>
+      <div id="gift-user-row" class="lvl-field" style="margin-top:12px;display:none">
+        <label>Usuario de Twitch</label>
+        <input id="gift-user" type="text" placeholder="nombre_usuario">
+      </div>
+
+      <p class="field-hint" style="margin-top:10px;font-size:11px;color:var(--text-muted)">Los viewers activos son quienes han escrito en el chat durante este stream.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" style="width:auto;padding:9px 18px" onclick="window.mimicsPage.closeGiftModal()">Cancelar</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px" onclick="window.mimicsPage.sendStreamerGift()">Enviar regalo</button>
+    </div>
+  </div>
+</div>
+
+<div id="onboarding-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-header"><h2>Configura tu Mimiku</h2></div>
+    <div class="mimic-editor-body" style="display:block">
+      <p class="desc">Esta instalación empieza vacía. Estos datos pertenecen al streamer y pueden cambiarse después en Ajustes.</p>
+      <div class="form-group">
+        <label>Tu nombre público<input id="onboarding-display-name" type="text" maxlength="80" placeholder="Ej: Luna"></label>
+        <label>Tu canal de Twitch<input id="onboarding-twitch-channel" type="text" maxlength="25" placeholder="Ej: lunatv"></label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="window.settingsPage.completeOnboarding()">Guardar y comenzar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="./app.js"></script>
+</body>
+</html>

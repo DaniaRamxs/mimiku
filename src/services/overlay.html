@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;overflow:hidden;font-family:sans-serif;width:100vw;height:100vh}
+
+#toolbar{position:fixed;top:10px;right:10px;z-index:99999;display:flex;gap:6px;align-items:center;background:rgba(10,10,15,.88);border:1px solid rgba(124,110,245,.4);border-radius:8px;padding:5px 10px;}
+#toolbar button{background:rgba(124,110,245,.2);border:1px solid rgba(124,110,245,.4);color:#e8e8f0;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;}
+#toolbar button:hover{background:rgba(124,110,245,.5);}
+.dot{width:6px;height:6px;border-radius:50%;background:#7c6ef5;box-shadow:0 0 6px #7c6ef5;}
+.logo-txt{font-size:11px;color:#7c6ef5;font-weight:700;letter-spacing:.06em}
+
+#alert-box{position:fixed;top:48px;left:50%;transform:translateX(-50%) translateY(-10px);background:rgba(124,110,245,.93);color:#fff;border-radius:12px;padding:12px 28px;font-size:20px;font-weight:700;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 32px rgba(0,0,0,.5);z-index:9999;}
+#alert-box.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Ruleta grande ── */
+#roulette-overlay{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:transparent;z-index:9995;
+  opacity:0;pointer-events:none;transition:opacity .4s;
+  flex-direction:column;gap:24px;
+}
+#roulette-overlay.show{opacity:1;}
+
+#roulette-wheel-wrap{position:relative;width:320px;height:320px;}
+
+#roulette-canvas{width:320px;height:320px;border-radius:50%;box-shadow:0 0 60px rgba(124,110,245,.4);}
+
+#roulette-pointer{
+  position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+  border-left:12px solid transparent;
+  border-right:12px solid transparent;
+  border-top:24px solid #7c6ef5;
+  filter:drop-shadow(0 0 8px #7c6ef5);
+}
+
+#roulette-center{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:70px;height:70px;border-radius:50%;
+  background:#0a0a0f;border:3px solid #7c6ef5;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:700;color:#e8e8f0;
+  box-shadow:0 0 20px rgba(124,110,245,.5);
+}
+
+#roulette-result{
+  text-align:center;
+}
+#roulette-result-num{font-size:48px;font-weight:700;color:#e8e8f0;line-height:1;}
+#roulette-result-msg{font-size:16px;color:#9898b0;margin-top:8px;max-width:500px;}
+#roulette-result-win{font-size:22px;font-weight:700;margin-top:6px;}
+
+
+
+
+
+/* ── Confeti ── */
+#confetti-canvas {
+  position:fixed;inset:0;z-index:9996;pointer-events:none;
+  opacity:0;transition:opacity .3s;
+}
+#confetti-canvas.show { opacity:1; }
+
+/* ── Arcoíris ── */
+#rainbow-overlay {
+  position:fixed;top:0;left:0;right:0;height:8px;z-index:9996;
+  background:linear-gradient(90deg,#ff0000,#ff7700,#ffff00,#00ff00,#0000ff,#8b00ff);
+  opacity:0;pointer-events:none;
+  box-shadow:0 0 30px rgba(255,255,255,.3);
+  transition:opacity .5s;
+}
+#rainbow-overlay.show { opacity:1; animation:rainbow-pulse 2s ease-in-out infinite; }
+#rainbow-arc {
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:800px;height:400px;z-index:9995;pointer-events:none;
+  opacity:0;transition:opacity .5s;border-radius:400px 400px 0 0;
+  border:12px solid transparent;
+  border-image:linear-gradient(90deg,#ff0000,#ff7700,#ffff00,#00ff00,#0000ff,#8b00ff) 1;
+}
+@keyframes rainbow-pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+/* ── Rey del Chat ── */
+#king-overlay{
+  position:fixed;bottom:52px;right:16px;
+  z-index:9991;opacity:0;pointer-events:none;
+  transition:opacity .4s,transform .4s;
+  transform:translateX(20px);
+}
+#king-overlay.show{opacity:1;transform:translateX(0);}
+.king-card{
+  background:rgba(10,10,15,.92);border:1px solid rgba(245,158,11,.4);
+  border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;
+  box-shadow:0 0 20px rgba(245,158,11,.15);min-width:200px;
+}
+.king-crown{font-size:20px;animation:crown-bounce .8s ease-in-out infinite;}
+@keyframes crown-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.king-info{flex:1;min-width:0;}
+.king-label{font-size:9px;font-weight:700;color:rgba(245,158,11,.8);text-transform:uppercase;letter-spacing:.08em;}
+.king-name{font-size:14px;font-weight:700;color:#fafafa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.king-msgs{font-size:11px;color:#a1a1aa;margin-top:1px;}
+.king-badge{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;flex-shrink:0;}
+
+/* ── Boss overlay ── */
+#boss-overlay{
+  position:fixed;top:60px;left:50%;transform:translateX(-50%);
+  z-index:9992;opacity:0;pointer-events:none;
+  transition:opacity .4s;width:520px;
+}
+#boss-overlay.show{opacity:1;}
+.boss-card{
+  background:rgba(10,10,15,.95);border:2px solid #ef4444;
+  border-radius:16px;padding:20px 24px;
+  box-shadow:0 0 40px rgba(239,68,68,.3);
+}
+.boss-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.boss-sprite{font-size:48px;animation:boss-float 2s ease-in-out infinite;}
+@keyframes boss-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.boss-title{font-size:20px;font-weight:900;color:#ef4444;text-shadow:0 0 20px rgba(239,68,68,.5);}
+.boss-subtitle{font-size:12px;color:#a1a1aa;margin-top:2px;}
+.boss-hp-wrap{margin-bottom:10px;}
+.boss-hp-label{display:flex;justify-content:space-between;font-size:12px;color:#a1a1aa;margin-bottom:6px;}
+.boss-hp-bar{height:20px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden;border:1px solid rgba(239,68,68,.3);}
+.boss-hp-fill{height:100%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:10px;transition:width .5s ease;position:relative;}
+.boss-hp-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.3) 0%,transparent 100%);border-radius:10px;}
+.boss-participants{font-size:11px;color:#52525b;text-align:right;}
+.boss-hit{animation:boss-hit .3s ease;}
+@keyframes boss-hit{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* ── Slots overlay ── */
+#slots-overlay{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:9993;opacity:0;pointer-events:none;
+  transition:opacity .3s;text-align:center;
+}
+#slots-overlay.show{opacity:1;}
+#slots-reels{
+  display:flex;gap:8px;justify-content:center;margin-bottom:16px;
+}
+.slots-reel{
+  width:90px;height:90px;background:rgba(10,10,15,.95);
+  border:2px solid rgba(124,110,245,.5);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:48px;
+  animation:reel-spin .6s ease-out both;
+}
+.slots-reel:nth-child(2){animation-delay:.15s;}
+.slots-reel:nth-child(3){animation-delay:.3s;}
+@keyframes reel-spin{
+  0%  {transform:translateY(-40px);opacity:0}
+  60% {transform:translateY(6px)}
+  100%{transform:translateY(0);opacity:1}
+}
+#slots-result-label{
+  font-size:42px;font-weight:900;letter-spacing:-.02em;
+  animation:bj-pop .4s .5s cubic-bezier(.17,.67,.35,1.4) both;
+}
+#slots-result-msg{
+  font-size:16px;color:rgba(232,232,240,.7);margin-top:8px;
+  animation:bj-pop .3s .6s ease both;
+}
+
+/* ── BJ overlay ── */
+#bj-overlay{
+  position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9994;opacity:0;pointer-events:none;
+  transition:opacity .15s;
+}
+#bj-overlay.show{opacity:1;}
+#bj-icon{
+  font-size:120px;line-height:1;
+  filter:drop-shadow(0 0 40px currentColor);
+  animation:bj-pop .4s cubic-bezier(.17,.67,.35,1.4) forwards;
+}
+#bj-result-label{
+  font-size:72px;font-weight:900;letter-spacing:-.02em;margin-top:8px;
+  animation:bj-pop .4s .1s cubic-bezier(.17,.67,.35,1.4) both;
+  text-shadow:0 0 60px currentColor;
+}
+#bj-result-text{
+  font-size:20px;color:rgba(232,232,240,.7);margin-top:12px;
+  animation:bj-pop .3s .2s ease both;
+  max-width:600px;text-align:center;line-height:1.4;
+}
+@keyframes bj-pop{
+  from{transform:scale(.5);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+@keyframes bj-shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-12px)}
+  40%{transform:translateX(12px)}
+  60%{transform:translateX(-8px)}
+  80%{transform:translateX(8px)}
+}
+
+/* ── Game bottom bar ── */
+#game-box{
+  position:fixed;bottom:52px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(10,10,15,.92);border:1px solid rgba(124,110,245,.5);
+  border-radius:12px;padding:10px 20px;font-size:14px;font-weight:600;
+  color:#e8e8f0;opacity:0;transition:opacity .3s,transform .3s;
+  pointer-events:none;z-index:9997;display:flex;align-items:center;gap:10px;
+}
+#game-box.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#ticker{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,15,.82);color:#e8e8f0;padding:7px 16px;font-size:13px;border-top:1px solid rgba(124,110,245,.35);z-index:9998;display:flex;align-items:center;gap:10px;}
+#afk-screen{position:fixed;inset:0;background:rgba(10,10,15,.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9990;color:#e8e8f0;}
+#afk-screen.show{display:flex;}
+#afk-title{font-size:36px;font-weight:700;color:#7c6ef5;margin-bottom:10px;}
+#afk-msg{font-size:18px;color:#9898b0;}
+#afk-time{font-size:13px;color:#55526a;margin-top:6px;}
+
+#widgets-layer{position:fixed;inset:0;z-index:100;pointer-events:none;}
+.mod-widget{position:absolute;background:rgba(10,10,15,.92);border:1px solid rgba(124,110,245,.3);border-radius:10px;overflow:hidden;pointer-events:all;min-width:180px;min-height:100px;box-shadow:0 4px 24px rgba(0,0,0,.6);}
+.mod-widget:hover{border-color:rgba(124,110,245,.6);}
+.mod-widget.dragging{opacity:.85;cursor:grabbing;}
+.cw-header{display:flex;align-items:center;gap:6px;background:rgba(124,110,245,.15);padding:5px 9px;cursor:grab;user-select:none;font-size:11px;color:#9898b0;border-bottom:1px solid rgba(124,110,245,.2);}
+.cw-header:active{cursor:grabbing;}
+.mod-tag{background:#7c6ef5;color:#fff;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;}
+.cw-close{margin-left:auto;cursor:pointer;color:#52525b;font-size:14px;padding:0 2px;}
+.cw-close:hover{color:#ef4444;}
+.resize-handle{position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:se-resize;z-index:10;background:linear-gradient(135deg,transparent 50%,rgba(124,110,245,.5) 50%);border-radius:0 0 10px 0;}
+.cw-body{width:100%;height:calc(100% - 30px);overflow:hidden;}
+.cw-body iframe{width:100%;height:100%;border:none;background:#0a0a0f;display:block;}
+.cw-body img{width:100%;height:100%;object-fit:contain;display:block;}
+.cw-text{padding:14px;color:#e8e8f0;font-size:15px;word-break:break-word;line-height:1.6;}
+
+/* ── Rey del Chat widget ── */
+#king-widget{
+  position:fixed;bottom:40px;left:20px;z-index:9996;
+  background:linear-gradient(135deg,rgba(10,10,15,.97) 0%,rgba(234,179,8,.08) 100%);
+  border:2px solid rgba(234,179,8,.6);
+  border-radius:16px;padding:14px 20px;
+  display:flex;align-items:center;gap:14px;
+  opacity:0;transform:translateY(30px) scale(.92);
+  transition:opacity .5s cubic-bezier(.17,.67,.35,1.4),transform .5s cubic-bezier(.17,.67,.35,1.4);
+  pointer-events:none;
+  box-shadow:0 0 32px rgba(234,179,8,.25),0 8px 32px rgba(0,0,0,.6);
+  min-width:240px;
+}
+#king-widget.show{opacity:1;transform:translateY(0) scale(1);}
+#king-crown{font-size:40px;line-height:1;filter:drop-shadow(0 0 12px rgba(234,179,8,.8));animation:crown-bounce 2s ease-in-out infinite;}
+@keyframes crown-bounce{0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-6px) rotate(3deg)}}
+#king-info{display:flex;flex-direction:column;gap:2px;}
+#king-label{font-size:9px;font-weight:700;color:rgba(234,179,8,.8);text-transform:uppercase;letter-spacing:.12em;}
+#king-name{font-size:18px;font-weight:800;color:#eab308;text-shadow:0 0 20px rgba(234,179,8,.6);line-height:1.1;}
+#king-stats{font-size:11px;color:rgba(232,232,240,.6);margin-top:2px;}
+#king-bonus{font-size:12px;font-weight:700;color:#4ade80;}
+
+/* ── Cara o Cruz overlay ── */
+#coin-overlay{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:20px;z-index:9992;
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+#coin-overlay.show{opacity:1;}
+#coin-wrap{
+  position:relative;width:180px;height:180px;
+  perspective:600px;
+}
+#coin-inner{
+  width:180px;height:180px;
+  transform-style:preserve-3d;
+  border-radius:50%;
+  animation:none;
+}
+#coin-inner.spinning{
+  animation:coin-spin 1.8s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes coin-spin{
+  0%   {transform:rotateY(0deg) scale(1)}
+  30%  {transform:rotateY(540deg) scale(1.15)}
+  70%  {transform:rotateY(1260deg) scale(1.1)}
+  100% {transform:rotateY(1800deg) scale(1)}
+}
+.coin-face{
+  position:absolute;inset:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:72px;backface-visibility:hidden;
+  box-shadow:0 0 40px rgba(0,0,0,.6);
+  border:4px solid;
+}
+#coin-front{
+  background:radial-gradient(circle at 35% 35%,#fde68a,#d97706);
+  border-color:#eab308;
+}
+#coin-back{
+  background:radial-gradient(circle at 35% 35%,#c4b5fd,#7c3aed);
+  border-color:#7c6ef5;
+  transform:rotateY(180deg);
+}
+#coin-result-wrap{
+  text-align:center;
+  opacity:0;transform:scale(.7);
+  transition:opacity .4s .2s,transform .4s .2s cubic-bezier(.17,.67,.35,1.4);
+}
+#coin-result-wrap.show{opacity:1;transform:scale(1);}
+#coin-result-label{
+  font-size:56px;font-weight:900;letter-spacing:-.02em;
+  text-shadow:0 0 40px currentColor;
+  line-height:1;
+}
+#coin-result-sub{
+  font-size:18px;color:rgba(232,232,240,.7);margin-top:8px;
+  font-weight:600;
+}
+#coin-result-pts{
+  font-size:24px;font-weight:800;margin-top:4px;
+}
+
+/* ── Mimic media (imagen/video) ── */
+#mimic-media-overlay{
+  position:fixed;top:0;left:0;
+  z-index:9994;opacity:0;pointer-events:none;
+  transition:opacity .35s,transform .35s cubic-bezier(.17,.67,.35,1.4);
+  transform:translate(-50%,-50%) scale(.6);
+}
+#mimic-media-overlay.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+#mimic-media-inner img,#mimic-media-inner video{
+  max-width:30vw;max-height:34vh;border-radius:16px;
+  box-shadow:0 0 50px rgba(124,110,245,.4),0 12px 48px rgba(0,0,0,.6);
+  display:block;
+}
+
+/* ── Mimic mensaje ── */
+#mimic-msg-overlay{
+  position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:9993;opacity:0;pointer-events:none;
+  transition:opacity .35s,transform .35s;
+}
+#mimic-msg-overlay.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#mimic-msg-text{
+  background:linear-gradient(135deg,rgba(124,110,245,.95),rgba(168,85,247,.95));
+  color:#fff;border-radius:14px;padding:14px 28px;
+  font-size:22px;font-weight:700;text-align:center;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  max-width:80vw;
+}
+
+/* ── Level Up ── */
+#levelup-overlay{
+  position:fixed;top:90px;left:50%;transform:translateX(-50%) translateY(-30px) scale(.85);
+  z-index:9995;opacity:0;pointer-events:none;
+  transition:opacity .4s,transform .4s cubic-bezier(.17,.67,.35,1.4);
+}
+#levelup-overlay.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+#levelup-card{
+  background:linear-gradient(135deg,rgba(10,10,15,.97),rgba(124,110,245,.12));
+  border:2px solid rgba(124,110,245,.6);
+  border-radius:18px;padding:18px 28px;
+  display:flex;align-items:center;gap:18px;
+  box-shadow:0 0 40px rgba(124,110,245,.35),0 12px 48px rgba(0,0,0,.6);
+  min-width:300px;
+}
+#levelup-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 16px rgba(124,110,245,.8));animation:levelup-bounce 1s ease-in-out infinite;}
+@keyframes levelup-bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.1)}}
+#levelup-info{display:flex;flex-direction:column;gap:2px;}
+#levelup-label{font-size:11px;font-weight:800;color:rgba(124,110,245,.9);text-transform:uppercase;letter-spacing:.12em;}
+#levelup-name{font-size:20px;font-weight:800;color:#fafafa;line-height:1.1;}
+#levelup-level{font-size:28px;font-weight:900;color:#7c6ef5;text-shadow:0 0 20px rgba(124,110,245,.6);line-height:1;}
+#levelup-title{font-size:14px;font-weight:700;margin-top:2px;}
+
+/* ── Gift Announce ── */
+#gift-overlay{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.7);
+  z-index:9996;opacity:0;pointer-events:none;
+  transition:opacity .4s,transform .5s cubic-bezier(.17,.67,.35,1.4);
+}
+#gift-overlay.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+#gift-card{
+  background:linear-gradient(135deg,rgba(236,72,153,.95),rgba(168,85,247,.95));
+  border:3px solid rgba(255,255,255,.4);
+  border-radius:24px;padding:32px 48px;text-align:center;
+  box-shadow:0 0 60px rgba(236,72,153,.5),0 16px 60px rgba(0,0,0,.6);
+}
+#gift-icon{font-size:72px;animation:gift-shake .6s ease-in-out infinite;}
+@keyframes gift-shake{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+#gift-label{font-size:14px;font-weight:900;color:#fff;letter-spacing:.2em;margin-top:8px;}
+#gift-text{font-size:22px;font-weight:800;color:#fff;margin-top:8px;}
+#gift-mimic{font-size:18px;font-weight:600;color:rgba(255,255,255,.9);margin-top:4px;}
+
+/* ── Flash ── */
+#flash-overlay{
+  position:fixed;inset:0;z-index:9990;pointer-events:none;
+  background:#fff;opacity:0;
+}
+#flash-overlay.flash-go{animation:flash-anim var(--flash-dur,.4s) ease-out;}
+@keyframes flash-anim{0%{opacity:0}15%{opacity:.85}100%{opacity:0}}
+
+/* ── Shake (aplica al body) ── */
+body.shake-light{animation:shake-light .4s ease-in-out;}
+body.shake-medium{animation:shake-medium .5s ease-in-out;}
+body.shake-strong{animation:shake-strong .6s ease-in-out;}
+@keyframes shake-light{0%,100%{transform:translate(0,0)}25%{transform:translate(-4px,2px)}50%{transform:translate(4px,-2px)}75%{transform:translate(-3px,-2px)}}
+@keyframes shake-medium{0%,100%{transform:translate(0,0)}20%{transform:translate(-9px,4px)}40%{transform:translate(9px,-4px)}60%{transform:translate(-7px,-5px)}80%{transform:translate(7px,5px)}}
+@keyframes shake-strong{0%,100%{transform:translate(0,0)}10%{transform:translate(-16px,8px)}30%{transform:translate(16px,-8px)}50%{transform:translate(-14px,-10px)}70%{transform:translate(14px,10px)}90%{transform:translate(-8px,4px)}}
+
+/* ── Emoji rain ── */
+#emoji-rain-layer{position:fixed;inset:0;z-index:9989;pointer-events:none;overflow:hidden;}
+.emoji-drop{position:absolute;top:-50px;font-size:36px;animation:emoji-fall linear forwards;}
+@keyframes emoji-fall{to{transform:translateY(110vh) rotate(360deg);}}
+
+/* ── Modo AFK ── */
+#afk-overlay{
+  position:fixed;inset:0;z-index:9988;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at center,rgba(20,18,40,.55),rgba(10,8,20,.8));
+  backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:opacity .5s;
+}
+#afk-overlay.show{opacity:1;}
+#afk-panel{
+  background:linear-gradient(150deg,rgba(40,34,80,.95),rgba(24,20,48,.95));
+  border:2px solid rgba(124,110,245,.4);
+  border-radius:28px;padding:40px 56px;text-align:center;min-width:480px;
+  box-shadow:0 0 80px rgba(124,110,245,.35),0 20px 70px rgba(0,0,0,.6);
+}
+#afk-badge{
+  font-size:18px;font-weight:900;letter-spacing:.2em;color:#c4b5fd;
+  background:rgba(124,110,245,.18);border:1px solid rgba(124,110,245,.4);
+  border-radius:999px;padding:8px 22px;display:inline-block;
+}
+#afk-msg{font-size:30px;font-weight:800;color:#fff;margin-top:18px;line-height:1.2;}
+#afk-time{font-size:15px;color:rgba(196,181,253,.85);margin-top:6px;}
+#afk-counter-wrap{margin-top:26px;}
+#afk-counter-label{font-size:14px;color:rgba(232,232,240,.7);font-weight:600;}
+#afk-counter-label #afk-goal{color:#fbbf24;font-weight:800;}
+#afk-counter-num{
+  font-size:88px;font-weight:900;color:#fff;line-height:1;margin:6px 0;
+  text-shadow:0 0 30px rgba(124,110,245,.6);transition:transform .15s;
+}
+#afk-counter-num.bump{transform:scale(1.25);}
+#afk-bar{
+  height:16px;background:rgba(255,255,255,.1);border-radius:8px;overflow:hidden;
+  margin:14px auto 0;max-width:420px;
+}
+#afk-bar-fill{
+  height:100%;width:0%;border-radius:8px;
+  background:linear-gradient(90deg,#7c6ef5,#a855f7,#fbbf24);
+  transition:width .4s cubic-bezier(.17,.67,.35,1.4);
+}
+#afk-next{font-size:14px;color:rgba(232,232,240,.6);margin-top:12px;}
+#afk-next #afk-next-num{color:#fff;font-size:18px;}
+#afk-break{
+  font-size:15px;font-weight:700;color:#f87171;margin-top:14px;min-height:20px;
+  opacity:0;transition:opacity .3s;
+}
+#afk-break.show{opacity:1;}
+
+/* ── Reto al streamer ── */
+#challenge-overlay{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);
+  z-index:9994;opacity:0;pointer-events:none;
+  transition:opacity .4s,transform .4s cubic-bezier(.17,.67,.35,1.4);
+}
+#challenge-overlay.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+#challenge-card{
+  background:linear-gradient(135deg,rgba(139,92,246,.96),rgba(99,102,241,.96));
+  border:3px solid rgba(255,255,255,.35);
+  border-radius:22px;padding:26px 40px;text-align:center;min-width:340px;
+  box-shadow:0 0 50px rgba(139,92,246,.5),0 16px 60px rgba(0,0,0,.6);
+}
+#challenge-label{font-size:13px;font-weight:900;color:#fff;letter-spacing:.15em;}
+#challenge-text{font-size:26px;font-weight:800;color:#fff;margin-top:10px;line-height:1.2;}
+#challenge-from{font-size:14px;color:rgba(255,255,255,.85);margin-top:6px;}
+#challenge-timer{position:relative;width:80px;height:80px;margin:14px auto 0;}
+#challenge-secs{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;}
+#challenge-ring{stroke-dasharray:213.6;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear;}
+
+/* ── Widgets: Avatares de chat ── */
+#avatars-layer{position:fixed;z-index:9985;display:flex;flex-direction:column;gap:8px;pointer-events:none;padding:14px;max-width:280px;}
+#avatars-layer.pos-bottom-left{left:0;bottom:40px;align-items:flex-start;}
+#avatars-layer.pos-bottom-right{right:0;bottom:40px;align-items:flex-end;}
+#avatars-layer.pos-top-left{left:0;top:10px;align-items:flex-start;}
+#avatars-layer.pos-top-right{right:0;top:10px;align-items:flex-end;}
+.chat-avatar-bubble{display:flex;align-items:center;gap:10px;background:rgba(10,10,15,.9);border:1px solid rgba(124,110,245,.35);border-radius:999px;padding:6px 16px 6px 6px;opacity:0;transform:translateY(10px) scale(.9);transition:opacity .35s cubic-bezier(.17,.67,.35,1.4),transform .35s cubic-bezier(.17,.67,.35,1.4);box-shadow:0 6px 24px rgba(0,0,0,.5);}
+#avatars-layer.pos-bottom-right .chat-avatar-bubble,#avatars-layer.pos-top-right .chat-avatar-bubble{flex-direction:row-reverse;padding:6px 6px 6px 16px;}
+.chat-avatar-bubble.show{opacity:1;transform:translateY(0) scale(1);}
+.chat-avatar-bubble.hide{opacity:0;transform:translateY(-8px) scale(.92);}
+.cab-pic{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px;box-shadow:0 0 0 2px rgba(255,255,255,.15);}
+.cab-pic img{width:100%;height:100%;object-fit:cover;display:block;}
+.cab-info{min-width:0;}
+.cab-name{font-size:13px;font-weight:700;color:#fafafa;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;}
+.cab-level{font-size:11px;color:#c4b5fd;font-weight:600;margin-top:1px;}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <span class="dot"></span><span class="logo-txt">MIMIKU</span>
+  <button onclick="clearAll()">✕ Limpiar</button>
+  <button onclick="toggleToolbar()" id="hide-btn">Ocultar</button>
+</div>
+
+<div id="alert-box"></div>
+
+<!-- Ruleta grande -->
+<div id="roulette-overlay">
+  <div id="roulette-wheel-wrap">
+    <canvas id="roulette-canvas" width="320" height="320"></canvas>
+    <div id="roulette-pointer"></div>
+    <div id="roulette-center">?</div>
+  </div>
+  <div id="roulette-result">
+    <div id="roulette-result-num"></div>
+    <div id="roulette-result-win"></div>
+    <div id="roulette-result-msg"></div>
+  </div>
+</div>
+
+
+
+
+
+<!-- Confeti canvas -->
+<canvas id="confetti-canvas"></canvas>
+<!-- Arcoíris -->
+<div id="rainbow-overlay"></div>
+
+<!-- Rey del Chat -->
+<div id="king-overlay">
+  <div class="king-card">
+    <span class="king-crown">👑</span>
+    <div class="king-info">
+      <div class="king-label">Rey del Chat</div>
+      <div class="king-name" id="king-name">—</div>
+      <div class="king-msgs" id="king-msgs">0 mensajes</div>
+    </div>
+    <div class="king-badge" id="king-badge">#1</div>
+  </div>
+</div>
+
+<!-- Boss overlay -->
+<div id="boss-overlay">
+  <div class="boss-card">
+    <div class="boss-header">
+      <span class="boss-sprite" id="boss-sprite">👾</span>
+      <div>
+        <div class="boss-title">¡¡BOSS INVOCADO!!</div>
+        <div class="boss-subtitle">Usa !atacar [cantidad] para atacar</div>
+      </div>
+    </div>
+    <div class="boss-hp-wrap">
+      <div class="boss-hp-label">
+        <span>❤️ HP</span>
+        <span id="boss-hp-text">5000 / 5000</span>
+      </div>
+      <div class="boss-hp-bar">
+        <div id="boss-hp-fill" class="boss-hp-fill" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="boss-participants" id="boss-participants">0 héroes atacando</div>
+  </div>
+</div>
+
+<!-- Slots overlay -->
+<div id="slots-overlay">
+  <div id="slots-reels">
+    <div class="slots-reel" id="slots-r1"></div>
+    <div class="slots-reel" id="slots-r2"></div>
+    <div class="slots-reel" id="slots-r3"></div>
+  </div>
+  <div id="slots-result-label"></div>
+  <div id="slots-result-msg"></div>
+</div>
+
+<!-- BJ overlay -->
+<div id="bj-overlay">
+  <div id="bj-icon"></div>
+  <div id="bj-result-label"></div>
+  <div id="bj-result-text"></div>
+</div>
+
+<div id="game-box"></div>
+<div id="ticker"><span style="color:#7c6ef5">✦</span><span id="ticker-text">Mimiku Overlay activo</span></div>
+<div id="afk-screen">
+  <div id="afk-title">😴 AFK</div>
+  <div id="afk-msg">Volvemos pronto</div>
+  <div id="afk-time"></div>
+</div>
+<div id="widgets-layer"></div>
+<div id="avatars-layer" class="pos-bottom-left"></div>
+
+<!-- Rey del Chat widget (esquina inferior izquierda) -->
+<div id="king-widget">
+  <div id="king-crown">👑</div>
+  <div id="king-info">
+    <div id="king-label">Rey del Chat</div>
+    <div id="king-name"></div>
+    <div id="king-stats"></div>
+    <div id="king-bonus"></div>
+  </div>
+</div>
+
+<!-- Cara o Cruz overlay -->
+<div id="coin-overlay">
+  <div id="coin-wrap">
+    <div id="coin-inner">
+      <div class="coin-face" id="coin-front">🪙</div>
+      <div class="coin-face" id="coin-back">✦</div>
+    </div>
+  </div>
+  <div id="coin-result-wrap">
+    <div id="coin-result-label"></div>
+    <div id="coin-result-sub"></div>
+    <div id="coin-result-pts"></div>
+  </div>
+</div>
+
+<!-- Mimic media (imagen/video) -->
+<div id="mimic-media-overlay">
+  <div id="mimic-media-inner"></div>
+</div>
+
+<!-- Mimic mensaje -->
+<div id="mimic-msg-overlay">
+  <div id="mimic-msg-text"></div>
+</div>
+
+<!-- Level Up -->
+<div id="levelup-overlay">
+  <div id="levelup-card">
+    <div id="levelup-icon">⭐</div>
+    <div id="levelup-info">
+      <div id="levelup-label">¡SUBIÓ DE NIVEL!</div>
+      <div id="levelup-name"></div>
+      <div id="levelup-level"></div>
+      <div id="levelup-title"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Gift Announce -->
+<div id="gift-overlay">
+  <div id="gift-card">
+    <div id="gift-icon">🎁</div>
+    <div id="gift-label">¡REGALO!</div>
+    <div id="gift-text"></div>
+    <div id="gift-mimic"></div>
+  </div>
+</div>
+
+<!-- Flash -->
+<div id="flash-overlay"></div>
+
+<!-- Emoji rain -->
+<div id="emoji-rain-layer"></div>
+
+<!-- Modo AFK: panel con contador comunitario -->
+<div id="afk-overlay">
+  <div id="afk-panel">
+    <div id="afk-badge">😴 MODO AFK</div>
+    <div id="afk-msg"></div>
+    <div id="afk-time"></div>
+    <div id="afk-counter-wrap">
+      <div id="afk-counter-label">Cuenten juntos hasta <span id="afk-goal">100</span></div>
+      <div id="afk-counter-num">0</div>
+      <div id="afk-bar"><div id="afk-bar-fill"></div></div>
+      <div id="afk-next">Siguiente número: <strong id="afk-next-num">1</strong></div>
+    </div>
+    <div id="afk-break"></div>
+  </div>
+</div>
+
+<!-- Reto al streamer -->
+<div id="challenge-overlay">
+  <div id="challenge-card">
+    <div id="challenge-label">🎯 RETO PARA EL STREAMER</div>
+    <div id="challenge-text"></div>
+    <div id="challenge-from"></div>
+    <div id="challenge-timer">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="6"/>
+        <circle id="challenge-ring" cx="40" cy="40" r="34" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" transform="rotate(-90 40 40)"/>
+      </svg>
+      <span id="challenge-secs">30</span>
+    </div>
+  </div>
+</div>
+
+<script>
+var ws      = new WebSocket("ws://localhost:7778");
+var layer   = document.getElementById("widgets-layer");
+var alertEl = document.getElementById("alert-box");
+var gameEl  = document.getElementById("game-box");
+var widgets = {};
+var alertTimer, gameTimer, rouletteTimer, kingTimer, coinTimer;
+var channel = null;
+
+ws.onopen = function() { ws.send(JSON.stringify({type:"get_channel"})); };
+
+ws.onmessage = function(e) {
+  var m = JSON.parse(e.data);
+  if (m.type === "set_channel")   channel = m.channel;
+  if (m.type === "alert")         showAlert(m.text, m.duration);
+  if (m.type === "ticker")        document.getElementById("ticker-text").textContent = m.text;
+  if (m.type === "afk")           setAfk(m.active, m.message);
+  if (m.type === "widget_add")    addWidget(m);
+  if (m.type === "widget_remove") removeWidget(m.widget_id);
+  if (m.type === "widget_clear")  clearAll();
+  if (m.type === "widget_move")   moveWidget(m.widget_id, m.x, m.y);
+  if (m.type === "widget_resize") resizeWidget(m.widget_id, m.w, m.h);
+  if (m.type === "game_roulette") showRouletteAnimation(m);
+  if (m.type === "game_bj")       showBjResult(m);
+  if (m.type === "game_slots")    showSlotsResult(m);
+  if (m.type === "game_event")     handleGameEvent(m);
+  if (m.type === "king_update")     updateKing(m);
+  if (m.type === "king_toggle")     toggleKing(m.visible);
+  if (m.type === "confetti")         launchConfetti(m.duration || 5000);
+  if (m.type === "rainbow")          showRainbow(m.duration || 5000);
+  if (m.type === "game_coin")       showCoinResult(m);
+  if (m.type === "king_widget")   showKingWidget(m);
+  if (m.type === "coin_flip")     showCoinFlip(m);
+  if (m.type === "mimic_image")   showMimicImage(m);
+  if (m.type === "mimic_video")   showMimicVideo(m);
+  if (m.type === "mimic_sound")   playMimicSound(m);
+  if (m.type === "mimic_message") showMimicMessage(m);
+  if (m.type === "level_up")      showLevelUp(m);
+  if (m.type === "gift_announce") showGiftAnnounce(m);
+  if (m.type === "mimic_emoji_rain") showEmojiRain(m);
+  if (m.type === "mimic_shake")   shakeScreen(m);
+  if (m.type === "mimic_flash")   flashScreen(m);
+  if (m.type === "mimic_streamer_challenge") showStreamerChallenge(m);
+  if (m.type === "emote_sound")   playEmoteSound(m);
+  if (m.type === "chat_avatar")    showChatAvatar(m);
+  if (m.type === "avatars_config") setAvatarsConfig(m);
+  if (m.type === "afk_start")        afkStart(m);
+  if (m.type === "afk_end")          afkEnd(m);
+  if (m.type === "afk_count")        afkCount(m);
+  if (m.type === "afk_count_break")  afkCountBreak(m);
+  if (m.type === "afk_goal_reached") afkGoalReached(m);
+};
+
+// ── Ruleta ────────────────────────────────────────────────────────────────────
+var RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+var WHEEL_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+
+function drawWheel(angle) {
+  var canvas = document.getElementById("roulette-canvas");
+  var ctx = canvas.getContext("2d");
+  var cx = 160, cy = 160, r = 155;
+  var slices = WHEEL_NUMS.length;
+  var arc = (2 * Math.PI) / slices;
+
+  ctx.clearRect(0, 0, 320, 320);
+
+  for (var i = 0; i < slices; i++) {
+    var n = WHEEL_NUMS[i];
+    var startAngle = angle + i * arc - arc/2;
+    var endAngle   = startAngle + arc;
+    var color = n === 0 ? "#22c55e" : RED_NUMS.indexOf(n) >= 0 ? "#ef4444" : "#1c1c1f";
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.4)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // número
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(startAngle + arc/2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 11px sans-serif";
+    ctx.fillText(n, r - 8, 4);
+    ctx.restore();
+  }
+
+  // borde exterior
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2*Math.PI);
+  ctx.strokeStyle = "#7c6ef5";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+}
+
+function showRouletteAnimation(m) {
+  var overlay = document.getElementById("roulette-overlay");
+  var center  = document.getElementById("roulette-center");
+  var resNum  = document.getElementById("roulette-result-num");
+  var resWin  = document.getElementById("roulette-result-win");
+  var resMsg  = document.getElementById("roulette-result-msg");
+
+  center.textContent = "?";
+  resNum.textContent = "";
+  resWin.textContent = "";
+  resMsg.textContent = "";
+  overlay.classList.add("show");
+
+  // encontrar ángulo del número ganador en la rueda
+  var targetIdx = WHEEL_NUMS.indexOf(m.number);
+  if (targetIdx === -1) targetIdx = 0;
+  var slices = WHEEL_NUMS.length;
+  var arc = (2 * Math.PI) / slices;
+
+  // girar muchas vueltas + llegar al número
+  var totalRotation = Math.PI * 2 * 8 + (Math.PI/2) - (targetIdx * arc);
+  var start = null;
+  var duration = 4000; // 4 segundos girando
+
+  function animate(ts) {
+    if (!start) start = ts;
+    var elapsed = ts - start;
+    var progress = Math.min(elapsed / duration, 1);
+    // easing: desaceleración
+    var ease = 1 - Math.pow(1 - progress, 4);
+    var angle = ease * totalRotation;
+    drawWheel(angle);
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // mostrar resultado
+      var colorMap = { rojo:"#ef4444", negro:"#e8e8f0", verde:"#22c55e" };
+      var color = colorMap[m.color] || "#e8e8f0";
+      center.textContent = m.number;
+      center.style.color = color;
+      resNum.textContent = m.number;
+      resNum.style.color = color;
+      resWin.textContent = m.win ? "🏆 GANASTE!" : "😔 Perdiste";
+      resWin.style.color = m.win ? "#22c55e" : "#ef4444";
+      resMsg.textContent = m.msg;
+
+      clearTimeout(rouletteTimer);
+      rouletteTimer = setTimeout(function() {
+        overlay.classList.remove("show");
+        center.textContent = "?";
+        center.style.color = "#e8e8f0";
+      }, 4000);
+    }
+  }
+
+  drawWheel(0);
+  requestAnimationFrame(animate);
+
+  // también mostrar en game-box
+  gameEl.innerHTML = "<span style='font-size:18px'>🎡</span><span>" + m.msg + "</span>";
+  gameEl.classList.add("show");
+  clearTimeout(gameTimer);
+  gameTimer = setTimeout(function() { gameEl.classList.remove("show"); }, 8000);
+}
+
+
+
+
+
+// ── Cara o Cruz ───────────────────────────────────────────────────────────────
+var coinTimer
+function showCoinResult(m) {
+  clearTimeout(gameTimer)
+  var icon = m.win ? "🪙" : "🟤"
+  var label = m.win ? "¡CARA! GANASTE" : "CRUZ. Perdiste"
+  var color = m.win ? "#22c55e" : "#ef4444"
+  gameEl.innerHTML =
+    "<span style='font-size:22px'>" + icon + "</span>" +
+    "<span style='color:" + color + ";font-weight:700'>" + label + "</span>" +
+    "<span style='color:#a1a1aa;font-size:13px'>@" + m.username + " " + (m.win ? "+" : "-") + m.amount + " pts</span>"
+  gameEl.classList.add("show")
+  gameTimer = setTimeout(function() { gameEl.classList.remove("show") }, 4000)
+}
+
+// ── Rey del Chat ──────────────────────────────────────────────────────────────
+function updateKing(m) {
+  if (!m.username) return
+  document.getElementById("king-name").textContent = m.display || m.username
+  document.getElementById("king-msgs").textContent = m.messages + " mensajes en stream"
+  document.getElementById("king-overlay").classList.add("show")
+}
+
+function toggleKing(visible) {
+  var overlay = document.getElementById("king-overlay")
+  if (visible) overlay.classList.add("show")
+  else overlay.classList.remove("show")
+}
+
+// ── Game events ───────────────────────────────────────────────────────────────
+function handleGameEvent(m) {
+  if (m.event === "boss_spawn") showBossOverlay(m.hp, m.hp, 0)
+  if (m.event === "boss_hit")   updateBossOverlay(m.hp, m.maxHp, m.participants)
+  if (m.event === "boss_defeat") hideBossOverlay()
+  if (m.event === "boss_attack") updateBossOverlay(m.bossHp, m.maxHp, m.participants)
+}
+
+var bossHideTimer = null
+
+function showBossOverlay(hp, maxHp, participants) {
+  var overlay = document.getElementById("boss-overlay")
+  var fill    = document.getElementById("boss-hp-fill")
+  var text    = document.getElementById("boss-hp-text")
+  var parts   = document.getElementById("boss-participants")
+  if (!overlay) return
+  fill.style.width = "100%"
+  text.textContent = maxHp + " / " + maxHp
+  parts.textContent = "0 héroes atacando"
+  overlay.classList.add("show")
+  clearTimeout(bossHideTimer)
+}
+
+function updateBossOverlay(hp, maxHp, participants) {
+  var fill  = document.getElementById("boss-hp-fill")
+  var text  = document.getElementById("boss-hp-text")
+  var parts = document.getElementById("boss-participants")
+  var card  = document.querySelector(".boss-card")
+  if (!fill) return
+  var pct = Math.max(0, Math.round((hp / maxHp) * 100))
+  fill.style.width = pct + "%"
+  // cambiar color según HP
+  if (pct > 60)      fill.style.background = "linear-gradient(90deg,#22c55e,#16a34a)"
+  else if (pct > 30) fill.style.background = "linear-gradient(90deg,#f59e0b,#d97706)"
+  else               fill.style.background = "linear-gradient(90deg,#ef4444,#dc2626)"
+  text.textContent  = hp.toLocaleString() + " / " + maxHp.toLocaleString()
+  parts.textContent = participants + " héroe" + (participants !== 1 ? "s" : "") + " atacando"
+  // shake
+  if (card) { card.classList.add("boss-hit"); setTimeout(function(){ card.classList.remove("boss-hit") }, 300) }
+  if (hp <= 0) {
+    bossHideTimer = setTimeout(hideBossOverlay, 4000)
+    document.querySelector(".boss-title").textContent = "¡¡BOSS DERROTADO!!"
+    document.getElementById("boss-sprite").textContent = "💀"
+  }
+}
+
+function hideBossOverlay() {
+  var overlay = document.getElementById("boss-overlay")
+  if (overlay) overlay.classList.remove("show")
+}
+
+// ── Slots ─────────────────────────────────────────────────────────────────────
+var slotsTimer;
+function showSlotsResult(m) {
+  var overlay  = document.getElementById("slots-overlay");
+  var r1 = document.getElementById("slots-r1");
+  var r2 = document.getElementById("slots-r2");
+  var r3 = document.getElementById("slots-r3");
+  var labelEl  = document.getElementById("slots-result-label");
+  var msgEl    = document.getElementById("slots-result-msg");
+
+  // reset animaciones
+  r1.style.animation = "none"; r2.style.animation = "none"; r3.style.animation = "none";
+  labelEl.style.animation = "none"; msgEl.style.animation = "none";
+  void overlay.offsetWidth;
+
+  r1.textContent = m.s1; r2.textContent = m.s2; r3.textContent = m.s3;
+  r1.style.animation = "reel-spin .6s ease-out both";
+  r2.style.animation = "reel-spin .6s .15s ease-out both";
+  r3.style.animation = "reel-spin .6s .3s ease-out both";
+
+  var colors = { jackpot:"#7c6ef5", par:"#22c55e", miss:"#ef4444" };
+  labelEl.style.color = colors[m.result] || "#e8e8f0";
+  labelEl.style.animation = "bj-pop .4s .5s cubic-bezier(.17,.67,.35,1.4) both";
+  msgEl.style.animation   = "bj-pop .3s .6s ease both";
+
+  if (m.result === "jackpot") {
+    labelEl.textContent = "🎰 JACKPOT! " + m.multiplier + "x";
+  } else if (m.result === "par") {
+    labelEl.textContent = "¡PAR! 2x";
+  } else {
+    labelEl.textContent = "Sin suerte...";
+  }
+  msgEl.textContent = m.username + " — " + (m.result !== "miss" ? "+" + m.payout + " pts" : "-" + m.bet + " pts");
+
+  overlay.classList.add("show");
+  clearTimeout(slotsTimer);
+  slotsTimer = setTimeout(function() { overlay.classList.remove("show"); }, 4000);
+}
+
+// ── Blackjack ─────────────────────────────────────────────────────────────────
+function showBjResult(m) {
+  var overlay = document.getElementById("bj-overlay");
+  var iconEl  = document.getElementById("bj-icon");
+  var labelEl = document.getElementById("bj-result-label");
+  var textEl  = document.getElementById("bj-result-text");
+
+  var cfg = {
+    blackjack: { icon:"🃏", label:"BLACKJACK!", color:"#7c6ef5" },
+    win:       { icon:"🏆", label:"¡GANASTE!",  color:"#22c55e" },
+    lose:      { icon:"💸", label:"PERDISTE",   color:"#ef4444" },
+    push:      { icon:"🤝", label:"EMPATE",     color:"#eab308" },
+    bust:      { icon:"💥", label:"¡BUST!",     color:"#ef4444" },
+  };
+  var c = cfg[m.result] || { icon:"🃏", label:"", color:"#e8e8f0" };
+
+  // reset animaciones
+  iconEl.style.animation  = "none";
+  labelEl.style.animation = "none";
+  textEl.style.animation  = "none";
+  void overlay.offsetWidth;
+
+  iconEl.textContent  = c.icon;
+  labelEl.textContent = c.label;
+  labelEl.style.color = c.color;
+  textEl.innerHTML    = m.msg ? m.msg.replace(/ \| /g, "<br>") : "";
+
+  // shake en lose/bust
+  if (m.result === "lose" || m.result === "bust") {
+    labelEl.style.animation = "bj-shake .5s .4s ease both, bj-pop .4s .1s cubic-bezier(.17,.67,.35,1.4) both";
+  } else {
+    iconEl.style.animation  = "bj-pop .4s cubic-bezier(.17,.67,.35,1.4) forwards";
+    labelEl.style.animation = "bj-pop .4s .1s cubic-bezier(.17,.67,.35,1.4) both";
+    textEl.style.animation  = "bj-pop .3s .2s ease both";
+  }
+
+  overlay.classList.add("show");
+  clearTimeout(gameTimer);
+  gameTimer = setTimeout(function() { overlay.classList.remove("show"); }, 4500);
+}
+
+// ── Widgets ───────────────────────────────────────────────────────────────────
+function addWidget(msg) {
+  var existing = widgets[msg.widget_id];
+  if (existing) {
+    existing.style.left   = (msg.x||50)  + "px";
+    existing.style.top    = (msg.y||50)  + "px";
+    existing.style.width  = (msg.w||480) + "px";
+    existing.style.height = (msg.h||300) + "px";
+    return;
+  }
+  var el = document.createElement("div");
+  el.className = "mod-widget";
+  el.id        = "mw_" + msg.widget_id;
+  el.style.left   = (msg.x||50)  + "px";
+  el.style.top    = (msg.y||50)  + "px";
+  el.style.width  = (msg.w||480) + "px";
+  el.style.height = (msg.h||300) + "px";
+  var ct   = msg.content_type || msg.type;
+  var body = "";
+  if      (ct === "url")   body = '<iframe src="' + msg.content + '" allowfullscreen allow="autoplay;fullscreen"></iframe>';
+  else if (ct === "image") body = '<img src="' + msg.content + '" alt="">';
+  else                     body = '<div class="cw-text">' + (msg.content||"") + "</div>";
+  el.innerHTML =
+    '<div class="cw-header">' +
+      '<span class="mod-tag">MOD</span>' +
+      '<span>' + (msg.mod_display||msg.mod_username||"") + '</span>' +
+      '<span class="cw-close" onclick="removeWidget(\'' + msg.widget_id + '\')">✕</span>' +
+    '</div>' +
+    '<div class="cw-body">' + body + '</div>' +
+    '<div class="resize-handle"></div>';
+  layer.appendChild(el);
+  widgets[msg.widget_id] = el;
+  makeDraggable(el);
+  makeResizable(el);
+}
+
+function removeWidget(id) { var el=widgets[id]||document.getElementById("mw_"+id); if(el){el.remove();delete widgets[id];} }
+function moveWidget(id,x,y)   { var el=widgets[id]; if(el){el.style.left=x+"px";el.style.top=y+"px";} }
+function resizeWidget(id,w,h) { var el=widgets[id]; if(el){el.style.width=w+"px";el.style.height=h+"px";} }
+function clearAll() { Object.keys(widgets).forEach(removeWidget); }
+
+function makeDraggable(el) {
+  var hdr=el.querySelector(".cw-header"),ox,oy,on=false;
+  hdr.addEventListener("mousedown",function(e){if(e.target.classList.contains("cw-close"))return;on=true;ox=e.clientX-el.offsetLeft;oy=e.clientY-el.offsetTop;el.classList.add("dragging");el.querySelectorAll("iframe,video").forEach(function(f){f.style.pointerEvents="none";});e.preventDefault();});
+  document.addEventListener("mousemove",function(e){if(!on)return;el.style.left=Math.max(0,e.clientX-ox)+"px";el.style.top=Math.max(0,e.clientY-oy)+"px";});
+  document.addEventListener("mouseup",function(){if(!on)return;on=false;el.classList.remove("dragging");el.querySelectorAll("iframe,video").forEach(function(f){f.style.pointerEvents="auto";});});
+}
+
+function makeResizable(el) {
+  var rsz=el.querySelector(".resize-handle"),sx,sy,sw,sh,on=false;
+  rsz.addEventListener("mousedown",function(e){on=true;sx=e.clientX;sy=e.clientY;sw=el.offsetWidth;sh=el.offsetHeight;el.querySelectorAll("iframe,video").forEach(function(f){f.style.pointerEvents="none";});e.preventDefault();e.stopPropagation();});
+  document.addEventListener("mousemove",function(e){if(!on)return;el.style.width=Math.max(200,sw+e.clientX-sx)+"px";el.style.height=Math.max(120,sh+e.clientY-sy)+"px";});
+  document.addEventListener("mouseup",function(){if(!on)return;on=false;el.querySelectorAll("iframe,video").forEach(function(f){f.style.pointerEvents="auto";});});
+}
+
+// ── Widget: Avatares de chat ──────────────────────────────────────────────────
+var avatarsCfg = { position: "bottom-left", duration_s: 6, max_stack: 5 };
+
+function setAvatarsConfig(m) {
+  avatarsCfg = Object.assign({}, avatarsCfg, m);
+  var layer = document.getElementById("avatars-layer");
+  if (layer) layer.className = "pos-" + (avatarsCfg.position || "bottom-left");
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c) {
+    return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+  });
+}
+
+function showChatAvatar(m) {
+  var layer = document.getElementById("avatars-layer");
+  if (!layer) return;
+  var name  = escapeHtml(m.display || m.username || "?");
+  var color = /^#[0-9a-fA-F]{3,8}$/.test(m.color || "") ? m.color : "#7c6ef5";
+  var avatarUrl = /^https:\/\//.test(m.avatar || "") ? m.avatar : "";
+  var el = document.createElement("div");
+  el.className = "chat-avatar-bubble";
+  el.innerHTML =
+    '<div class="cab-pic" style="background:' + color + '">' +
+      (avatarUrl ? '<img src="' + escapeHtml(avatarUrl) + '">' : '<span>' + name[0].toUpperCase() + '</span>') +
+    '</div>' +
+    '<div class="cab-info">' +
+      '<div class="cab-name">' + name + '</div>' +
+      (m.level != null ? '<div class="cab-level">' + escapeHtml(m.titleIcon || "⭐") + ' Nv. ' + parseInt(m.level, 10) + '</div>' : '') +
+    '</div>';
+  layer.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add("show"); });
+
+  while (layer.children.length > (avatarsCfg.max_stack || 5)) layer.removeChild(layer.firstChild);
+
+  setTimeout(function() {
+    el.classList.remove("show");
+    el.classList.add("hide");
+    setTimeout(function() { el.remove(); }, 400);
+  }, (avatarsCfg.duration_s || 6) * 1000);
+}
+
+function showAlert(text,dur) {
+  clearTimeout(alertTimer);
+  alertEl.textContent=text;
+  alertEl.classList.add("show");
+  alertTimer=setTimeout(function(){alertEl.classList.remove("show");},dur||4000);
+}
+
+function setAfk(active,message) {
+  var sc=document.getElementById("afk-screen");
+  document.getElementById("afk-msg").textContent=message||"Volvemos pronto";
+  if(active){
+    sc.classList.add("show");
+    var start=Date.now();
+    var iv=setInterval(function(){
+      if(!sc.classList.contains("show")){clearInterval(iv);return;}
+      var s=Math.floor((Date.now()-start)/1000);
+      document.getElementById("afk-time").textContent=Math.floor(s/60)+"m "+(s%60)+"s ausente";
+    },1000);
+  } else { sc.classList.remove("show"); }
+}
+
+var tbVisible=true;
+function toggleToolbar(){
+  tbVisible=!tbVisible;
+  document.getElementById("toolbar").style.opacity=tbVisible?"1":"0.1";
+  document.getElementById("hide-btn").textContent=tbVisible?"Ocultar":"Mostrar";
+}
+
+// dibujar rueda inicial
+drawWheel(0);
+
+// ── Rey del Chat ─────────────────────────────────────────────────────────────
+function showKingWidget(m) {
+  var w = document.getElementById("king-widget");
+  document.getElementById("king-name").textContent  = m.display || m.username;
+  document.getElementById("king-stats").textContent = m.messages + " mensajes";
+  document.getElementById("king-bonus").textContent  = "+" + m.bonus + " pts";
+  // reset + show
+  w.classList.remove("show");
+  void w.offsetWidth;
+  w.classList.add("show");
+  clearTimeout(kingTimer);
+  // se mantiene 30 segundos
+  kingTimer = setTimeout(function() { w.classList.remove("show"); }, 30000);
+  // también alerta centrada
+  showAlert("\uD83D\uDC51 \u00a1" + (m.display||m.username) + " es el Rey del Chat!", 7000);
+}
+
+// ── Cara o Cruz ───────────────────────────────────────────────────────────────
+function showCoinFlip(m) {
+  var overlay   = document.getElementById("coin-overlay");
+  var inner     = document.getElementById("coin-inner");
+  var resWrap   = document.getElementById("coin-result-wrap");
+  var resLabel  = document.getElementById("coin-result-label");
+  var resSub    = document.getElementById("coin-result-sub");
+  var resPts    = document.getElementById("coin-result-pts");
+
+  // reset
+  inner.classList.remove("spinning");
+  resWrap.classList.remove("show");
+  resLabel.textContent = "";
+  resSub.textContent   = "";
+  resPts.textContent   = "";
+  void inner.offsetWidth;
+
+  var isCara = (m.result === "cara");
+
+  // si cara → queda en cara (0 deg final), si cruz → queda girado 180
+  // la animación termina en 1800deg = 5 vueltas → cara
+  // para cruz hacemos 1980deg (5.5 vueltas)
+  overlay.style.setProperty("--coin-end", isCara ? "1800deg" : "1980deg");
+  inner.style.animation = "none";
+  void inner.offsetWidth;
+  inner.style.animation = "coin-spin 1.8s cubic-bezier(.4,0,.2,1) forwards";
+
+  overlay.classList.add("show");
+
+  // mostrar resultado tras la animación
+  setTimeout(function() {
+    resLabel.textContent = isCara ? "\uD83E\uDE99 CARA" : "\u2728 CRUZ";
+    resLabel.style.color = m.win ? "#4ade80" : "#f87171";
+    resSub.textContent   = (m.display || m.username) + (m.win ? " ganó" : " perdió");
+    resPts.textContent   = (m.win ? "+" : "-") + m.amount + " pts";
+    resPts.style.color   = m.win ? "#4ade80" : "#f87171";
+    resWrap.classList.add("show");
+  }, 2000);
+
+  clearTimeout(coinTimer);
+  coinTimer = setTimeout(function() {
+    overlay.classList.remove("show");
+    resWrap.classList.remove("show");
+  }, 5500);
+
+  // game-box también
+  var icon = isCara ? "\uD83E\uDE99" : "\u2728";
+  gameEl.innerHTML = "<span style='font-size:18px'>" + icon + "</span><span>" +
+    (m.display||m.username) + (m.win ? " gan\u00f3 +" : " perdi\u00f3 -") + m.amount + " pts</span>";
+  gameEl.classList.add("show");
+  clearTimeout(gameTimer);
+  gameTimer = setTimeout(function() { gameEl.classList.remove("show"); }, 5000);
+}
+
+// ── Mimics: ejecución de bloques ──────────────────────────────────────────────
+var mimicMediaTimer = null
+var mimicMsgTimer   = null
+
+// posiciona el contenedor de media en un punto aleatorio de la pantalla
+// (dentro de márgenes seguros para que no se corte)
+function placeMimicRandom(overlay) {
+  var marginX = 18, marginY = 20  // % desde los bordes
+  var x = marginX + Math.random() * (100 - marginX * 2)
+  var y = marginY + Math.random() * (100 - marginY * 2)
+  overlay.style.left = x + "vw"
+  overlay.style.top  = y + "vh"
+}
+
+function showMimicImage(m) {
+  var overlay = document.getElementById("mimic-media-overlay")
+  var inner   = document.getElementById("mimic-media-inner")
+  if (!overlay || !m.url) return
+  inner.innerHTML = '<img src="' + m.url + '" alt="">'
+  placeMimicRandom(overlay)
+  overlay.classList.add("show")
+  clearTimeout(mimicMediaTimer)
+  mimicMediaTimer = setTimeout(function() {
+    overlay.classList.remove("show")
+    setTimeout(function(){ inner.innerHTML = "" }, 400)
+  }, m.duration || 3000)
+}
+
+function showMimicVideo(m) {
+  var overlay = document.getElementById("mimic-media-overlay")
+  var inner   = document.getElementById("mimic-media-inner")
+  if (!overlay || !m.url) return
+  var vol = (typeof m.volume === "number") ? m.volume : 0.8
+  inner.innerHTML = '<video src="' + m.url + '" autoplay playsinline></video>'
+  var vid = inner.querySelector("video")
+  if (vid) {
+    vid.volume = vol
+    vid.muted  = false
+    // forzar reproducción con sonido
+    var p = vid.play()
+    if (p && p.catch) {
+      p.catch(function() {
+        // si el navegador bloquea autoplay con sonido, reintentar muteado
+        vid.muted = true
+        vid.play().catch(function(e){ console.warn("mimic video:", e) })
+      })
+    }
+  }
+  placeMimicRandom(overlay)
+  overlay.classList.add("show")
+  clearTimeout(mimicMediaTimer)
+  mimicMediaTimer = setTimeout(function() {
+    overlay.classList.remove("show")
+    setTimeout(function(){ inner.innerHTML = "" }, 400)
+  }, m.duration || 5000)
+}
+
+function playMimicSound(m) {
+  if (!m.url) return
+  var audio = new Audio(m.url)
+  audio.volume = (typeof m.volume === "number") ? m.volume : 0.8
+  audio.play().catch(function(e){ console.warn("mimic sound:", e) })
+}
+
+function playEmoteSound(m) {
+  if (!m.url) return
+  var audio = new Audio(m.url)
+  audio.volume = (typeof m.volume === "number") ? m.volume : 0.8
+  audio.play().catch(function(e){ console.warn("emote sound:", e) })
+}
+
+function showMimicMessage(m) {
+  var overlay = document.getElementById("mimic-msg-overlay")
+  var textEl  = document.getElementById("mimic-msg-text")
+  if (!overlay || !m.text) return
+  textEl.textContent = m.text
+  overlay.classList.add("show")
+  clearTimeout(mimicMsgTimer)
+  mimicMsgTimer = setTimeout(function() {
+    overlay.classList.remove("show")
+  }, m.duration || 4000)
+}
+
+// ── Level Up ──────────────────────────────────────────────────────────────────
+var levelupTimer = null
+function showLevelUp(m) {
+  var overlay = document.getElementById("levelup-overlay")
+  if (!overlay) return
+  document.getElementById("levelup-icon").textContent  = m.titleIcon || "⭐"
+  document.getElementById("levelup-name").textContent  = m.display || m.username
+  document.getElementById("levelup-level").textContent = "Nivel " + m.level
+  var titleEl = document.getElementById("levelup-title")
+  titleEl.textContent = m.title || ""
+  titleEl.style.color = m.titleColor || "#a1a1aa"
+  overlay.classList.remove("show")
+  void overlay.offsetWidth
+  overlay.classList.add("show")
+  launchConfetti(4000)
+  clearTimeout(levelupTimer)
+  levelupTimer = setTimeout(function() { overlay.classList.remove("show") }, 7000)
+}
+
+// ── Gift Announce ─────────────────────────────────────────────────────────────
+var giftTimer = null
+function showGiftAnnounce(m) {
+  var overlay = document.getElementById("gift-overlay")
+  if (!overlay) return
+  document.getElementById("gift-icon").textContent = m.mimicIcon || "🎁"
+  var text = ""
+  if (m.target === "boxes")    text = "@" + m.from + " regaló " + m.count + " caja" + (m.count !== 1 ? "s" : "") + " a la comunidad"
+  else if (m.target === "all")      text = (m.from || "Alguien") + " regaló a todos"
+  else if (m.target === "first_n") text = (m.from || "Alguien") + " regaló a los primeros " + m.count
+  else if (m.toUser)           text = "@" + m.from + " regaló a @" + m.toUser
+  else                         text = (m.from || "Alguien") + " hizo un regalo"
+  document.getElementById("gift-text").textContent  = text
+  var sub = (m.mimicIcon || "") + " " + (m.mimicName || "")
+  if (m.target === "first_n" || m.target === "all") sub += (m.count > 1 ? " · " + m.count + " viewers" : "")
+  document.getElementById("gift-mimic").textContent = sub
+  overlay.classList.remove("show")
+  void overlay.offsetWidth
+  overlay.classList.add("show")
+  launchConfetti(5000)
+  clearTimeout(giftTimer)
+  giftTimer = setTimeout(function() { overlay.classList.remove("show") }, 8000)
+}
+
+// ── Emoji Rain ────────────────────────────────────────────────────────────────
+var emojiRainTimer = null
+function showEmojiRain(m) {
+  var layer = document.getElementById("emoji-rain-layer")
+  if (!layer) return
+  var emoji = m.emoji || "🔥"
+  var duration = m.duration || 5000
+  var interval = setInterval(function() {
+    var drop = document.createElement("div")
+    drop.className = "emoji-drop"
+    drop.textContent = emoji
+    drop.style.left = Math.random() * 100 + "vw"
+    drop.style.fontSize = (24 + Math.random() * 28) + "px"
+    var fallDur = 2 + Math.random() * 2
+    drop.style.animationDuration = fallDur + "s"
+    layer.appendChild(drop)
+    setTimeout(function() { drop.remove() }, fallDur * 1000)
+  }, 120)
+  clearTimeout(emojiRainTimer)
+  emojiRainTimer = setTimeout(function() { clearInterval(interval) }, duration)
+}
+
+// ── Shake ─────────────────────────────────────────────────────────────────────
+function shakeScreen(m) {
+  var cls = "shake-" + (m.intensity || "medium")
+  document.body.classList.remove("shake-light", "shake-medium", "shake-strong")
+  void document.body.offsetWidth
+  document.body.classList.add(cls)
+  setTimeout(function() { document.body.classList.remove(cls) }, m.duration || 800)
+}
+
+// ── Flash ─────────────────────────────────────────────────────────────────────
+function flashScreen(m) {
+  var el = document.getElementById("flash-overlay")
+  if (!el) return
+  el.style.background = m.color || "#ffffff"
+  el.style.setProperty("--flash-dur", ((m.duration || 400) / 1000) + "s")
+  el.classList.remove("flash-go")
+  void el.offsetWidth
+  el.classList.add("flash-go")
+}
+
+// ── Reto al streamer ──────────────────────────────────────────────────────────
+var challengeTimer = null, challengeInterval = null
+function showStreamerChallenge(m) {
+  var overlay = document.getElementById("challenge-overlay")
+  if (!overlay) return
+  var total = m.seconds || 30
+  document.getElementById("challenge-text").textContent = m.text || "¡Reto!"
+  document.getElementById("challenge-from").textContent = m.from ? "Lanzado por " + m.from : ""
+  var secsEl = document.getElementById("challenge-secs")
+  var ring   = document.getElementById("challenge-ring")
+  var circ   = 213.6
+  secsEl.textContent = total
+  ring.style.transition = "none"
+  ring.style.strokeDashoffset = "0"
+
+  overlay.classList.remove("show")
+  void overlay.offsetWidth
+  overlay.classList.add("show")
+  launchConfetti(2500)
+
+  var remaining = total
+  clearInterval(challengeInterval)
+  // arrancar animación del anillo
+  setTimeout(function() {
+    ring.style.transition = "stroke-dashoffset " + total + "s linear"
+    ring.style.strokeDashoffset = circ
+  }, 50)
+
+  challengeInterval = setInterval(function() {
+    remaining--
+    secsEl.textContent = remaining > 0 ? remaining : 0
+    if (remaining <= 0) {
+      clearInterval(challengeInterval)
+      secsEl.textContent = "✓"
+    }
+  }, 1000)
+
+  clearTimeout(challengeTimer)
+  challengeTimer = setTimeout(function() {
+    overlay.classList.remove("show")
+  }, (total + 2) * 1000)
+}
+
+// ── Modo AFK ──────────────────────────────────────────────────────────────────
+var afkTimeInterval = null
+var afkStartedAt = null
+function afkStart(m) {
+  var ov = document.getElementById("afk-overlay")
+  if (!ov) return
+  afkStartedAt = m.startedAt || Date.now()
+  document.getElementById("afk-msg").textContent = m.message || "Volvemos pronto"
+  document.getElementById("afk-goal").textContent = m.goal || 100
+  document.getElementById("afk-next-num").textContent = (m.current || 0) + 1
+  updateAfkCounter(m.current || 0, m.goal || 100)
+  ov.classList.add("show")
+  // cronómetro en vivo
+  clearInterval(afkTimeInterval)
+  updateAfkTime()
+  afkTimeInterval = setInterval(updateAfkTime, 30000)
+}
+
+function afkEnd(m) {
+  var ov = document.getElementById("afk-overlay")
+  if (ov) ov.classList.remove("show")
+  clearInterval(afkTimeInterval)
+  launchConfetti(3000)
+}
+
+function updateAfkTime() {
+  if (!afkStartedAt) return
+  var ms = Date.now() - afkStartedAt
+  var totalMin = Math.floor(ms / 60000)
+  var h = Math.floor(totalMin / 60), mn = totalMin % 60
+  var txt = h > 0 ? ("Ausente hace " + h + "h " + mn + "min") : ("Ausente hace " + mn + " min")
+  var el = document.getElementById("afk-time")
+  if (el) el.textContent = txt
+}
+
+function updateAfkCounter(current, goal) {
+  document.getElementById("afk-counter-num").textContent = current
+  document.getElementById("afk-next-num").textContent = current + 1
+  var pct = Math.min(100, Math.round((current / goal) * 100))
+  document.getElementById("afk-bar-fill").style.width = pct + "%"
+}
+
+function afkCount(m) {
+  var numEl = document.getElementById("afk-counter-num")
+  updateAfkCounter(m.current, m.goal)
+  // animación "bump"
+  if (numEl) {
+    numEl.classList.remove("bump")
+    void numEl.offsetWidth
+    numEl.classList.add("bump")
+  }
+  // limpiar mensaje de ruptura
+  var br = document.getElementById("afk-break")
+  if (br && m.current > 0) br.classList.remove("show")
+}
+
+function afkCountBreak(m) {
+  var br = document.getElementById("afk-break")
+  if (br) {
+    br.textContent = "💥 @" + m.breaker + " rompió la cuenta en " + m.brokenAt +
+      (m.penalty > 0 ? " (-" + m.penalty + " pts)" : "") + " · ¡desde 1!"
+    br.classList.add("show")
+  }
+  shakeScreen({ intensity: "medium", duration: 600 })
+  updateAfkCounter(0, m.goal || parseInt(document.getElementById("afk-goal").textContent) || 100)
+}
+
+function afkGoalReached(m) {
+  launchConfetti(6000)
+  var br = document.getElementById("afk-break")
+  if (br) { br.style.color = "#4ade80"; br.textContent = "🎉 " + (m.message || "¡Meta alcanzada!") + (m.points > 0 ? " +" + m.points + " pts para todos!" : ""); br.classList.add("show") }
+  // sonido / video de recompensa
+  if (m.soundUrl) { var a = new Audio(m.soundUrl); a.volume = 0.85; a.play().catch(function(){}) }
+  if (m.videoUrl) showMimicVideo({ url: m.videoUrl, duration: 8000, volume: 0.85 })
+  // restaurar color del mensaje después
+  setTimeout(function(){ if (br) { br.style.color = "#f87171"; br.classList.remove("show") } }, 8000)
+}
+
+// ── Confeti ───────────────────────────────────────────────────────────────────
+var confettiCanvas  = document.getElementById("confetti-canvas")
+var confettiCtx     = confettiCanvas ? confettiCanvas.getContext("2d") : null
+var confettiPieces  = []
+var confettiTimer   = null
+var confettiRunning = false
+var CONFETTI_COLORS = ["#ff4d6d","#ffd166","#06d6a0","#118ab2","#7c6ef5","#ff6b6b","#ffa62b","#c77dff"]
+
+if (confettiCanvas) {
+  confettiCanvas.width  = window.innerWidth
+  confettiCanvas.height = window.innerHeight
+  window.addEventListener("resize", function() {
+    confettiCanvas.width  = window.innerWidth
+    confettiCanvas.height = window.innerHeight
+  })
+}
+
+function createConfettiPiece() {
+  return {
+    x: Math.random() * (confettiCanvas ? confettiCanvas.width : 1920),
+    y: -10,
+    w: Math.random() * 10 + 5,
+    h: Math.random() * 6 + 4,
+    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+    speed: Math.random() * 3 + 2,
+    angle: Math.random() * Math.PI * 2,
+    spin:  (Math.random() - 0.5) * 0.2,
+    drift: (Math.random() - 0.5) * 1.5,
+  }
+}
+
+function drawConfetti() {
+  if (!confettiCtx || !confettiCanvas) return
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height)
+  confettiPieces.forEach(function(p) {
+    confettiCtx.save()
+    confettiCtx.translate(p.x, p.y)
+    confettiCtx.rotate(p.angle)
+    confettiCtx.fillStyle = p.color
+    confettiCtx.fillRect(-p.w/2, -p.h/2, p.w, p.h)
+    confettiCtx.restore()
+    p.y += p.speed; p.x += p.drift; p.angle += p.spin
+    if (p.y > (confettiCanvas.height + 20)) {
+      p.y = -10
+      p.x = Math.random() * confettiCanvas.width
+    }
+  })
+  if (confettiRunning) requestAnimationFrame(drawConfetti)
+}
+
+function launchConfetti(duration) {
+  if (!confettiCanvas) return
+  confettiCanvas.style.opacity = "1"
+  confettiCanvas.style.pointerEvents = "none"
+  confettiRunning = true
+  confettiPieces = []
+  for (var i = 0; i < 120; i++) confettiPieces.push(createConfettiPiece())
+  drawConfetti()
+  clearTimeout(confettiTimer)
+  confettiTimer = setTimeout(function() {
+    confettiRunning = false
+    if (confettiCanvas) confettiCanvas.style.opacity = "0"
+    confettiPieces = []
+  }, duration || 6000)
+}
+
+// ── Arcoíris ──────────────────────────────────────────────────────────────────
+var rainbowTimer = null
+function showRainbow(duration) {
+  // crear arco dinámicamente si no existe
+  var existing = document.getElementById("rainbow-arc-dynamic")
+  if (existing) existing.remove()
+
+  var arc = document.createElement("div")
+  arc.id = "rainbow-arc-dynamic"
+  arc.style.cssText = [
+    "position:fixed",
+    "top:0",
+    "left:0",
+    "right:0",
+    "height:16px",
+    "z-index:9996",
+    "pointer-events:none",
+    "background:linear-gradient(90deg,#ff0000,#ff7700,#ffff00,#00ff00,#00bfff,#8b00ff)",
+    "opacity:1",
+    "box-shadow:0 0 40px 8px rgba(255,255,255,0.4)",
+    "transition:opacity 0.5s"
+  ].join(";")
+
+  document.body.appendChild(arc)
+
+  // también arco curvo en el centro
+  var arc2 = document.createElement("div")
+  arc2.id = "rainbow-arc-dynamic2"
+  arc2.style.cssText = [
+    "position:fixed",
+    "top:60%",
+    "left:50%",
+    "transform:translate(-50%,-50%)",
+    "width:700px",
+    "height:350px",
+    "border-radius:350px 350px 0 0",
+    "border-top:16px solid transparent",
+    "border-left:16px solid transparent",
+    "border-right:16px solid transparent",
+    "z-index:9995",
+    "pointer-events:none",
+    "opacity:0.7",
+    "background:transparent",
+    "box-shadow:0 -8px 0 8px violet,0 -24px 0 16px indigo,0 -40px 0 24px blue,0 -56px 0 32px green,0 -72px 0 40px yellow,0 -88px 0 48px orange,0 -104px 0 56px red"
+  ].join(";")
+  document.body.appendChild(arc2)
+
+  clearTimeout(rainbowTimer)
+  rainbowTimer = setTimeout(function() {
+    var a = document.getElementById("rainbow-arc-dynamic")
+    var b = document.getElementById("rainbow-arc-dynamic2")
+    if (a) { a.style.opacity = "0"; setTimeout(function(){ a.remove() }, 500) }
+    if (b) { b.style.opacity = "0"; setTimeout(function(){ b.remove() }, 500) }
+  }, duration || 5000)
+}
+
+</script>
+</body>
+</html>

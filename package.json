@@ -1,0 +1,63 @@
+{
+  "name": "mimiku",
+  "version": "2.0.0",
+  "description": "Plataforma de engagement para streamers y VTubers",
+  "main": "main.cjs",
+  "author": "Mimiku contributors",
+  "scripts": {
+    "test": "node --test tests/**/*.test.js",
+    "start": "electron .",
+    "rebuild": "npx @electron/rebuild -f -w better-sqlite3 -v 35.7.5",
+    "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "better-sqlite3": "^11.0.0",
+    "tmi.js": "^1.8.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.5",
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "fun.mimiku.app",
+    "productName": "Mimiku",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "src/**/*",
+      "mod-panel/**/*",
+      "!src/**/*.map",
+      "!**/fix-*.js"
+    ],
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Mimiku-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mimiku",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": false,
+      "include": "build/installer.nsh"
+    }
+  }
+}

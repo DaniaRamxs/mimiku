@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mimiku</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home-screen">
+  <header class="home-header">
+    <div class="home-logo">mimiku</div>
+    <p class="home-sub">Plataforma para streamers y comunidades</p>
+  </header>
+  <div class="home-body">
+    <div class="home-search-wrap">
+      <input id="search-input" type="text" placeholder="Buscar canal..." oninput="filterChannels(this.value)">
+    </div>
+    <div id="channels-grid" class="channels-grid">
+      <div class="channels-loading">Cargando canales...</div>
+    </div>
+  </div>
+</div>
+
+<!-- CHANNEL VIEW -->
+<div id="channel-screen" style="display:none">
+  <header id="ch-topbar">
+    <button class="back-btn" onclick="goHome()">Inicio</button>
+    <div class="ch-topbar-info">
+      <div class="ch-avatar" id="ch-avatar"></div>
+      <div>
+        <div class="ch-topbar-name" id="ch-topbar-name"></div>
+        <div class="ch-topbar-status">mimiku activo</div>
+      </div>
+    </div>
+    <div class="ch-topbar-right" id="ch-topbar-right">
+      <div id="viewer-chip" style="display:none" class="viewer-chip">
+        <span id="viewer-chip-name"></span>
+        <button onclick="logoutViewer()" class="btn-ghost-sm">Salir</button>
+      </div>
+      <button id="btn-login-viewer" class="btn-twitch-sm" onclick="loginViewer()">
+        Conectar Twitch
+      </button>
+    </div>
+  </header>
+
+  <div class="ch-tabs">
+    <button class="ch-tab active" data-tab="overview">Overview</button>
+    <button class="ch-tab" data-tab="profile">Mi Perfil</button>
+    <button class="ch-tab" data-tab="collection">Coleccion</button>
+    <button class="ch-tab" data-tab="mimics">Mis Mimics</button>
+    <button class="ch-tab" data-tab="shop">Tienda</button>
+    <button class="ch-tab" data-tab="arena">🏟 Arena</button>
+    <button class="ch-tab" data-tab="economy">Economia</button>
+    <button class="ch-tab" data-tab="mod">Moderar</button>
+  </div>
+
+  <div id="ch-content">
+
+    <!-- Overview -->
+    <div id="tab-overview" class="ch-tab-content active">
+      <div class="overview-stats">
+        <div class="stat-card"><span class="label">Viewers</span><span class="value" id="ov-viewers">-</span></div>
+        <div class="stat-card"><span class="label">Puntos totales</span><span class="value" id="ov-points">-</span></div>
+        <div class="stat-card"><span class="label">Eventos</span><span class="value" id="ov-events">-</span></div>
+        <div class="stat-card"><span class="label">Mods activos</span><span class="value" id="ov-mods">-</span></div>
+      </div>
+      <div class="two-col" style="margin-top:1.5rem">
+        <div>
+          <p class="section-label">TOP VIEWERS</p>
+          <div id="ov-ranking" class="ov-list"><p class="empty-small">Cargando...</p></div>
+        </div>
+        <div>
+          <p class="section-label">ACTIVIDAD RECIENTE</p>
+          <div id="ov-activity" class="ov-list"><p class="empty-small">Cargando...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mi Perfil -->
+    <div id="tab-profile" class="ch-tab-content">
+      <div id="profile-login-gate" class="mod-gate">
+        <div class="mod-gate-card">
+          <div class="mod-gate-icon">👤</div>
+          <h2 class="mod-gate-title">Tu perfil en este canal</h2>
+          <p class="mod-gate-desc">Conecta tu cuenta de Twitch para ver tu perfil, coleccion de cartas, logros y mas.</p>
+          <button class="btn-twitch" onclick="loginViewer()">Conectar con Twitch</button>
+        </div>
+      </div>
+      <div id="profile-content" style="display:none">
+        <div class="profile-layout">
+          <div>
+            <div class="profile-banner" id="profile-banner">
+              <div class="profile-banner-inner">
+                <div class="profile-avatar-wrap">
+                  <img id="profile-avatar" src="" alt="" class="profile-avatar">
+                  <img id="profile-frame" src="" alt="" class="profile-frame" style="display:none">
+                </div>
+                <div class="profile-info">
+                  <div class="profile-display" id="profile-display"></div>
+                  <div class="profile-handle" id="profile-handle"></div>
+                  <div class="profile-badges" id="profile-badges"></div>
+                </div>
+              </div>
+            </div>
+            <div class="profile-stats" style="margin-top:12px">
+              <div class="profile-stat"><span class="profile-stat-val" id="prof-points">0</span><span class="profile-stat-label">puntos</span></div>
+              <div class="profile-stat"><span class="profile-stat-val" id="prof-msgs">0</span><span class="profile-stat-label">mensajes</span></div>
+              <div class="profile-stat"><span class="profile-stat-val" id="prof-hours">0</span><span class="profile-stat-label">horas</span></div>
+              <div class="profile-stat"><span class="profile-stat-val" id="prof-cards">0</span><span class="profile-stat-label">cartas</span></div>
+            </div>
+            <div id="profile-level-section" class="profile-level-section"></div>
+          </div>
+          <div>
+            <p class="section-label">LOGROS</p>
+            <div id="profile-achievements" class="achievements-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coleccion -->
+    <div id="tab-collection" class="ch-tab-content">
+      <div id="collection-gate" class="mod-gate">
+        <div class="mod-gate-card">
+          <div class="mod-gate-icon">🃏</div>
+          <h2 class="mod-gate-title">Tu coleccion</h2>
+          <p class="mod-gate-desc">Conecta Twitch para ver tus cartas.</p>
+          <button class="btn-twitch" onclick="loginViewer()">Conectar con Twitch</button>
+        </div>
+      </div>
+      <div id="collection-content" style="display:none">
+        <div class="collection-header">
+          <p class="section-label">TU COLECCION</p>
+          <button class="btn-primary" style="width:auto;padding:8px 16px" onclick="switchChTab('shop')">Abrir sobres</button>
+        </div>
+        <div id="collection-grid" class="collection-grid"></div>
+      </div>
+    </div>
+
+    <!-- Mis Mimics -->
+    <div id="tab-mimics" class="ch-tab-content">
+      <div id="mimics-gate" class="mod-gate">
+        <div class="mod-gate-card">
+          <div class="mod-gate-icon">✨</div>
+          <h2 class="mod-gate-title">Tus Mimics</h2>
+          <p class="mod-gate-desc">Conecta Twitch para ver y usar tus Mimics en vivo.</p>
+          <button class="btn-twitch" onclick="loginViewer()">Conectar con Twitch</button>
+        </div>
+      </div>
+      <div id="mimics-content" style="display:none">
+        <div id="viewer-boxes-inv"></div>
+        <p class="section-label" style="margin-top:1rem">TUS MIMICS — tócalos para activarlos en el stream</p>
+        <div id="viewer-mimics-grid" class="mimics-inv-grid"></div>
+      </div>
+    </div>
+
+    <!-- Tienda -->
+    <div id="tab-shop" class="ch-tab-content">
+      <div id="shop-gate" class="mod-gate">
+        <div class="mod-gate-card">
+          <div class="mod-gate-icon">🏪</div>
+          <h2 class="mod-gate-title">Tienda del canal</h2>
+          <p class="mod-gate-desc">Conecta Twitch para comprar sobres y cosmeticos.</p>
+          <button class="btn-twitch" onclick="loginViewer()">Conectar con Twitch</button>
+        </div>
+      </div>
+      <div id="shop-content" style="display:none">
+        <div class="shop-section">
+          <p class="section-label">CAJAS DE MIMICS</p>
+          <div id="mimic-boxes-grid" class="packs-grid"></div>
+        </div>
+        <div class="shop-section">
+          <p class="section-label">SOBRES DE CARTAS</p>
+          <div id="packs-grid" class="packs-grid"></div>
+        </div>
+        <div class="shop-section" style="margin-top:2rem">
+          <p class="section-label">COSMETICOS</p>
+          <div id="cosmetics-grid" class="cosmetics-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Economia -->
+    <div id="tab-economy" class="ch-tab-content">
+      <div class="eco-layout">
+        <div>
+          <p class="section-label">RANKING</p>
+          <div id="eco-ranking" class="eco-ranking-list"><p class="empty-small">Cargando...</p></div>
+        </div>
+        <div>
+          <p class="section-label">HISTORIAL</p>
+          <div id="eco-log" class="eco-log-list"><p class="empty-small">Cargando...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arena -->
+    <div id="tab-arena" class="ch-tab-content">
+      <!-- sin sala activa -->
+      <div id="arena-none" class="arena-none">
+        <div class="arena-none-icon">🏟</div>
+        <h2>No hay partida activa</h2>
+        <p>Cuando el streamer cree una partida, aparecerá aquí para que te unas.</p>
+        <button class="btn-twitch" onclick="loadArena()">↻ Buscar partida</button>
+      </div>
+
+      <!-- lobby -->
+      <div id="arena-room" style="display:none">
+        <div class="arena-room-banner">
+          <div class="arena-game-icon">💣</div>
+          <div>
+            <div class="arena-game-name">Palabra Bomba</div>
+            <div class="arena-room-meta">Sala <strong id="arena-code-display">-----</strong> · <span id="arena-cat-display">Libre</span></div>
+          </div>
+          <div id="arena-room-status" class="arena-room-status">EN LOBBY</div>
+        </div>
+
+        <!-- gate: necesita identidad -->
+        <div id="arena-join-box" class="arena-join-box">
+          <p class="arena-join-title">¡Únete a la partida!</p>
+          <div id="arena-guest-row" style="display:none">
+            <input type="text" id="arena-guest-name" placeholder="Tu nombre" maxlength="20">
+            <button class="btn-twitch" onclick="joinArenaGuest()">Entrar como invitado</button>
+          </div>
+          <div id="arena-joined-msg" style="display:none" class="arena-joined-msg">✓ Estás en el lobby. Espera a que comience…</div>
+        </div>
+
+        <p class="section-label" style="margin-top:1.5rem">JUGADORES <span id="arena-count-badge">0</span></p>
+        <div id="arena-lobby-players" class="arena-lobby-players"></div>
+      </div>
+
+      <!-- juego en curso -->
+      <div id="arena-game" style="display:none">
+        <div class="ag-hud">
+          <div class="ag-hud-item"><span class="ag-hud-label">Ronda</span><span id="ag-round" class="ag-hud-val">1</span></div>
+          <div class="ag-hud-item"><span class="ag-hud-label">Vivos</span><span id="ag-alive" class="ag-hud-val">0</span></div>
+          <div class="ag-hud-item"><span class="ag-hud-label">Categoría</span><span id="ag-cat" class="ag-hud-val">Libre</span></div>
+        </div>
+
+        <div class="ag-bomb-wrap">
+          <div id="ag-bomb" class="ag-bomb">
+            <div id="ag-timer" class="ag-timer">15</div>
+          </div>
+        </div>
+
+        <div class="ag-letter-box">
+          <span class="ag-letter-label">Palabra que contenga</span>
+          <span id="ag-letter" class="ag-letter">N</span>
+        </div>
+        <div id="ag-lastword" class="ag-lastword"></div>
+
+        <div id="ag-turn-info" class="ag-turn-info"></div>
+
+        <!-- input solo visible si es tu turno -->
+        <div id="ag-input-row" class="ag-input-row" style="display:none">
+          <input type="text" id="ag-word-input" placeholder="Escribe tu palabra…" autocomplete="off">
+          <button class="btn-twitch" onclick="submitArenaWord()">Enviar 💥</button>
+        </div>
+        <div id="ag-wait-msg" class="ag-wait-msg"></div>
+      </div>
+
+      <!-- resultado final -->
+      <div id="arena-result" style="display:none">
+        <div class="ag-podium">
+          <div class="ag-trophy">🏆</div>
+          <div class="ag-winner-label">GANADOR</div>
+          <div id="ag-winner-name" class="ag-winner-name"></div>
+        </div>
+        <button class="btn-twitch" onclick="loadArena()" style="margin-top:20px">↻ Volver al inicio</button>
+      </div>
+    </div>
+
+    <!-- Moderar -->
+    <div id="tab-mod" class="ch-tab-content">
+      <div id="mod-login-gate" class="mod-gate">
+        <div class="mod-gate-card">
+          <div class="mod-gate-icon">🛡</div>
+          <h2 class="mod-gate-title">Acceso de Moderador</h2>
+          <p class="mod-gate-desc">Conecta tu cuenta de Twitch para moderar este canal.</p>
+          <button class="btn-twitch" onclick="loginMod()">Conectar con Twitch</button>
+          <p id="mod-login-error" class="error-msg"></p>
+        </div>
+      </div>
+      <div id="mod-panel-inner" style="display:none">
+        <div class="mod-user-bar">
+          <span id="mod-user-name" class="mod-user-chip"></span>
+          <button class="btn-ghost-sm" onclick="logoutMod()">Salir</button>
+        </div>
+        <div class="canvas-layout">
+          <div class="canvas-wrap">
+            <div class="canvas-topbar">
+              <span class="canvas-label">Overlay en vivo - 1920x1080</span>
+              <span class="canvas-hint">Arrastra y redimensiona los widgets</span>
+            </div>
+            <div class="canvas-container">
+              <div id="overlay-canvas">
+                <div id="canvas-empty" class="canvas-empty">Agrega contenido desde el panel</div>
+              </div>
+            </div>
+            <div class="canvas-ticker">Mimiku Overlay activo</div>
+          </div>
+          <div class="add-panel">
+            <p class="section-label">AGREGAR AL OVERLAY</p>
+            <div class="type-grid">
+              <button class="type-card active" data-type="url" onclick="selectType('url',this)"><span class="type-icon">🌐</span><span>Web</span></button>
+              <button class="type-card" data-type="text" onclick="selectType('text',this)"><span class="type-icon">💬</span><span>Texto</span></button>
+              <button class="type-card" data-type="image" onclick="selectType('image',this)"><span class="type-icon">🖼</span><span>Imagen</span></button>
+              <button class="type-card" data-type="alert" onclick="selectType('alert',this)"><span class="type-icon">🔔</span><span>Alerta</span></button>
+            </div>
+            <div id="input-url" class="input-block">
+              <label class="field-label">URL</label>
+              <input id="content-url" type="url" placeholder="https://...">
+            </div>
+            <div id="input-text" class="input-block" style="display:none">
+              <label class="field-label">Texto</label>
+              <textarea id="content-text" rows="3" placeholder="Mensaje..."></textarea>
+            </div>
+            <div id="input-image" class="input-block" style="display:none">
+              <label class="field-label">URL de imagen</label>
+              <input id="content-image" type="url" placeholder="https://...jpg">
+            </div>
+            <div id="input-alert" class="input-block" style="display:none">
+              <label class="field-label">Alerta</label>
+              <input id="content-alert" type="text" placeholder="Alerta!">
+              <label class="field-label" style="margin-top:8px">Duracion (seg)</label>
+              <input id="alert-duration" type="number" value="5" min="1" max="30">
+            </div>
+            <button class="btn-send" onclick="sendToOverlay()">Agregar al overlay</button>
+            <div class="divider"></div>
+            <p class="section-label">EN PANTALLA</p>
+            <div id="widget-list" class="widget-list"><p class="empty-small">Vacio</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Pack opening modal -->
+<div id="pack-modal" style="display:none">
+  <div class="pack-modal-bg" onclick="closePackModal()"></div>
+  <div class="pack-modal-card">
+    <div id="pack-modal-state-loading" class="pack-modal-state">
+      <div class="pack-spinner"></div>
+      <p>Abriendo sobre...</p>
+    </div>
+    <div id="pack-modal-state-reveal" class="pack-modal-state" style="display:none">
+      <h2 class="pack-modal-title" id="pack-modal-pack-name"></h2>
+      <div class="pack-cards-reveal" id="pack-cards-reveal"></div>
+      <button class="btn-primary" style="width:auto;padding:10px 28px;margin-top:24px" onclick="closePackModal()">Genial!</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

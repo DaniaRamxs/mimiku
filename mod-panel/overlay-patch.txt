@@ -1,0 +1,23 @@
+
+// reemplaza startSignalPolling y pollSignals en el overlay HTML
+let pollingStarted = false
+
+async function startSignalPolling() {
+  if (pollingStarted) return
+  pollingStarted = true
+
+  // obtener el último ID existente para no procesar señales viejas
+  try {
+    const r = await fetch(
+      SUPABASE_URL + "/rest/v1/webrtc_signals?channel_id=eq." + channel + "&order=id.desc&limit=1",
+      { headers: SB_HEADERS }
+    )
+    const rows = await r.json()
+    if (Array.isArray(rows) && rows.length) {
+      lastSigId = rows[0].id
+      console.log("[overlay] polling arrancado, lastSigId:", lastSigId)
+    }
+  } catch {}
+
+  setInterval(pollSignals, 800)
+}

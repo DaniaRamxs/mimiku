@@ -1,0 +1,27 @@
+{
+  "connection": {
+    "url": "ws://localhost:8001",
+    "pluginName": "Mimiku Roulette",
+    "pluginDeveloper": "Mimiku contributors",
+    "tokenPath": "vts-token.json"
+  },
+  "itemRoulette": {
+    "durationMs": 30000,
+    "fadeTime": 0.5,
+    "size": 0.32,
+    "positionX": 0,
+    "positionY": 0.3,
+    "pinToArtMesh": "Head",
+    "pool": [
+      { "fileName": "gorro_pirata.png" },
+      { "fileName": "lentes_sol.png" },
+      { "fileName": "orejas_gato.png" }
+    ]
+  },
+  "avatarRoulette": {
+    "pool": [
+      { "modelID": "REEMPLAZAR_CON_ID_REAL_1", "name": "Hikki Normal" },
+      { "modelID": "REEMPLAZAR_CON_ID_REAL_2", "name": "Hikki Chibi" }
+    ]
+  }
+}
