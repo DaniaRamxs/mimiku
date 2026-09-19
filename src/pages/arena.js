@@ -1,5 +1,6 @@
 // pages/arena.js — Control de partidas Arena desde Mimiku Desktop
 const { ipcRenderer } = require("electron")
+const { escapeHtml, safeHttpUrl } = require("../core/html.js")
 
 let currentRoom = null
 let lobbyPoll = null
@@ -53,10 +54,10 @@ function renderLobby() {
   if (grid) {
     grid.innerHTML = players.length ? players.map(p => `
       <div class="arena-player-chip ${p.is_ready ? "ready" : ""}">
-        <div class="arena-player-av">${p.avatar ? `<img src="${p.avatar}">` : (p.display||"?")[0].toUpperCase()}</div>
-        <div class="arena-player-name">${p.display}</div>
+        <div class="arena-player-av">${safeHttpUrl(p.avatar) ? `<img src="${escapeHtml(safeHttpUrl(p.avatar))}">` : escapeHtml((p.display || "?")[0].toUpperCase())}</div>
+        <div class="arena-player-name">${escapeHtml(p.display || p.username)}</div>
         ${p.is_ready ? `<span class="arena-ready-tag">Listo</span>` : ""}
-      </div>`).join("") : `<p class="empty">Esperando jugadores… comparte el código ${currentRoom.code}</p>`
+      </div>`).join("") : `<p class="empty">Esperando jugadores… comparte el código ${escapeHtml(currentRoom.code)}</p>`
   }
 
   const statusEl = document.getElementById("arena-status-label")

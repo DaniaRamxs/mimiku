@@ -76,7 +76,12 @@ function getStatus() {
 // ── Contador comunitario ────────────────────────────────────────────────────
 // Llamado por cada mensaje del chat mientras AFK está activo.
 // Detecta si el mensaje es un número y aplica las reglas.
-function onMessage(username, display, message) {
+// Es un juego deliberadamente GLOBAL/comunitario (todo el chat cuenta junto,
+// sin importar la plataforma) — "la misma persona" se sigue identificando
+// por username, a propósito. Lo que SÍ debe respetar identidad por
+// plataforma es cualquier movimiento de puntos real (penalización/premio),
+// por eso platformName/platformUserId se propagan hacia addPoints.
+function onMessage(username, display, message, platformName = "twitch", platformUserId = "") {
   if (!afk.active) return
 
   const trimmed = message.trim()
@@ -88,13 +93,13 @@ function onMessage(username, display, message) {
 
   // regla 1: misma persona no puede contar dos veces seguidas
   if (afk.lastCounter && afk.lastCounter === username) {
-    breakCount(username, display, num, "no puedes contar dos veces seguidas")
+    breakCount(username, display, num, "no puedes contar dos veces seguidas", platformName, platformUserId)
     return
   }
 
   // regla 2: número correcto
   if (num !== expected) {
-    breakCount(username, display, num, `el número era ${expected}`)
+    breakCount(username, display, num, `el número era ${expected}`, platformName, platformUserId)
     return
   }
 
@@ -111,14 +116,14 @@ function onMessage(username, display, message) {
   broadcastCounter()
 }
 
-function breakCount(username, display, num, reason) {
+function breakCount(username, display, num, reason, platformName = "twitch", platformUserId = "") {
   const brokenAt = afk.current
   afk.current = 0
   afk.lastCounter = null
 
   // penalización opcional
   if (afk.penalty > 0) {
-    try { addPoints(username, -afk.penalty, "rompe-contador") } catch (e) {}
+    try { addPoints(username, -afk.penalty, "rompe-contador", { platform: platformName, platformUserId }) } catch (e) {}
   }
 
   if (_say) _say(`💥 @${display} rompió la cuenta en ${brokenAt} (${reason}). ¡Volvemos a empezar desde 1!`)
@@ -138,12 +143,16 @@ async function reachGoal() {
   // disparar automatizaciones
   const r = afk.rewards
 
-  // puntos a todos los activos
+  // puntos a todos los activos, multiplataforma: cada viewer activo recibe
+  // el premio en SU wallet real (platform + platformUserId), no siempre en
+  // "twitch" como antes.
   if (r.points > 0) {
     try {
-      let active = []
-      try { active = require("./twitch.js").getActiveViewers() } catch (e) {}
-      for (const usr of active) addPoints(usr, r.points, "meta-contador")
+      const { getDefaultActivityTracker } = require("../core/interactions/activity-consumer.js")
+      const active = getDefaultActivityTracker().getActiveViewerIdentities()
+      for (const viewer of active) {
+        addPoints(viewer.username, r.points, "meta-contador", { platform: viewer.platform, platformUserId: viewer.platformUserId })
+      }
     } catch (e) {}
   }
 
@@ -188,22 +197,32 @@ function broadcastAfkState() {
 }
 
 // ── Comandos solo-idle ──────────────────────────────────────────────────────
-// devuelve true si manejó el comando (para que twitch.js no lo procese más)
-function handleCommand(username, display, command) {
-  if (!afk.active) return false
+// Fase 1.6: sin operación de identidad/economía — es solo un texto de
+// estado — así que se movió a Command Engine (agnóstico de plataforma) en
+// vez de seguir gateado dentro de twitch-adapter.js. `getIdleCommandReply`
+// es la versión pura (sin efectos secundarios) que usa Command Engine;
+// `handleCommand` se conserva como wrapper por compatibilidad de API.
+function getIdleCommandReply(command) {
+  if (!afk.active) return null
   const cmd = command.toLowerCase().split(" ")[0]
 
   if (cmd === "!afk" || cmd === "!brb" || cmd === "!volver") {
-    if (_say) _say(`😴 ${afk.message} · Lleva ${formatElapsed(Date.now() - afk.startedAt)} ausente.`)
-    return true
+    return `😴 ${afk.message} · Lleva ${formatElapsed(Date.now() - afk.startedAt)} ausente.`
   }
 
   if (cmd === "!contador" || cmd === "!cuenta") {
-    if (_say) _say(`🔢 Vamos en ${afk.current}/${afk.goal}. El siguiente número es ${afk.current + 1}.`)
-    return true
+    return `🔢 Vamos en ${afk.current}/${afk.goal}. El siguiente número es ${afk.current + 1}.`
   }
 
-  return false
+  return null
+}
+
+// devuelve true si manejó el comando
+function handleCommand(username, display, command) {
+  const reply = getIdleCommandReply(command)
+  if (reply === null) return false
+  if (_say) _say(reply)
+  return true
 }
 
 function formatElapsed(ms) {
@@ -217,5 +236,5 @@ function formatElapsed(ms) {
 module.exports = {
   init, setBroadcast, setSay,
   activate, deactivate, getStatus,
-  onMessage, handleCommand,
+  onMessage, handleCommand, getIdleCommandReply,
 }

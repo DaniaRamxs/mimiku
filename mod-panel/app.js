@@ -18,6 +18,10 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char])
 }
 
+function inlineJson(value) {
+  return escapeHtml(JSON.stringify(String(value ?? "")))
+}
+
 window.addEventListener("load", async () => {
   if (!API_TOKEN) { showToast("Abre este panel desde Mimiku Desktop"); return }
   try {
@@ -30,7 +34,7 @@ window.addEventListener("load", async () => {
 
 function renderChannels(channels) {
   const grid = document.getElementById("channels-grid")
-  grid.innerHTML = channels.map(item => `<button class="channel-card" onclick="openChannel('${escapeHtml(item.id)}')">
+  grid.innerHTML = channels.map(item => `<button class="channel-card" onclick="openChannel(${inlineJson(item.id)})">
     <div class="channel-card-avatar">${escapeHtml((item.display || item.id)[0].toUpperCase())}</div>
     <div class="channel-card-name">${escapeHtml(item.display || item.id)}</div>
     <div class="channel-card-handle">Local · /${escapeHtml(item.id)}</div>
@@ -126,7 +130,7 @@ async function loadShop() {
   const canBuy = showViewerGate("shop")
   try {
     const { items } = await api(`/shop?channel=${encodeURIComponent(state.currentChannel)}`)
-    document.getElementById("packs-grid").innerHTML = items.map(item => `<div class="pack-card"><strong>${escapeHtml(item.name)}</strong><span>${item.price} pts</span><button ${canBuy ? "" : "disabled"} onclick="buyShopItem('${escapeHtml(item.id)}')">Comprar</button></div>`).join("") || '<p class="empty-small">La tienda aún no tiene items.</p>'
+    document.getElementById("packs-grid").innerHTML = items.map(item => `<div class="pack-card"><strong>${escapeHtml(item.name)}</strong><span>${Number(item.price) || 0} pts</span><button ${canBuy ? "" : "disabled"} onclick="buyShopItem(${inlineJson(item.id)})">Comprar</button></div>`).join("") || '<p class="empty-small">La tienda aún no tiene items.</p>'
     document.getElementById("mimic-boxes-grid").innerHTML = ""
     document.getElementById("cosmetics-grid").innerHTML = ""
   } catch (error) { showToast(error.message) }
@@ -213,7 +217,10 @@ async function sendToOverlay() {
   const fields = { url: "content-url", text: "content-text", image: "content-image", alert: "content-alert" }
   const content = document.getElementById(fields[state.activeType])?.value || ""
   try {
-    await api("/commands", { method: "POST", body: { type: state.activeType === "alert" ? "alert" : "widget_add", payload: { content, text: content, duration: 5000 } } })
+    await api("/commands", { method: "POST", body: {
+      type: state.activeType === "alert" ? "alert" : "widget_add",
+      payload: { content_type: state.activeType, content, text: content, duration: 5000 },
+    } })
     showToast("Enviado al overlay local")
   } catch (error) { showToast(error.message) }
 }

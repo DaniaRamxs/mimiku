@@ -6,7 +6,7 @@ let kingVisible = false
 function initOverlay() {}
 
 function copyUrl() {
-  navigator.clipboard.writeText("http://localhost:7777/overlay")
+  navigator.clipboard.writeText("http://127.0.0.1:7777/overlay")
   showToast("URL copiada al portapapeles")
 }
 

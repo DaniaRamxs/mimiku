@@ -1,9 +1,32 @@
 // pages/economy.js
 const { ipcRenderer } = require("electron")
+const { escapeHtml } = require("../core/html.js")
 
 async function initEconomy() {
   await renderRanking()
   await renderLog()
+  await loadGrantViewers()
+}
+
+async function loadGrantViewers() {
+  const select = document.getElementById("grant-user")
+  if (!select) return
+  const viewers = await ipcRenderer.invoke("activity:getActiveViewers")
+  select.replaceChildren()
+  const placeholder = document.createElement("option")
+  placeholder.value = ""
+  placeholder.textContent = viewers.length ? "Elige un viewer activo…" : "Sin viewers activos todavía"
+  select.append(placeholder)
+  for (const viewer of viewers) {
+    const option = document.createElement("option")
+    option.value = `${viewer.platform}:${viewer.platformUserId || `legacy:${viewer.username}`}`
+    option.textContent = `[${viewer.platform}] ${viewer.displayName || viewer.username}`
+    option.dataset.platform = viewer.platform
+    option.dataset.platformUserId = viewer.platformUserId || ""
+    option.dataset.username = viewer.username
+    option.dataset.displayName = viewer.displayName || viewer.username
+    select.append(option)
+  }
 }
 
 async function renderRanking() {
@@ -12,7 +35,7 @@ async function renderRanking() {
   if (!el) return
 
   if (!ranking.length) {
-    el.innerHTML = `<p class="empty">Aún no hay viewers registrados. Conecta Twitch en Ajustes.</p>`
+    el.innerHTML = `<p class="empty">Aún no hay viewers registrados. Aparecerán cuando participen desde una plataforma conectada.</p>`
     return
   }
 
@@ -23,7 +46,7 @@ async function renderRanking() {
     <div class="rank-row">
       <span class="rank-pos">${medal}</span>
       <div class="rank-info">
-        <span class="rank-name">${v.display || v.username}</span>
+        <span class="rank-name">${escapeHtml(v.display || v.username)}</span>
         <div class="rank-bar-wrap"><div class="rank-bar" style="width:${bar}%"></div></div>
       </div>
       <span class="rank-pts">${v.points.toLocaleString()} pts</span>
@@ -47,8 +70,8 @@ async function renderLog() {
     const color = l.delta >= 0 ? "#4ade80" : "#f87171"
     return `
     <div class="log-row">
-      <span class="log-user">${l.username}</span>
-      <span class="log-reason">${l.reason}</span>
+      <span class="log-user">${escapeHtml(l.username)}</span>
+      <span class="log-reason">${escapeHtml(l.reason)}</span>
       <span class="log-delta" style="color:${color}">${sign}${l.delta}</span>
       <span class="log-time">${l.created_at.slice(11,16)}</span>
     </div>`
@@ -56,15 +79,25 @@ async function renderLog() {
 }
 
 async function grantPoints() {
-  const user   = document.getElementById("grant-user").value.trim()
+  const select = document.getElementById("grant-user")
+  const option = select?.selectedOptions?.[0]
   const amount = parseInt(document.getElementById("grant-amount").value, 10)
-  if (!user || isNaN(amount)) return
+  if (!option?.value || isNaN(amount)) return
 
-  await ipcRenderer.invoke("economy:addPoints", { username: user, delta: amount, reason: "manual" })
-  document.getElementById("grant-user").value   = ""
+  await ipcRenderer.invoke("economy:addPoints", {
+    identity: {
+      platform: option.dataset.platform,
+      platformUserId: option.dataset.platformUserId,
+      username: option.dataset.username,
+      displayName: option.dataset.displayName,
+    },
+    delta: amount,
+    reason: "manual",
+  })
+  select.value = ""
   document.getElementById("grant-amount").value = ""
   await renderRanking()
   await renderLog()
 }
 
-module.exports = { initEconomy, grantPoints, renderRanking, renderLog }
+module.exports = { initEconomy, loadGrantViewers, grantPoints, renderRanking, renderLog }

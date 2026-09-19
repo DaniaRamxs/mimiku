@@ -1,5 +1,6 @@
 // pages/vtuber.js — configuración de VTube Studio (ruletas de ítem y avatar)
 const { ipcRenderer } = require("electron")
+const { escapeHtml, inlineJson } = require("../core/html.js")
 
 let vtsConfig = null
 
@@ -36,7 +37,7 @@ function renderVtsConfig() {
   if (itemEl) {
     itemEl.innerHTML = itemPool.length ? itemPool.map((it, i) => `
       <div class="vts-pool-row">
-        <input type="text" value="${(it.fileName||'').replace(/"/g,'&quot;')}" onchange="window.vtuberPage.updateItem(${i}, this.value)" placeholder="nombre_archivo.png">
+        <input type="text" value="${escapeHtml(it.fileName)}" onchange="window.vtuberPage.updateItem(${i}, this.value)" placeholder="nombre_archivo.png">
         <button class="btn-icon-sm danger" onclick="window.vtuberPage.removeItem(${i})">✕</button>
       </div>`).join("") : `<p class="empty-small">Sin ítems. Agrega uno o descúbrelos desde VTS.</p>`
   }
@@ -50,8 +51,8 @@ function renderVtsConfig() {
   if (modelEl) {
     modelEl.innerHTML = modelPool.length ? modelPool.map((m, i) => `
       <div class="vts-pool-row">
-        <input type="text" value="${(m.name||'').replace(/"/g,'&quot;')}" onchange="window.vtuberPage.updateModelName(${i}, this.value)" placeholder="Nombre visible" style="flex:1">
-        <input type="text" value="${(m.modelID||'').replace(/"/g,'&quot;')}" onchange="window.vtuberPage.updateModelID(${i}, this.value)" placeholder="modelID" style="flex:2">
+        <input type="text" value="${escapeHtml(m.name)}" onchange="window.vtuberPage.updateModelName(${i}, this.value)" placeholder="Nombre visible" style="flex:1">
+        <input type="text" value="${escapeHtml(m.modelID)}" onchange="window.vtuberPage.updateModelID(${i}, this.value)" placeholder="modelID" style="flex:2">
         <button class="btn-icon-sm danger" onclick="window.vtuberPage.removeModel(${i})">✕</button>
       </div>`).join("") : `<p class="empty-small">Sin modelos. Agrega uno o descúbrelos desde VTS.</p>`
   }
@@ -108,10 +109,10 @@ function renderDiscovered(kind, list) {
   }
   if (kind === "models") {
     el.innerHTML = `<p class="section-label" style="margin-top:1rem">MODELOS EN VTS (clic para agregar)</p>` +
-      list.map(m => `<button class="vts-discovered-chip" onclick="window.vtuberPage.pickModel('${(m.modelID||'').replace(/'/g,'')}','${(m.modelName||'').replace(/'/g,'')}')">${m.modelName || m.modelID}</button>`).join("")
+      list.map(m => `<button class="vts-discovered-chip" onclick="window.vtuberPage.pickModel(${inlineJson(m.modelID)},${inlineJson(m.modelName)})">${escapeHtml(m.modelName || m.modelID)}</button>`).join("")
   } else {
     el.innerHTML = `<p class="section-label" style="margin-top:1rem">ÍTEMS EN VTS (clic para agregar)</p>` +
-      list.map(f => `<button class="vts-discovered-chip" onclick="window.vtuberPage.pickItem('${(f.fileName||'').replace(/'/g,'')}')">${f.fileName}</button>`).join("")
+      list.map(f => `<button class="vts-discovered-chip" onclick="window.vtuberPage.pickItem(${inlineJson(f.fileName)})">${escapeHtml(f.fileName)}</button>`).join("")
   }
 }
 

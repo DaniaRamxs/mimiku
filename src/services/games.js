@@ -32,29 +32,40 @@ function handValue(hand) {
 function cardStr(card) { return `${card.v}${card.s}` }
 function handStr(hand) { return hand.map(cardStr).join(" ") }
 
-// Estado de partidas activas: username → { deck, hand, dealer, bet, done }
+// Estado de partidas activas: clave de identidad → { deck, hand, dealer, bet, done }.
+// Namespaced por plataforma + platformUserId (Fase 1.45) — la Fase 1.4 ya lo
+// separaba por plataforma, pero seguía "perdiendo" el platformUserId real al
+// pasar por bjJoin/bjHit/bjStand/bjFinish, así que dos identidades reales
+// distintas dentro de la MISMA plataforma podían fragmentarse. La clave usa
+// el mismo criterio que economy.js: platformUserId real si existe, si no
+// "legacy:<username>" — nunca username a secas.
 const bjGames = {}
 let bjActive  = false   // si el juego está abierto para nuevas partidas
+
+function bjKey(username, platformName, platformUserId) {
+  return `${platformName}:${platformUserId || "legacy:" + username}`
+}
 
 function bjOpen()  { bjActive = true }
 function bjClose() { bjActive = false; Object.keys(bjGames).forEach(k => delete bjGames[k]) }
 function bjIsOpen() { return bjActive }
 
-function bjJoin(username, bet) {
-  const viewer = getViewer(username)
+function bjJoin(username, bet, platformName = "twitch", platformUserId = "") {
+  const viewer = getViewer(username, platformName)
   if (!viewer) return { error: "No tenés puntos registrados. Chateá primero." }
   if (viewer.points < bet) return { error: `No tenés suficientes puntos. Tenés ${viewer.points}.` }
-  if (bjGames[username]) return { error: "Ya tenés una partida en curso. Usá !hit o !stand." }
+  const key = bjKey(username, platformName, platformUserId)
+  if (bjGames[key]) return { error: "Ya tenés una partida en curso. Usá !hit o !stand." }
 
   const deck   = newDeck()
   const hand   = [deck.pop(), deck.pop()]
   const dealer = [deck.pop(), deck.pop()]
 
-  addPoints(username, -bet, "bj-apuesta")
-  bjGames[username] = { deck, hand, dealer, bet, done: false }
+  addPoints(username, -bet, "bj-apuesta", { platform: platformName, platformUserId })
+  bjGames[key] = { deck, hand, dealer, bet, done: false }
 
   const val = handValue(hand)
-  if (val === 21) return bjFinish(username, "blackjack")
+  if (val === 21) return bjFinish(username, "blackjack", platformName, platformUserId)
 
   return {
     ok: true,
@@ -63,21 +74,21 @@ function bjJoin(username, bet) {
   }
 }
 
-function bjHit(username) {
-  const game = bjGames[username]
+function bjHit(username, platformName = "twitch", platformUserId = "") {
+  const game = bjGames[bjKey(username, platformName, platformUserId)]
   if (!game || game.done) return { error: "No tenés partida activa. Usá !bj [apuesta]." }
   game.hand.push(game.deck.pop())
   const val = handValue(game.hand)
-  if (val > 21) return bjFinish(username, "bust")
-  if (val === 21) return bjFinish(username, "blackjack")
+  if (val > 21) return bjFinish(username, "bust", platformName, platformUserId)
+  if (val === 21) return bjFinish(username, "blackjack", platformName, platformUserId)
   return {
     ok: true,
     msg: `@${username} | Tu mano: ${handStr(game.hand)} (${val}) | !hit o !stand`
   }
 }
 
-function bjStand(username) {
-  const game = bjGames[username]
+function bjStand(username, platformName = "twitch", platformUserId = "") {
+  const game = bjGames[bjKey(username, platformName, platformUserId)]
   if (!game || game.done) return { error: "No tenés partida activa." }
 
   // Dealer juega: pide hasta 17
@@ -86,16 +97,17 @@ function bjStand(username) {
   const playerVal = handValue(game.hand)
   const dealerVal = handValue(game.dealer)
 
-  if (dealerVal > 21 || playerVal > dealerVal) return bjFinish(username, "win")
-  if (playerVal === dealerVal)                  return bjFinish(username, "push")
-  return bjFinish(username, "lose")
+  if (dealerVal > 21 || playerVal > dealerVal) return bjFinish(username, "win", platformName, platformUserId)
+  if (playerVal === dealerVal)                  return bjFinish(username, "push", platformName, platformUserId)
+  return bjFinish(username, "lose", platformName, platformUserId)
 }
 
-function bjFinish(username, result) {
-  const game = bjGames[username]
+function bjFinish(username, result, platformName = "twitch", platformUserId = "") {
+  const key = bjKey(username, platformName, platformUserId)
+  const game = bjGames[key]
   if (!game) return { error: "Sin partida." }
   game.done = true
-  delete bjGames[username]
+  delete bjGames[key]
 
   const playerVal = handValue(game.hand)
   const dealerVal = handValue(game.dealer)
@@ -103,14 +115,14 @@ function bjFinish(username, result) {
 
   if (result === "blackjack") {
     payout = Math.floor(game.bet * 2.5)
-    addPoints(username, payout, "bj-blackjack")
+    addPoints(username, payout, "bj-blackjack", { platform: platformName, platformUserId })
     msg = `🃏 ¡BLACKJACK! @${username} ganó ${payout} pts | Mano: ${handStr(game.hand)}`
   } else if (result === "win") {
     payout = game.bet * 2
-    addPoints(username, payout, "bj-win")
+    addPoints(username, payout, "bj-win", { platform: platformName, platformUserId })
     msg = `🃏 @${username} ganó ${payout} pts | Tu mano: ${handStr(game.hand)} (${playerVal}) | Dealer: ${handStr(game.dealer)} (${dealerVal})`
   } else if (result === "push") {
-    addPoints(username, game.bet, "bj-push")
+    addPoints(username, game.bet, "bj-push", { platform: platformName, platformUserId })
     msg = `🃏 Empate @${username} | Tu mano: ${handStr(game.hand)} (${playerVal}) | Dealer: ${handStr(game.dealer)} (${dealerVal}) | Devuelven tu apuesta`
   } else if (result === "bust") {
     msg = `🃏 @${username} se pasó de 21 | Mano: ${handStr(game.hand)} (${playerVal}) | Perdiste ${game.bet} pts`
@@ -127,8 +139,8 @@ const RED_NUMBERS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]
 
 function rouletteColor(n) { return n === 0 ? "verde" : RED_NUMBERS.includes(n) ? "rojo" : "negro" }
 
-function rouletteSpin(username, betType, bet) {
-  const viewer = getViewer(username)
+function rouletteSpin(username, betType, bet, platformName = "twitch", platformUserId = "") {
+  const viewer = getViewer(username, platformName)
   if (!viewer) return { error: "Chateá primero para registrarte." }
   if (viewer.points < bet) return { error: `No tenés suficientes puntos. Tenés ${viewer.points}.` }
   if (bet <= 0) return { error: "La apuesta debe ser mayor a 0." }
@@ -164,14 +176,14 @@ function rouletteSpin(username, betType, bet) {
     return { error: `Apuesta inválida. Opciones: rojo negro par impar alto bajo [0-36]` }
   }
 
-  addPoints(username, -bet, "ruleta-apuesta")
+  addPoints(username, -bet, "ruleta-apuesta", { platform: platformName, platformUserId })
   let gained = 0
   if (win) {
     gained = bet * (multiplier + 1)
-    addPoints(username, gained, "ruleta-ganadora")
+    addPoints(username, gained, "ruleta-ganadora", { platform: platformName, platformUserId })
   }
 
-  const resultViewer = getViewer(username)
+  const resultViewer = getViewer(username, platformName)
   return {
     ok: true,
     number, color,
@@ -187,8 +199,8 @@ function rouletteSpin(username, betType, bet) {
 // ── SLOTS ─────────────────────────────────────────────────────────────────────
 const SYMBOLS = ["🍒","🍋","🍊","🍇","⭐","💎","7️⃣","🎰"]
 
-function playSlots(username, bet) {
-  const viewer = getViewer(username)
+function playSlots(username, bet, platformName = "twitch", platformUserId = "") {
+  const viewer = getViewer(username, platformName)
   if (!viewer) return { error: "Chateá primero para registrarte." }
   if (viewer.points < bet) return { error: `No tenés suficientes puntos. Tenés ${viewer.points}.` }
   if (bet <= 0) return { error: "La apuesta debe ser mayor a 0." }
@@ -197,7 +209,7 @@ function playSlots(username, bet) {
   const s2 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
   const s3 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
 
-  addPoints(username, -bet, "slots-apuesta")
+  addPoints(username, -bet, "slots-apuesta", { platform: platformName, platformUserId })
 
   let result, payout = 0, multiplier = 0
 
@@ -214,9 +226,9 @@ function playSlots(username, bet) {
     result = "miss"
   }
 
-  if (payout > 0) addPoints(username, payout, "slots-" + result)
+  if (payout > 0) addPoints(username, payout, "slots-" + result, { platform: platformName, platformUserId })
 
-  const finalViewer = getViewer(username)
+  const finalViewer = getViewer(username, platformName)
   const display = `[ ${s1} | ${s2} | ${s3} ]`
 
   let msg = ""

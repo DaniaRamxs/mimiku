@@ -1,4 +1,5 @@
 // pages/cards.js — gestión de cartas y sobres desde Mimiku (broadcaster)
+const { escapeHtml, inlineJson, safeHttpUrl } = require("../core/html.js")
 
 function rarityLabel(r) {
   const map = { comun:'Común', raro:'Raro', epico:'Épico', legendario:'Legendario', common:'Común', rare:'Raro', epic:'Épico', legendary:'Legendario' }
@@ -27,16 +28,16 @@ async function loadCards() {
   el.innerHTML = cards.map(c => `
     <div class="card-item">
       <div class="card-preview" style="border-color:${rarityColor(c.rarity)||'#27272a'}">
-        ${c.image_url
-          ? `<img src="${c.image_url}" alt="${c.name}">`
-          : `<div class="card-no-img">${c.name[0]}</div>`}
-        <div class="card-rarity-badge" style="background:${rarityColor(c.rarity)}">${rarityLabel(c.rarity)}</div>
+        ${safeHttpUrl(c.image_url)
+          ? `<img src="${escapeHtml(safeHttpUrl(c.image_url))}" alt="${escapeHtml(c.name)}">`
+          : `<div class="card-no-img">${escapeHtml((c.name || "?")[0])}</div>`}
+        <div class="card-rarity-badge" style="background:${rarityColor(c.rarity)}">${escapeHtml(rarityLabel(c.rarity))}</div>
       </div>
       <div class="card-info">
-        <div class="card-name">${c.name}</div>
-        <div class="card-desc">${c.description||""}</div>
+        <div class="card-name">${escapeHtml(c.name)}</div>
+        <div class="card-desc">${escapeHtml(c.description)}</div>
       </div>
-      <button class="btn-icon-danger" onclick="deleteCard('${c.id}')">✕</button>
+      <button class="btn-icon-danger" onclick="window.cardsPage.deleteCard(${inlineJson(c.id)})">✕</button>
     </div>`).join("")
 }
 
@@ -75,9 +76,9 @@ async function loadPacks() {
     <div class="pack-item">
       <div class="pack-icon">${p.tier === "premium" ? "💎" : "📦"}</div>
       <div class="pack-info">
-        <div class="pack-name">${p.name}</div>
-        <div class="pack-meta">${p.price} pts · ${p.tier} · ${p.cards_count} cartas</div>
-        <div class="pack-desc">${p.description||""}</div>
+        <div class="pack-name">${escapeHtml(p.name)}</div>
+        <div class="pack-meta">${Number(p.price) || 0} pts · ${escapeHtml(p.tier)} · ${Number(p.cards_count) || 0} cartas</div>
+        <div class="pack-desc">${escapeHtml(p.description)}</div>
       </div>
     </div>`).join("")
 }

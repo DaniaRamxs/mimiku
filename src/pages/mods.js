@@ -1,5 +1,6 @@
 // pages/mods.js — Panel de moderadores (renderer)
 const { ipcRenderer } = require("electron")
+const { escapeHtml } = require("../core/html.js")
 
 async function initMods() {
   await refreshModList()
@@ -18,7 +19,7 @@ async function refreshModList() {
     <div class="mod-row">
       <div class="mod-avatar">${(m.mod_display||m.mod_username)[0].toUpperCase()}</div>
       <div class="mod-info">
-        <span class="mod-name">${m.mod_display || m.mod_username}</span>
+        <span class="mod-name">${escapeHtml(m.mod_display || m.mod_username)}</span>
         <span class="mod-since">${timeAgo(m.last_seen)}</span>
       </div>
       <span class="mod-badge">MOD</span>
@@ -41,8 +42,8 @@ function onModCommand(cmd) {
   row.className = "event"
   row.innerHTML = `
     <span class="event-type" style="background:rgba(124,110,245,.2);color:#7c6ef5">${icon} ${cmd.type}</span>
-    <span style="flex:1;font-size:12px;color:#9898b0">${cmd.mod_display||cmd.mod_username}</span>
-    <span style="font-size:12px;color:#55556a;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</span>
+    <span style="flex:1;font-size:12px;color:#9898b0">${escapeHtml(cmd.mod_display || cmd.mod_username)}</span>
+    <span style="font-size:12px;color:#55556a;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(preview)}</span>
   `
   el.prepend(row)
   if (el.children.length > 30) el.lastChild.remove()

@@ -28,31 +28,31 @@ async function init(channel, broadcastFn) {
   _config = getLocalPlatform().levels.getConfig(_channel)
 }
 
-async function addXp(username, amount, reason, platformUserId = "") {
+async function addXp(username, amount, reason, platformUserId = "", platformName = "twitch") {
   if (!_channel || Number(amount) <= 0) return undefined
   const platform = getLocalPlatform()
-  const identity = platform.identities.resolve({ platform: "twitch", platformUserId, username })
+  const identity = platform.identities.resolve({ platform: platformName, platformUserId, username })
   const before = platform.levels.getViewer(_channel, identity.id)
   const result = platform.levels.addXp(_channel, identity.id, Number(amount), reason)
   if (result.level > before.level) {
     if ((_config?.level_up_reward || 0) > 0) {
-      require("./economy.js").addPoints(username, _config.level_up_reward * (result.level - before.level), "level-up")
+      require("./economy.js").addPoints(username, _config.level_up_reward * (result.level - before.level), "level-up", { platform: platformName, platformUserId })
     }
     if (_config?.announce_overlay && _broadcast) {
       const title = titleForLevel(result.level, await getTitles(_channel))
-      _broadcast({ type: "level_up", username, level: result.level, title: title.title, titleColor: title.color, titleIcon: title.icon })
+      _broadcast({ type: "level_up", username, platform: platformName, level: result.level, title: title.title, titleColor: title.color, titleIcon: title.icon })
     }
   }
   return { oldXp: before.xp || 0, newXp: result.xp, oldLevel: before.level || 1, newLevel: result.level }
 }
 
-function onMessage(username, platformUserId = "") {
+function onMessage(username, platformUserId = "", platformName = "twitch") {
   if (!_config || !_channel) return
-  const key = platformUserId || username.toLowerCase()
+  const key = `${platformName}:${platformUserId || "legacy:" + username.toLowerCase()}`
   const now = Date.now()
   if ((now - (msgCooldowns.get(key) || 0)) / 1000 < _config.msg_cooldown_s) return
   msgCooldowns.set(key, now)
-  addXp(username, _config.xp_per_message, "mensaje", platformUserId).catch(error => console.error("[levels]", error.message))
+  addXp(username, _config.xp_per_message, "mensaje", platformUserId, platformName).catch(error => console.error("[levels]", error.message))
 }
 
 function grantWatchXp(usernames) {
@@ -62,9 +62,9 @@ function grantWatchXp(usernames) {
 
 async function getTitles(channelId = _channel) { return getLocalPlatform().levels.getTitles(channelId || "local") }
 
-async function getViewerLevel(channelId, username, platformUserId = "") {
+async function getViewerLevel(channelId, username, platformUserId = "", platformName = "twitch") {
   const platform = getLocalPlatform()
-  const identity = platform.identities.resolve({ platform: "twitch", platformUserId, username })
+  const identity = platform.identities.resolve({ platform: platformName, platformUserId, username })
   const row = platform.levels.getViewer(channelId, identity.id)
   return { xp: row.xp || 0, ...levelProgress(row.xp || 0) }
 }

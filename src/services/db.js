@@ -1,5 +1,6 @@
 // services/db.js — solo se ejecuta en el main process
 const Database = require("better-sqlite3")
+const fs = require("node:fs")
 const path = require("path")
 const { app } = require("electron")
 const { applyMigrations } = require("../db/migrations.js")
@@ -13,6 +14,12 @@ let _db = null
 
 function getDb() {
   if (_db) return _db
+  const pendingRestore = `${dbPath}.restore-next-start`
+  if (fs.existsSync(pendingRestore)) {
+    if (fs.existsSync(dbPath)) fs.copyFileSync(dbPath, `${dbPath}.before-restore`)
+    fs.copyFileSync(pendingRestore, dbPath)
+    fs.rmSync(pendingRestore, { force: true })
+  }
   _db = new Database(dbPath)
   _db.pragma("journal_mode = WAL")
   _db.pragma("busy_timeout = 5000")
@@ -60,4 +67,19 @@ function getDb() {
   return _db
 }
 
-module.exports = { getDb }
+function closeDb() {
+  if (!_db) return
+  try { _db.pragma("wal_checkpoint(TRUNCATE)") } catch {}
+  _db.close()
+  _db = null
+}
+
+function quickCheck() {
+  const rows = getDb().pragma("quick_check")
+  const result = String(rows?.[0]?.quick_check || "unknown")
+  return { ok: result.toLowerCase() === "ok", result }
+}
+
+function getPath() { return dbPath }
+
+module.exports = { getDb, closeDb, quickCheck, getPath }

@@ -1,5 +1,6 @@
 // pages/mimics.js — Editor de Mimics con secuencia de bloques
 const { ipcRenderer } = require("electron")
+const { escapeHtml, inlineJson, safeColor } = require("../core/html.js")
 
 let currentSequence = []   // bloques del Mimic en edición
 let editingMimicId  = null
@@ -23,6 +24,7 @@ const BLOCK_TYPES = {
   points:       { icon: "🪙", label: "Puntos",       color: "#14b8a6" },
   wait:         { icon: "⏱", label: "Esperar",      color: "#64748b" },
 }
+const RARITY_CLASSES = new Set(["comun", "raro", "epico", "legendario", "evento"])
 
 function initMimics() {
   loadMimics()
@@ -38,16 +40,16 @@ async function loadMimics() {
   if (!grid) return
   if (!mimics.length) { grid.innerHTML = `<p class="empty">No hay Mimics aún. ¡Crea el primero!</p>`; return }
   grid.innerHTML = mimics.map(m => `
-    <div class="mimic-card ${m.rarity}">
-      <div class="mimic-card-icon">${m.icon}</div>
+    <div class="mimic-card ${RARITY_CLASSES.has(m.rarity) ? m.rarity : "comun"}">
+      <div class="mimic-card-icon">${escapeHtml(m.icon)}</div>
       <div class="mimic-card-body">
-        <div class="mimic-card-name">${m.name}</div>
-        <div class="mimic-card-rarity">${rarityLabel(m.rarity)}</div>
+        <div class="mimic-card-name">${escapeHtml(m.name)}</div>
+        <div class="mimic-card-rarity">${escapeHtml(rarityLabel(m.rarity))}</div>
         <div class="mimic-card-seq">${(m.sequence||[]).length} acciones</div>
       </div>
       <div class="mimic-card-actions">
-        <button class="btn-icon" onclick="window.mimicsPage.editMimic('${m.id}')" title="Editar">✏</button>
-        <button class="btn-icon danger" onclick="window.mimicsPage.removeMimic('${m.id}')" title="Eliminar">🗑</button>
+        <button class="btn-icon" onclick="window.mimicsPage.editMimic(${inlineJson(m.id)})" title="Editar">✏</button>
+        <button class="btn-icon danger" onclick="window.mimicsPage.removeMimic(${inlineJson(m.id)})" title="Eliminar">🗑</button>
       </div>
     </div>`).join("")
 }
@@ -168,14 +170,14 @@ function renderSequence() {
     if (block.type === "image") {
       fields = `
         <div class="block-url-row">
-          <input type="url" placeholder="URL del GIF/imagen" value="${block.url||""}" onchange="window.mimicsPage.updateBlockField(${i},'url',this.value)">
+          <input type="url" placeholder="URL del GIF/imagen" value="${escapeHtml(block.url)}" onchange="window.mimicsPage.updateBlockField(${i},'url',this.value)">
           <button class="block-upload-btn" onclick="window.mimicsPage.pickBlockFile(${i},'image/*')">📁</button>
         </div>
         <label class="block-inline">Duración (ms): <input type="number" value="${block.duration}" onchange="window.mimicsPage.updateBlockField(${i},'duration',this.value)"></label>`
     } else if (block.type === "video") {
       fields = `
         <div class="block-url-row">
-          <input type="url" placeholder="URL del video (mp4)" value="${block.url||""}" onchange="window.mimicsPage.updateBlockField(${i},'url',this.value)">
+          <input type="url" placeholder="URL del video (mp4)" value="${escapeHtml(block.url)}" onchange="window.mimicsPage.updateBlockField(${i},'url',this.value)">
           <button class="block-upload-btn" onclick="window.mimicsPage.pickBlockFile(${i},'video/*')">📁</button>
         </div>
         <label class="block-inline">Duración (ms): <input type="number" value="${block.duration}" onchange="window.mimicsPage.updateBlockField(${i},'duration',this.value)"></label>
@@ -183,13 +185,13 @@ function renderSequence() {
     } else if (block.type === "sound") {
       fields = `
         <div class="block-url-row">
-          <input type="url" placeholder="URL del sonido (mp3)" value="${block.url||""}" onchange="window.mimicsPage.updateBlockField(${i},'url',this.value)">
+          <input type="url" placeholder="URL del sonido (mp3)" value="${escapeHtml(block.url)}" onchange="window.mimicsPage.updateBlockField(${i},'url',this.value)">
           <button class="block-upload-btn" onclick="window.mimicsPage.pickBlockFile(${i},'audio/*')">📁</button>
         </div>
         <label class="block-inline">Volumen: <input type="number" step="0.1" min="0" max="1" value="${block.volume}" onchange="window.mimicsPage.updateBlockField(${i},'volume',this.value)"></label>`
     } else if (block.type === "message") {
       fields = `
-        <input type="text" placeholder="Texto (usa {user} para el nombre)" value="${(block.text||"").replace(/"/g,'&quot;')}" onchange="window.mimicsPage.updateBlockField(${i},'text',this.value)">
+        <input type="text" placeholder="Texto (usa {user} para el nombre)" value="${escapeHtml(block.text)}" onchange="window.mimicsPage.updateBlockField(${i},'text',this.value)">
         <label class="block-inline">Duración (ms): <input type="number" value="${block.duration}" onchange="window.mimicsPage.updateBlockField(${i},'duration',this.value)"></label>`
     } else if (block.type === "effect") {
       fields = `
@@ -199,7 +201,7 @@ function renderSequence() {
         </select>`
     } else if (block.type === "emoji_rain") {
       fields = `
-        <label class="block-inline">Emoji: <input type="text" maxlength="4" value="${block.emoji||"🔥"}" onchange="window.mimicsPage.updateBlockField(${i},'emoji',this.value)" style="width:60px"></label>
+        <label class="block-inline">Emoji: <input type="text" maxlength="4" value="${escapeHtml(block.emoji || "🔥")}" onchange="window.mimicsPage.updateBlockField(${i},'emoji',this.value)" style="width:60px"></label>
         <label class="block-inline">Duración (ms): <input type="number" value="${block.duration}" onchange="window.mimicsPage.updateBlockField(${i},'duration',this.value)"></label>`
     } else if (block.type === "shake") {
       fields = `
@@ -211,18 +213,18 @@ function renderSequence() {
         <label class="block-inline">Duración (ms): <input type="number" value="${block.duration}" onchange="window.mimicsPage.updateBlockField(${i},'duration',this.value)"></label>`
     } else if (block.type === "flash") {
       fields = `
-        <label class="block-inline">Color: <input type="color" value="${block.color||"#ffffff"}" onchange="window.mimicsPage.updateBlockField(${i},'color',this.value)"></label>
+        <label class="block-inline">Color: <input type="color" value="${safeColor(block.color, "#ffffff")}" onchange="window.mimicsPage.updateBlockField(${i},'color',this.value)"></label>
         <label class="block-inline">Duración (ms): <input type="number" value="${block.duration}" onchange="window.mimicsPage.updateBlockField(${i},'duration',this.value)"></label>`
     } else if (block.type === "rain_points") {
       fields = `<label class="block-inline">Puntos a cada viewer activo: <input type="number" value="${block.amount}" onchange="window.mimicsPage.updateBlockField(${i},'amount',this.value)"></label>`
     } else if (block.type === "mini_challenge") {
       fields = `
-        <label class="block-inline">Palabra/emoji: <input type="text" value="${(block.word||"🔥").replace(/"/g,'&quot;')}" onchange="window.mimicsPage.updateBlockField(${i},'word',this.value)" style="width:80px"></label>
+        <label class="block-inline">Palabra/emoji: <input type="text" value="${escapeHtml(block.word || "🔥")}" onchange="window.mimicsPage.updateBlockField(${i},'word',this.value)" style="width:80px"></label>
         <label class="block-inline">Segundos: <input type="number" value="${block.seconds}" onchange="window.mimicsPage.updateBlockField(${i},'seconds',this.value)"></label>
         <label class="block-inline">Recompensa: <input type="number" value="${block.reward}" onchange="window.mimicsPage.updateBlockField(${i},'reward',this.value)"></label>`
     } else if (block.type === "streamer_challenge") {
       fields = `
-        <input type="text" placeholder="El reto (ej: ¡Haz 10 flexiones!)" value="${(block.text||"").replace(/"/g,'&quot;')}" onchange="window.mimicsPage.updateBlockField(${i},'text',this.value)">
+        <input type="text" placeholder="El reto (ej: ¡Haz 10 flexiones!)" value="${escapeHtml(block.text)}" onchange="window.mimicsPage.updateBlockField(${i},'text',this.value)">
         <label class="block-inline">Cuenta regresiva (seg): <input type="number" value="${block.seconds}" onchange="window.mimicsPage.updateBlockField(${i},'seconds',this.value)"></label>`
     } else if (block.type === "economy_event") {
       fields = `
@@ -246,11 +248,11 @@ function renderSequence() {
       fields = `<label class="block-inline">Esperar (ms): <input type="number" value="${block.ms}" onchange="window.mimicsPage.updateBlockField(${i},'ms',this.value)"></label>`
     }
     return `
-      <div class="seq-block" style="border-left:3px solid ${meta.color}">
+      <div class="seq-block" style="border-left:3px solid ${safeColor(meta.color, "#666666")}">
         <div class="seq-block-header">
           <span class="seq-block-num">${i+1}</span>
-          <span class="seq-block-icon">${meta.icon}</span>
-          <span class="seq-block-label">${meta.label}</span>
+          <span class="seq-block-icon">${escapeHtml(meta.icon)}</span>
+          <span class="seq-block-label">${escapeHtml(meta.label)}</span>
           <div class="seq-block-controls">
             <button class="btn-icon-sm test" onclick="window.mimicsPage.testBlock(${i})" title="Probar">▶</button>
             <button class="btn-icon-sm" onclick="window.mimicsPage.moveBlock(${i},-1)" ${i===0?"disabled":""}>↑</button>
@@ -317,12 +319,12 @@ async function loadBoxes() {
   if (!boxes.length) { grid.innerHTML = `<p class="empty">No hay cajas aún.</p>`; return }
   grid.innerHTML = boxes.map(b => `
     <div class="box-card">
-      <div class="box-card-icon">${b.icon}</div>
-      <div class="box-card-name">${b.name}</div>
-      <div class="box-card-desc">${b.description||""}</div>
-      <div class="box-card-price">${b.price_points ? b.price_points + " pts" : ""}${b.price_real ? " $" + b.price_real : ""}</div>
-      <div class="box-card-count">${b.mimic_count} Mimics por caja</div>
-      <button class="btn-icon danger" onclick="window.mimicsPage.removeBox('${b.id}')" style="margin-top:8px">🗑 Eliminar</button>
+      <div class="box-card-icon">${escapeHtml(b.icon)}</div>
+      <div class="box-card-name">${escapeHtml(b.name)}</div>
+      <div class="box-card-desc">${escapeHtml(b.description)}</div>
+      <div class="box-card-price">${b.price_points ? Number(b.price_points) + " pts" : ""}${b.price_real ? " $" + Number(b.price_real) : ""}</div>
+      <div class="box-card-count">${Number(b.mimic_count) || 0} Mimics por caja</div>
+      <button class="btn-icon danger" onclick="window.mimicsPage.removeBox(${inlineJson(b.id)})" style="margin-top:8px">🗑 Eliminar</button>
     </div>`).join("")
 }
 
@@ -436,7 +438,14 @@ async function openGiftModal() {
   const ch = localStorage.getItem("mimiku_channel")
   const mimics = await ipcRenderer.invoke("mimics:list", ch)
   const sel = document.getElementById("gift-mimic-select")
-  if (sel) sel.innerHTML = mimics.map(m => `<option value="${m.id}">${m.icon} ${m.name} (${rarityLabel(m.rarity)})</option>`).join("")
+  if (sel) {
+    sel.replaceChildren(...mimics.map(m => {
+      const option = document.createElement("option")
+      option.value = String(m.id)
+      option.textContent = `${m.icon || "✨"} ${m.name || "Mimic"} (${rarityLabel(m.rarity)})`
+      return option
+    }))
+  }
   document.getElementById("gift-modal").style.display = "flex"
   updateGiftTarget()
 }
@@ -445,10 +454,35 @@ function closeGiftModal() {
   document.getElementById("gift-modal").style.display = "none"
 }
 
-function updateGiftTarget() {
+const PLATFORM_LABEL = { twitch: "Twitch", youtube: "YouTube", tiktok: "TikTok", kick: "Kick" }
+
+async function updateGiftTarget() {
   const target = document.getElementById("gift-target").value
   document.getElementById("gift-firstn-row").style.display = target === "first_n" ? "flex" : "none"
   document.getElementById("gift-user-row").style.display   = target === "user" ? "flex" : "none"
+  if (target === "user") await populateGiftUserSelect()
+}
+
+// Selecciona de la lista de viewers ACTIVOS con identidad completa
+// (platform + platformUserId) en vez de un username de texto libre — así el
+// regalo nunca puede terminar en la identidad de la plataforma equivocada.
+async function populateGiftUserSelect() {
+  const sel = document.getElementById("gift-user")
+  if (!sel) return
+  const active = await ipcRenderer.invoke("activity:getActiveViewers")
+  if (!active.length) {
+    sel.replaceChildren(new Option("Sin viewers activos todavía", ""))
+    return
+  }
+  const placeholder = new Option("Elige un viewer activo…", "")
+  const options = active.map((viewer, index) => {
+    const option = new Option(`[${PLATFORM_LABEL[viewer.platform] || viewer.platform}] ${viewer.displayName || viewer.username}`, String(index))
+    option.dataset.platform = viewer.platform
+    option.dataset.platformUserId = viewer.platformUserId || ""
+    option.dataset.username = viewer.username
+    return option
+  })
+  sel.replaceChildren(placeholder, ...options)
 }
 
 async function sendStreamerGift() {
@@ -458,8 +492,15 @@ async function sendStreamerGift() {
   if (!mimicId) { showToast("Elige un Mimic"); return }
   const gift = { mimicId, target }
   if (target === "first_n") gift.targetN = parseInt(document.getElementById("gift-firstn").value) || 10
-  if (target === "user")    gift.toUser  = document.getElementById("gift-user").value.trim().toLowerCase()
-  if (target === "user" && !gift.toUser) { showToast("Escribe el usuario"); return }
+  if (target === "user") {
+    const opt = document.getElementById("gift-user").selectedOptions[0]
+    if (!opt || !opt.value) { showToast("Elige un viewer activo"); return }
+    gift.toIdentity = {
+      platform: opt.dataset.platform,
+      platformUserId: opt.dataset.platformUserId,
+      username: opt.dataset.username,
+    }
+  }
 
   try {
     const res = await ipcRenderer.invoke("mimics:streamerGift", { ch, gift })

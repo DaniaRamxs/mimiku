@@ -1,5 +1,6 @@
 // pages/levels.js — configuración del sistema de niveles
 const { ipcRenderer } = require("electron")
+const { escapeHtml, safeColor } = require("../core/html.js")
 
 const DEFAULT_TITLES = [
   { min_level: 1,   title: "Novato",   color: "#a1a1aa", icon: "🌱" },
@@ -58,10 +59,10 @@ function renderTitles() {
   if (!el) return
   el.innerHTML = currentTitles.map((t, i) => `
     <div class="title-row">
-      <input type="text" class="title-icon-input" value="${t.icon}" maxlength="2" onchange="window.levelsPage.updateTitle(${i},'icon',this.value)">
-      <input type="text" class="title-name-input" value="${t.title.replace(/"/g,'&quot;')}" onchange="window.levelsPage.updateTitle(${i},'title',this.value)">
-      <label class="title-inline">desde nivel <input type="number" min="1" value="${t.min_level}" onchange="window.levelsPage.updateTitle(${i},'min_level',this.value)"></label>
-      <input type="color" value="${t.color}" onchange="window.levelsPage.updateTitle(${i},'color',this.value)">
+      <input type="text" class="title-icon-input" value="${escapeHtml(t.icon)}" maxlength="2" onchange="window.levelsPage.updateTitle(${i},'icon',this.value)">
+      <input type="text" class="title-name-input" value="${escapeHtml(t.title)}" onchange="window.levelsPage.updateTitle(${i},'title',this.value)">
+      <label class="title-inline">desde nivel <input type="number" min="1" value="${Math.max(1, Number(t.min_level) || 1)}" onchange="window.levelsPage.updateTitle(${i},'min_level',this.value)"></label>
+      <input type="color" value="${safeColor(t.color)}" onchange="window.levelsPage.updateTitle(${i},'color',this.value)">
       <button class="btn-icon-sm danger" onclick="window.levelsPage.removeTitle(${i})">✕</button>
     </div>`).join("")
 }
@@ -101,7 +102,7 @@ async function loadLevelLeaderboard() {
   el.innerHTML = top.map((v, i) => `
     <div class="lb-row">
       <span class="lb-pos">${medals[i] || "#" + (i + 1)}</span>
-      <span class="lb-name">${v.username}</span>
+      <span class="lb-name">${escapeHtml(v.username)}</span>
       <span class="lb-level">Nivel ${v.level}</span>
       <span class="lb-xp">${v.xp.toLocaleString()} XP</span>
     </div>`).join("")

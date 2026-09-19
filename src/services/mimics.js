@@ -61,7 +61,7 @@ function startUseQueue() {
 async function checkPendingUses() {
   if (!_channel || !_broadcast) return
   try {
-    const data = getLocalPlatform().db.prepare(`SELECT u.*, i.username, i.display FROM mimic_uses_local u
+    const data = getLocalPlatform().db.prepare(`SELECT u.*, i.username, i.display, i.platform, i.platform_user_id FROM mimic_uses_local u
       JOIN viewer_identities i ON i.id=u.viewer_id WHERE u.channel_id=? AND u.status='pending' AND u.used_at>=?
       ORDER BY u.used_at,u.rowid LIMIT 5`).all(_channel, lastUseCheck)
     if (!data?.length) return
@@ -211,12 +211,12 @@ function executeBlock(block, use) {
         break
 
       case "xp":
-        try { require("./levels.js").addXp(use.username, block.amount || 50, "mimic") } catch (e) {}
+        try { require("./levels.js").addXp(use.username, block.amount || 50, "mimic", use.platform_user_id || "", use.platform || "twitch") } catch (e) {}
         setTimeout(resolve, 100)
         break
 
       case "points":
-        addPoints(use.username, block.amount || 50, "mimic-points")
+        addPoints(use.username, block.amount || 50, "mimic-points", { platform: use.platform || "twitch", platformUserId: use.platform_user_id || "" })
         setTimeout(resolve, 100)
         break
 
@@ -308,32 +308,39 @@ function testBlock(block) {
 }
 
 // ── REGALOS ─────────────────────────────────────────────────────────────────
-// Dar un Mimic al inventario de un viewer
-async function grantMimicToViewer(channelId, username, mimicId, qty = 1) {
+// Dar un Mimic al inventario de un viewer. `identity` es opcional: si no se
+// da, cae a Twitch por compatibilidad (caso "regalar a este username" desde
+// la UI actual, que todavía no tiene selector de plataforma — ver Fase 1.5).
+async function grantMimicToViewer(channelId, username, mimicId, qty = 1, identity = {}) {
   const platform = getLocalPlatform()
-  const viewer = platform.identities.resolve({ platform: "twitch", username })
+  const viewer = platform.identities.resolve({ platform: identity.platform || "twitch", platformUserId: identity.platformUserId || "", username })
   return platform.mimics.grant(channelId, viewer.id, mimicId, qty, `streamer-grant:${randomUUID()}`)
 }
 
 // Regalo del STREAMER a viewers
 // target: 'all' | 'first_n' | 'user'
-async function streamerGift(channelId, { mimicId, target, targetN, toUser }) {
+// `toIdentity` (Fase 1.6) trae la identidad completa elegida desde la lista
+// de viewers activos en la UI — {platform, platformUserId, username}. Ya no
+// se acepta un username de texto libre para el caso "user": eso era lo que
+// permitía regalar accidentalmente a la identidad de plataforma equivocada.
+async function streamerGift(channelId, { mimicId, target, targetN, toIdentity }) {
   const ch = channelId.toLowerCase()
   const mimic = getLocalPlatform().mimics.get(mimicId)
   let recipients = []
 
-  if (target === "user" && toUser) {
-    recipients = [toUser.toLowerCase()]
+  if (target === "user" && toIdentity && toIdentity.username) {
+    recipients = [{ username: toIdentity.username.toLowerCase(), platform: toIdentity.platform || "twitch", platformUserId: toIdentity.platformUserId || "" }]
   } else {
-    // viewers activos por mensajes en sesión (vienen de twitch.js)
+    // Viewers activos multiplataforma (Activity Consumer, Fase 1.5) — cada
+    // uno conserva su identidad real, ya no se asume Twitch para todos.
     let active = []
-    try { active = require("./twitch.js").getActiveViewers() } catch (e) {}
+    try { active = require("../core/interactions/activity-consumer.js").getDefaultActivityTracker().getActiveViewerIdentities() } catch (e) {}
     if (target === "first_n") recipients = active.slice(0, targetN || 10)
     else recipients = active // all
   }
 
-  for (const usr of recipients) {
-    await grantMimicToViewer(ch, usr, mimicId, 1)
+  for (const identity of recipients) {
+    await grantMimicToViewer(ch, identity.username, mimicId, 1, identity)
   }
 
   // animación en overlay

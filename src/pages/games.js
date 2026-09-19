@@ -1,5 +1,6 @@
 // pages/games.js — UI de minijuegos (renderer)
 const { ipcRenderer } = require("electron")
+const { escapeHtml } = require("../core/html.js")
 
 let bjOpen = false
 
@@ -54,7 +55,7 @@ function addBjEvent(data) {
   const icon  = icons[data.result] || icons[data.action] || "🃏"
   const el    = document.createElement("div")
   el.className = "game-event"
-  el.innerHTML = `<span class="game-event-icon">${icon}</span><span class="game-event-text">${data.msg || data.text || ""}</span>`
+  el.innerHTML = `<span class="game-event-icon">${icon}</span><span class="game-event-text">${escapeHtml(data.msg || data.text)}</span>`
   feed.prepend(el)
   if (feed.children.length > 20) feed.lastChild.remove()
 }
@@ -71,8 +72,8 @@ function addRouletteEvent(data) {
   const el = document.createElement("div")
   el.className = "game-event"
   el.innerHTML = `
-    <span class="roulette-number" style="background:${color === '#e8e8f0' ? '#27272a' : color};color:${color === '#e8e8f0' ? color : '#fff'}">${data.number}</span>
-    <span class="game-event-text">${data.msg}</span>`
+    <span class="roulette-number" style="background:${color === '#e8e8f0' ? '#27272a' : color};color:${color === '#e8e8f0' ? color : '#fff'}">${Number(data.number) || 0}</span>
+    <span class="game-event-text">${escapeHtml(data.msg)}</span>`
   feed.prepend(el)
   if (feed.children.length > 20) feed.lastChild.remove()
 
@@ -113,9 +114,9 @@ function addSlotsEvent(data) {
   el.className = "game-event"
   el.innerHTML = `
     <span class="game-event-icon">${icons[data.result]||"🎰"}</span>
-    <span style="font-size:11px;color:var(--text-muted)">[${data.s1}|${data.s2}|${data.s3}]</span>
-    <span style="flex:1;font-size:12px">${data.display||data.username}</span>
-    <span style="color:${colors[data.result]||'#e8e8f0'};font-weight:600;font-size:12px">${labels[data.result]||""}</span>
+    <span style="font-size:11px;color:var(--text-muted)">[${escapeHtml(data.s1)}|${escapeHtml(data.s2)}|${escapeHtml(data.s3)}]</span>
+    <span style="flex:1;font-size:12px">${escapeHtml(data.display || data.username)}</span>
+    <span style="color:${colors[data.result]||'#e8e8f0'};font-weight:600;font-size:12px">${escapeHtml(labels[data.result])}</span>
   `
   feed.prepend(el)
   if (feed.children.length > 20) feed.lastChild.remove()
@@ -130,9 +131,9 @@ function addCoinEvent(data) {
   el.className = "game-event"
   el.innerHTML = `
     <span class="game-event-icon">${data.win ? "🪙" : "🟤"}</span>
-    <span style="flex:1;font-size:12px">${data.display||data.username}</span>
-    <span style="font-size:11px;color:var(--text-muted)">${data.side}</span>
-    <span style="color:${data.win ? "var(--success)" : "var(--danger)"};font-weight:600;font-size:12px">${data.win ? "+" : "-"}${data.amount}</span>
+    <span style="flex:1;font-size:12px">${escapeHtml(data.display || data.username)}</span>
+    <span style="font-size:11px;color:var(--text-muted)">${escapeHtml(data.side)}</span>
+    <span style="color:${data.win ? "var(--success)" : "var(--danger)"};font-weight:600;font-size:12px">${data.win ? "+" : "-"}${Number(data.amount) || 0}</span>
   `
   feed.prepend(el)
   if (feed.children.length > 20) feed.lastChild.remove()

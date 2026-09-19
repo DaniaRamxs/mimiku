@@ -36,7 +36,7 @@ async function rainPoints(amount = 100) {
   const viewers = getRanking(9999)
   let count = 0
   for (const v of viewers) {
-    addPoints(v.username, amount, "lluvia-de-puntos")
+    addPoints(v.username, amount, "lluvia-de-puntos", { platform: v.platform, platformUserId: v.platform_user_id })
     count++
   }
   say(`🎉 ¡LLUVIA DE PUNTOS! Todos los viewers recibieron ${amount} puntos! (${count} viewers)`)
@@ -75,7 +75,7 @@ async function equalizer(minutes = 5) {
   if (!viewers.length) return
   const poorest = viewers[viewers.length - 1]
   const bonus   = poorest.points
-  addPoints(poorest.username, bonus, "equilibrador")
+  addPoints(poorest.username, bonus, "equilibrador", { platform: poorest.platform, platformUserId: poorest.platform_user_id })
   say(`🧲 ¡Equilibrador! @${poorest.display||poorest.username} tenía menos puntos y recibió ${bonus} pts extra!`)
   overlay({ type: "alert", text: `🧲 ¡${poorest.display||poorest.username} recibió boost de equilibrio!`, duration: 5000 })
   return { username: poorest.username, bonus }
@@ -133,29 +133,43 @@ function spawnBoss(hp = 5000) {
   overlay({ type: "game_event", event: "boss_spawn", hp, maxHp: hp })
 }
 
-function attackBoss(username, display, amount) {
+// Claves de participante namespaced por identidad completa (Fase 1.45): el
+// boss es un evento compartido de todo el canal (boss.hp SÍ es global a
+// propósito), pero la contribución/recompensa de cada participante es por
+// viewer. La Fase 1.4 ya separaba por plataforma; esta fase corrige que
+// además use platformUserId real cuando existe (y no solo "legacy:username")
+// para no fragmentar a un mismo viewer en dos entradas dentro de la MISMA
+// plataforma. Cada entrada guarda la identidad completa, no solo un número,
+// así la recompensa final vuelve a Economy con el platformUserId correcto.
+function participantKey(username, platformName, platformUserId) {
+  return `${platformName}::${platformUserId || "legacy:" + username}`
+}
+
+function attackBoss(username, display, amount, platformName = "twitch", platformUserId = "") {
   const boss = activeEvents.bossActive
   if (!boss) return { error: "No hay boss activo. El broadcaster debe invocar uno." }
-  const viewer = getViewer(username)
+  const viewer = getViewer(username, platformName)
   if (!viewer || viewer.points < amount) return { error: `No tienes suficientes puntos. Tienes ${viewer?.points ?? 0}.` }
 
-  addPoints(username, -amount, "boss-ataque")
+  addPoints(username, -amount, "boss-ataque", { platform: platformName, platformUserId })
   boss.hp -= amount
-  boss.participants[username] = (boss.participants[username] || 0) + amount
+  const key = participantKey(username, platformName, platformUserId)
+  if (!boss.participants[key]) boss.participants[key] = { username, platformName, platformUserId, damage: 0 }
+  boss.participants[key].damage += amount
 
   if (boss.hp <= 0) {
     boss.hp = 0
     // distribuir recompensas
-    const totalDmg    = Object.values(boss.participants).reduce((a, b) => a + b, 0)
-    const rewardPool  = Math.floor(boss.maxHp * 1.5)
-    const participants = Object.entries(boss.participants)
+    const entries    = Object.values(boss.participants)
+    const totalDmg   = entries.reduce((a, p) => a + p.damage, 0)
+    const rewardPool = Math.floor(boss.maxHp * 1.5)
 
-    say(`👾 ¡¡BOSS DERROTADO!! Repartiendo ${rewardPool} puntos entre ${participants.length} héroes…`)
+    say(`👾 ¡¡BOSS DERROTADO!! Repartiendo ${rewardPool} puntos entre ${entries.length} héroes…`)
     overlay({ type: "alert", text: `👾 ¡BOSS DERROTADO! ¡Victoria!`, duration: 8000 })
 
-    for (const [usr, dmg] of participants) {
-      const reward = Math.floor((dmg / totalDmg) * rewardPool)
-      addPoints(usr, reward, "boss-recompensa")
+    for (const p of entries) {
+      const reward = Math.floor((p.damage / totalDmg) * rewardPool)
+      addPoints(p.username, reward, "boss-recompensa", { platform: p.platformName, platformUserId: p.platformUserId })
     }
 
     activeEvents.bossActive = null
@@ -179,14 +193,15 @@ function startLottery(pricePerTicket = 100) {
   overlay({ type: "alert", text: `🎟 ¡Lotería iniciada! Boleto: ${pricePerTicket} pts`, duration: 6000 })
 }
 
-function buyLotteryTicket(username, display) {
+function buyLotteryTicket(username, display, platformName = "twitch", platformUserId = "") {
   const lottery = activeEvents.lotteryActive
   if (!lottery) return { error: "No hay lotería activa." }
-  if (lottery.tickets[username]) return { error: `@${display} ya tienes un boleto.` }
-  const viewer = getViewer(username)
+  const key = participantKey(username, platformName, platformUserId)
+  if (lottery.tickets[key]) return { error: `@${display} ya tienes un boleto.` }
+  const viewer = getViewer(username, platformName)
   if (!viewer || viewer.points < lottery.pricePerTicket) return { error: `No tienes suficientes puntos. Necesitas ${lottery.pricePerTicket}.` }
-  addPoints(username, -lottery.pricePerTicket, "boleto-lotería")
-  lottery.tickets[username] = { display }
+  addPoints(username, -lottery.pricePerTicket, "boleto-lotería", { platform: platformName, platformUserId })
+  lottery.tickets[key] = { display, username, platformName, platformUserId }
   const total = Object.keys(lottery.tickets).length
   say(`🎟 @${display} compró un boleto! Total: ${total} participantes. Pozo: ${total * lottery.pricePerTicket} pts`)
   return { ok: true, total }
@@ -198,16 +213,16 @@ function drawLottery() {
   const participants = Object.entries(lottery.tickets)
   if (!participants.length) return { error: "No hay participantes en la lotería." }
 
-  const [winner, info] = participants[Math.floor(Math.random() * participants.length)]
+  const [, info] = participants[Math.floor(Math.random() * participants.length)]
   const prize = participants.length * lottery.pricePerTicket
 
-  addPoints(winner, prize, "lotería-ganador")
+  addPoints(info.username, prize, "lotería-ganador", { platform: info.platformName, platformUserId: info.platformUserId })
   say(`🎟 ¡¡GANADOR DE LA LOTERÍA!! 🎉 @${info.display} ganó ${prize} pts con ${participants.length} boletos en juego!`)
   overlay({ type: "alert", text: `🎟 ¡${info.display} ganó la lotería! +${prize} pts 🎉`, duration: 8000 })
-  overlay({ type: "game_event", event: "lottery_win", winner, prize })
+  overlay({ type: "game_event", event: "lottery_win", winner: info.username, prize })
 
   activeEvents.lotteryActive = null
-  return { ok: true, winner, prize }
+  return { ok: true, winner: info.username, prize }
 }
 
 
@@ -223,7 +238,7 @@ function collectTax(percent = 10) {
     if (v.points <= 0) continue
     const tax = Math.floor(v.points * (percent / 100))
     if (tax <= 0) continue
-    addPoints(v.username, -tax, `impuesto-${percent}%`)
+    addPoints(v.username, -tax, `impuesto-${percent}%`, { platform: v.platform, platformUserId: v.platform_user_id })
     totalCollected += tax
     affected++
   }
@@ -302,7 +317,7 @@ async function taxEveryone(percent = 10) {
     if (v.points <= 0) continue
     const tax = Math.floor(v.points * (percent / 100))
     if (tax <= 0) continue
-    addPoints(v.username, -tax, "impuestos")
+    addPoints(v.username, -tax, "impuestos", { platform: v.platform, platformUserId: v.platform_user_id })
     totalTaxed += tax
     count++
   }
@@ -319,7 +334,7 @@ async function crownKing(bonusPoints = 500) {
   const byMsgs = [...viewers].sort((a, b) => (b.messages||0) - (a.messages||0))
   if (!byMsgs.length) { say("⚠ No hay viewers con mensajes aún."); return { error: "Sin viewers" } }
   const king = byMsgs[0]
-  addPoints(king.username, bonusPoints, "rey-del-chat")
+  addPoints(king.username, bonusPoints, "rey-del-chat", { platform: king.platform, platformUserId: king.platform_user_id })
   const kingDisplay = king.display || king.username
   say(`👑 ¡REY DEL CHAT! @${kingDisplay} es el más activo con ${king.messages||0} mensajes y recibe ${bonusPoints} pts!`)
   overlay({ type: "alert", text: `👑 ¡${kingDisplay} es el Rey del Chat!`, duration: 8000 })
@@ -351,18 +366,18 @@ function isCoinActive() { return activeEvents.coinActive }
 function getCoinMaxBet() { return activeEvents.coinMaxBet }
 
 // Tirada de moneda para un viewer
-function flipCoin(username, display, amount) {
+function flipCoin(username, display, amount, platformName = "twitch", platformUserId = "") {
   if (!activeEvents.coinActive) return { error: "!coin no está activo ahora." }
   if (amount > activeEvents.coinMaxBet) return { error: `Máximo permitido: ${activeEvents.coinMaxBet} pts.` }
-  const viewer = getViewer(username)
+  const viewer = getViewer(username, platformName)
   if (!viewer || viewer.points < amount) return { error: `No tenés suficientes puntos.` }
   const cara = Math.random() < 0.5
   if (cara) {
-    addPoints(username, amount, "coin-cara")
+    addPoints(username, amount, "coin-cara", { platform: platformName, platformUserId })
     overlay({ type: "coin_flip", result: "cara", username, display, amount, win: true })
     return { ok: true, result: "cara", won: true, amount }
   } else {
-    addPoints(username, -amount, "coin-cruz")
+    addPoints(username, -amount, "coin-cruz", { platform: platformName, platformUserId })
     overlay({ type: "coin_flip", result: "cruz", username, display, amount, win: false })
     return { ok: true, result: "cruz", won: false, amount }
   }

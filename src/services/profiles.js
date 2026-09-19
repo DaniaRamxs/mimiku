@@ -2,23 +2,27 @@
 const { randomUUID } = require("node:crypto")
 const { getLocalPlatform } = require("./local-runtime.js")
 
-function resolve(username, display = "", platformUserId = "") {
-  return getLocalPlatform().identities.resolve({ platform: "twitch", platformUserId, username, display })
+// Identidad multiplataforma (Fase 1.4): estas funciones no tienen ningún
+// llamador activo todavía (no hay comando de chat conectado a perfiles/
+// cartas/cosméticos vía Command Engine), pero se corrige el mismo hardcode
+// de "twitch" para que no resurja el bug apenas se conecten.
+function resolve(username, display = "", platformUserId = "", platformName = "twitch") {
+  return getLocalPlatform().identities.resolve({ platform: platformName, platformUserId, username, display })
 }
 
-async function getOrCreateProfile(channelId, username, display = "", avatarUrl = "", platformUserId = "") {
+async function getOrCreateProfile(channelId, username, display = "", avatarUrl = "", platformUserId = "", platformName = "twitch") {
   return getLocalPlatform().profiles.getOrCreate(channelId, {
-    platform: "twitch", platformUserId, username, display, avatarUrl,
+    platform: platformName, platformUserId, username, display, avatarUrl,
   })
 }
 
-async function updateProfile(channelId, username, updates) {
-  const viewer = resolve(username)
+async function updateProfile(channelId, username, updates, platformName = "twitch") {
+  const viewer = resolve(username, "", "", platformName)
   return getLocalPlatform().profiles.update(channelId, viewer.id, updates)
 }
 
-async function addHoursWatched(channelId, username, hours) {
-  const profile = await getOrCreateProfile(channelId, username)
+async function addHoursWatched(channelId, username, hours, platformName = "twitch") {
+  const profile = await getOrCreateProfile(channelId, username, "", "", "", platformName)
   return getLocalPlatform().profiles.update(channelId, profile.viewer_id, {
     hoursWatched: profile.hours_watched + Math.max(0, Number(hours) || 0),
   })
@@ -47,9 +51,9 @@ function pickCard(cards, tier) {
   return source[Math.floor(Math.random() * source.length)]
 }
 
-async function openPack(channelId, username, packId, idempotencyKey = `pack:${randomUUID()}`) {
+async function openPack(channelId, username, packId, idempotencyKey = `pack:${randomUUID()}`, platformName = "twitch") {
   const platform = getLocalPlatform()
-  const viewer = resolve(username)
+  const viewer = resolve(username, "", "", platformName)
   const pack = platform.profiles.listPacks(channelId).find(item => item.id === packId)
   if (!pack) return { error: "Sobre no encontrado." }
   const cards = platform.profiles.listCards(channelId)
@@ -72,8 +76,8 @@ async function openPack(channelId, username, packId, idempotencyKey = `pack:${ra
   } catch (error) { return { error: error.message } }
 }
 
-async function getViewerCards(channelId, username) {
-  const viewer = resolve(username)
+async function getViewerCards(channelId, username, platformName = "twitch") {
+  const viewer = resolve(username, "", "", platformName)
   return getLocalPlatform().profiles.getCards(channelId, viewer.id)
 }
 
@@ -82,9 +86,9 @@ async function createCosmetic(channelId, name, type, imagePath, color, price) {
   return getLocalPlatform().profiles.createCosmetic(channelId, { name, type, imagePath, color, price: Number(price) })
 }
 
-async function buyCosmetic(channelId, username, cosmeticId, idempotencyKey = `cosmetic:${randomUUID()}`) {
+async function buyCosmetic(channelId, username, cosmeticId, idempotencyKey = `cosmetic:${randomUUID()}`, platformName = "twitch") {
   const platform = getLocalPlatform()
-  const viewer = resolve(username)
+  const viewer = resolve(username, "", "", platformName)
   const cosmetic = platform.profiles.listCosmetics(channelId).find(item => item.id === cosmeticId)
   if (!cosmetic) return { error: "Cosmético no encontrado." }
   try {
@@ -100,19 +104,19 @@ async function buyCosmetic(channelId, username, cosmeticId, idempotencyKey = `co
   } catch (error) { return { error: error.message } }
 }
 
-async function equipCosmetic(channelId, username, cosmeticId) {
-  const viewer = resolve(username)
+async function equipCosmetic(channelId, username, cosmeticId, platformName = "twitch") {
+  const viewer = resolve(username, "", "", platformName)
   const cosmetic = getLocalPlatform().profiles.equipCosmetic(channelId, viewer.id, cosmeticId)
   const fields = { frame: "frameUrl", banner: "bannerUrl", badge: "badgeUrl", name_color: "nameColor" }
   if (fields[cosmetic.type]) getLocalPlatform().profiles.update(channelId, viewer.id, { [fields[cosmetic.type]]: cosmetic.image_path || cosmetic.color })
   return { ok: true }
 }
 
-async function checkAchievements(channelId, username) {
+async function checkAchievements(channelId, username, platformName = "twitch") {
   const platform = getLocalPlatform()
-  const viewer = resolve(username)
-  const economy = require("./economy.js").getViewer(username)
-  const profile = await getOrCreateProfile(channelId, username)
+  const viewer = resolve(username, "", "", platformName)
+  const economy = require("./economy.js").getViewer(username, platformName)
+  const profile = await getOrCreateProfile(channelId, username, "", "", "", platformName)
   const owned = new Set(platform.profiles.getAchievements(channelId, viewer.id).map(item => item.achievement_id))
   const unlocked = []
   for (const achievement of platform.profiles.listAchievements()) {
@@ -127,8 +131,8 @@ async function checkAchievements(channelId, username) {
   return unlocked
 }
 
-async function getViewerAchievements(channelId, username) {
-  const viewer = resolve(username)
+async function getViewerAchievements(channelId, username, platformName = "twitch") {
+  const viewer = resolve(username, "", "", platformName)
   return getLocalPlatform().profiles.getAchievements(channelId, viewer.id)
 }
 
