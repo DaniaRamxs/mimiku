@@ -25,6 +25,11 @@ debe resolver esto (licencia de Mimiku o distribución sin esta dependencia) ant
 instalador. El adaptador (`src/integrations/tiktok/tiktok-adapter.js`) solo depende de una interfaz
 mínima, de modo que la librería se puede sustituir o retirar sin tocar el resto de Mimiku.
 
+Responder en el chat de TikTok es opcional y está desactivado por defecto. Al activarlo, la librería
+usa tu clave de API de Euler Stream y la cookie `sessionid` de la cuenta elegida, y según su
+documentación esas credenciales se envían al servicio de firma de terceros. Mimiku las guarda cifradas
+con el sistema (o solo en memoria si el cifrado no está disponible) y nunca las muestra en pantalla.
+
 ## Licencia de Mimiku
 
 Antes de publicar el código fuente fuera del repositorio actual, el propietario debe escoger y añadir

@@ -38,7 +38,7 @@ function activeWorkspaceId() {
 function autoStartTikTok() {
   const tiktok = appConfig.getAppConfig().integrations.tiktok
   if (!tiktok.enabled || !tiktok.username) return
-  tiktokAdapter().connect(tiktok.username, { autoReconnect: tiktok.autoReconnect }).catch(() => {})
+  tiktokAdapter().connect(tiktok.username, { autoReconnect: tiktok.autoReconnect, sendReplies: tiktok.sendReplies }).catch(() => {})
 }
 
 function initializeLocalRuntime(channelId) {
@@ -197,11 +197,22 @@ ipcMain.handle("tiktok:getStatus", () => tiktokAdapter().getStatus())
 ipcMain.handle("tiktok:connect", (_, input = {}) => {
   const username = validate.text(input.username, { name: "usuario", max: 40, required: true })
   const autoReconnect = input.autoReconnect !== false
-  appConfig.saveAppConfig({ integrations: { tiktok: { enabled: true, username, autoReconnect } } })
+  const sendReplies = input.sendReplies === true
+  appConfig.saveAppConfig({ integrations: { tiktok: { enabled: true, username, autoReconnect, sendReplies } } })
   const saved = appConfig.getAppConfig().integrations.tiktok
-  tiktokAdapter().connect(saved.username, { autoReconnect: saved.autoReconnect }).catch(() => {})
+  tiktokAdapter().connect(saved.username, { autoReconnect: saved.autoReconnect, sendReplies: saved.sendReplies }).catch(() => {})
   return tiktokAdapter().getStatus()
 })
+
+// Credenciales para responder en el chat de TikTok. Nunca se devuelven al
+// renderer: solo el estado (configurado / protegido / que falta).
+ipcMain.handle("tiktok:secretsStatus", () => secrets().getTikTokStatus())
+ipcMain.handle("tiktok:setSecrets", (_, input = {}) => secrets().setTikTokCredentials({
+  signApiKey: validate.text(input.signApiKey, { max: 4096 }),
+  sessionId: validate.text(input.sessionId, { max: 4096 }),
+  ttTargetIdc: validate.text(input.ttTargetIdc, { max: 200 }),
+}))
+ipcMain.handle("tiktok:clearSecrets", () => secrets().clearTikTokCredentials())
 ipcMain.handle("tiktok:disconnect", () => {
   appConfig.saveAppConfig({ integrations: { tiktok: { enabled: false } } })
   tiktokAdapter().disconnect()

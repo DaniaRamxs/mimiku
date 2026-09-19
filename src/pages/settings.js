@@ -170,6 +170,12 @@ async function refreshTikTokStatus() {
   const errorEl = document.getElementById("tiktok-error")
   errorEl.textContent = status.error || ""
   errorEl.style.display = status.error ? "" : "none"
+  const sendEl = document.getElementById("tiktok-send-status")
+  if (sendEl) {
+    if (!status.sendReplies) sendEl.textContent = ""
+    else if (status.canSend) sendEl.textContent = "Respuestas en el chat de TikTok: activas"
+    else sendEl.textContent = status.sendNote || "Respuestas en el chat de TikTok: se activarán al conectar"
+  }
   const active = ["connecting", "connected", "reconnecting"].includes(status.state)
   document.getElementById("tiktok-connect-btn").style.display = active ? "none" : ""
   document.getElementById("tiktok-disconnect-btn").style.display = active ? "" : "none"
@@ -180,6 +186,8 @@ async function refreshTikTok(config) {
   const saved = config?.integrations?.tiktok || {}
   document.getElementById("tiktok-username").value = saved.username || ""
   document.getElementById("tiktok-auto-reconnect").checked = saved.autoReconnect !== false
+  document.getElementById("tiktok-send-replies").checked = saved.sendReplies === true
+  await refreshTikTokSecrets()
   await refreshTikTokStatus()
   await refreshGiftConfig()
   await refreshRankConfig()
@@ -189,9 +197,42 @@ async function connectTikTok() {
   const username = document.getElementById("tiktok-username").value.trim()
   if (!username) { showToast("Escribe tu usuario de TikTok"); return }
   const autoReconnect = document.getElementById("tiktok-auto-reconnect").checked
-  await ipcRenderer.invoke("tiktok:connect", { username, autoReconnect })
+  const sendReplies = document.getElementById("tiktok-send-replies").checked
+  await ipcRenderer.invoke("tiktok:connect", { username, autoReconnect, sendReplies })
   showToast("Conectando con TikTok…")
   await refreshTikTokStatus()
+}
+
+// Solo se muestra el estado de las credenciales: los valores nunca vuelven al renderer.
+async function refreshTikTokSecrets() {
+  const label = document.getElementById("tiktok-secrets-status")
+  if (!label) return
+  const status = await ipcRenderer.invoke("tiktok:secretsStatus")
+  if (status.configured) label.textContent = status.protected ? "Guardadas con protección del sistema" : "Disponibles solo durante esta sesión"
+  else label.textContent = status.missing.length === 3 ? "No configuradas" : "Faltan: " + status.missing.join(", ")
+}
+
+async function saveTikTokSecrets() {
+  const fields = { signApiKey: "tiktok-sign-key", sessionId: "tiktok-session-id", ttTargetIdc: "tiktok-target-idc" }
+  const values = {}
+  for (const [name, id] of Object.entries(fields)) values[name] = document.getElementById(id).value.trim()
+  if (!values.signApiKey && !values.sessionId && !values.ttTargetIdc) { showToast("Escribe al menos un valor"); return }
+  try {
+    await ipcRenderer.invoke("tiktok:setSecrets", values)
+    showToast("Credenciales guardadas. Pulsa Conectar para aplicarlas.")
+  } catch (error) {
+    showToast("No se pudieron guardar las credenciales")
+    console.error("[settings] tiktok:setSecrets:", error.message)
+  }
+  for (const id of Object.values(fields)) document.getElementById(id).value = ""
+  await refreshTikTokSecrets()
+}
+
+async function clearTikTokSecrets() {
+  if (!window.confirm("¿Borrar las credenciales de TikTok guardadas?")) return
+  await ipcRenderer.invoke("tiktok:clearSecrets")
+  showToast("Credenciales borradas")
+  await refreshTikTokSecrets()
 }
 
 async function disconnectTikTok() {
@@ -509,6 +550,8 @@ module.exports = {
   disconnectSsn,
   connectTikTok,
   disconnectTikTok,
+  saveTikTokSecrets,
+  clearTikTokSecrets,
   saveGiftRate,
   saveGiftRule,
   saveSuperfanThreshold,

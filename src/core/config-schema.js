@@ -21,7 +21,7 @@ const DEFAULT_APP_CONFIG = Object.freeze({
       enabled: false,
       sessionId: "",
     },
-    tiktok: { enabled: false, username: "", autoReconnect: true },
+    tiktok: { enabled: false, username: "", autoReconnect: true, sendReplies: false },
   },
 })
 
@@ -81,6 +81,8 @@ function normalizeAppConfig(input = {}) {
         enabled: tiktok.enabled === true,
         username: cleanTikTokUser(tiktok.username),
         autoReconnect: tiktok.autoReconnect !== false,
+        // Responder en el chat de TikTok: opt-in, necesita credenciales (secret-store).
+        sendReplies: tiktok.sendReplies === true,
       },
     },
   }

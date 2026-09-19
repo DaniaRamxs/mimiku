@@ -1145,6 +1145,30 @@
           </label>
           <span class="field-hint">Estado: <strong id="tiktok-status">Desconectado</strong></span>
           <p id="tiktok-error" class="field-hint" style="display:none;font-size:12px;color:var(--danger);margin:8px 0 0;line-height:1.4"></p>
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer">Responder en el chat de TikTok (avanzado)</summary>
+            <p class="desc" style="margin-top:8px">Por defecto, las respuestas de los comandos solo se ven en tu Dashboard. Para que Mimiku escriba en el chat de TikTok necesita iniciar sesión con una cuenta.</p>
+            <p class="field-hint" style="color:var(--warning);line-height:1.4">Riesgo: la cookie <strong>sessionid</strong> da acceso a esa cuenta de TikTok y, según la librería, se envía al servicio de firma de terceros (Euler Stream) junto con tu clave de API. Actívalo solo si lo aceptas; lo más prudente es usar una cuenta secundaria para el bot. TikTok puede limitar las cuentas que envían mensajes automáticos.</p>
+            <div class="form-stack" style="margin-top:12px">
+            <label class="check-row"><input id="tiktok-send-replies" type="checkbox"> Responder en el chat de TikTok</label>
+            <label>Clave de API de Euler Stream
+              <input id="tiktok-sign-key" type="password" autocomplete="off" placeholder="No se muestra después de guardarla">
+            </label>
+            <label>sessionid (cookie de tiktok.com)
+              <input id="tiktok-session-id" type="password" autocomplete="off" placeholder="No se muestra después de guardarla">
+            </label>
+            <label>tt-target-idc (cookie de tiktok.com)
+              <input id="tiktok-target-idc" type="password" autocomplete="off" placeholder="ej. useast1a">
+            </label>
+            <span class="field-hint" style="display:block">Credenciales: <strong id="tiktok-secrets-status">No configuradas</strong></span>
+            <span id="tiktok-send-status" class="field-hint" style="display:block"></span>
+            <div class="btn-row">
+              <button class="btn-primary" onclick="window.settingsPage.saveTikTokSecrets()">Guardar credenciales</button>
+              <button class="btn-ghost" onclick="window.settingsPage.clearTikTokSecrets()">Borrar credenciales</button>
+            </div>
+            <p class="desc" style="margin:0">Los cambios de credenciales o de esta opción se aplican al pulsar Conectar (o reconectar).</p>
+            </div>
+          </details>
           <div class="btn-row" style="margin-top:12px">
             <button class="btn-primary" id="tiktok-connect-btn" onclick="window.settingsPage.connectTikTok()">Conectar</button>
             <button class="btn-ghost" id="tiktok-disconnect-btn" style="display:none" onclick="window.settingsPage.disconnectTikTok()">Desconectar</button>

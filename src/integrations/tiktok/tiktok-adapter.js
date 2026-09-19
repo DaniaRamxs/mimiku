@@ -10,6 +10,13 @@
 //   - es dependencia opcional: si no se puede cargar, el adaptador queda en
 //     estado "unavailable" y el resto de Mimiku sigue funcionando.
 //
+// Envio de chat (opcional): con credenciales (clave de API de Euler Stream +
+// sessionid + tt-target-idc) y la opcion activada, los eventos de chat pueden
+// responderse en el chat de TikTok. Esas credenciales viajan al servicio de
+// firma de terceros, asi que solo se usan si el streamer lo activa. Los
+// mensajes salen por una cola con espera minima entre envios y se desactiva
+// el envio tras fallos consecutivos para no martillar la cuenta.
+//
 // Formato de los eventos que emite (además de los campos comunes de
 // event-normalizer.js):
 //   chat_message: { message: { text } }
@@ -33,6 +40,12 @@ const RECONNECT_BASE_MS = 5000
 const RECONNECT_MAX_MS = 60000
 
 const LIMITS = { text: 500, name: 100, url: 1000, id: 200 }
+
+// Limites del envio de chat: TikTok corta mensajes largos y castiga el spam.
+const CHAT_MAX_LENGTH = 150
+const SEND_MIN_INTERVAL_MS = 2000
+const SEND_QUEUE_MAX = 20
+const SEND_MAX_CONSECUTIVE_FAILURES = 3
 
 function truncate(value, max) {
   return typeof value === "string" ? value.trim().slice(0, max) : ""
@@ -62,16 +75,18 @@ function normalizeActor(user) {
 }
 
 const noReply = () => {}
+// Contexto de respuesta por defecto: sin envio, la respuesta va al panel local.
+const NO_REPLY_CONTEXT = Object.freeze({ canReply: false, reply: noReply })
 
-function baseEvent(type, data, extra) {
+function baseEvent(type, data, extra, context = NO_REPLY_CONTEXT) {
   return {
     id: extra.id || null,
     source: SOURCE,
     platform: PLATFORM,
     type,
     actor: normalizeActor(data?.user),
-    metadata: { capabilities: { reply: false } },
-    reply: noReply,
+    metadata: { capabilities: { reply: context.canReply } },
+    reply: context.reply,
     ...extra.fields,
   }
 }
@@ -81,13 +96,13 @@ function msgId(data) {
   return id ? truncate(String(id), LIMITS.id) : null
 }
 
-function normalizeChat(data) {
+function normalizeChat(data, context) {
   const text = truncate(data?.comment, LIMITS.text)
   if (!text) return null
   return baseEvent("chat_message", data, {
     id: msgId(data),
     fields: { message: { text, emotes: [] } },
-  })
+  }, context)
 }
 
 function normalizeFollow(data) {
@@ -201,14 +216,36 @@ async function loadTikTokLibrary() {
   return import("tiktok-live-connector")
 }
 
-async function defaultConnectionFactory(username) {
+async function defaultConnectionFactory(username, { credentials } = {}) {
   const library = await loadTikTokLibrary()
-  const connection = new library.TikTokLiveConnection(username)
+  const options = credentials
+    ? {
+        signApiKey: credentials.signApiKey,
+        authenticateWs: true,
+        session: { cookie: { type: "cookie", value: { sessionId: credentials.sessionId, ttTargetIdc: credentials.ttTargetIdc } } },
+      }
+    : {}
+  const connection = new library.TikTokLiveConnection(username, options)
   return {
     on: (name, handler) => connection.on(name, handler),
     connect: () => connection.connect(),
     disconnect: () => connection.disconnect(),
+    // Solo tiene sentido con credenciales; sin ellas la libreria lo rechazaria.
+    ...(credentials ? { sendMessage: text => connection.sendMessage(text) } : {}),
   }
+}
+
+function hasCompleteCredentials(credentials) {
+  return Boolean(credentials && credentials.signApiKey && credentials.sessionId && credentials.ttTargetIdc)
+}
+
+// Texto seguro para el chat: una linea, longitud maxima y sin empezar por "!"
+// (una respuesta que empiece con "!" podria leerse como comando).
+function prepareOutgoing(message) {
+  let text = String(message ?? "").replace(/\s+/g, " ").trim()
+  if (!text) return ""
+  if (text.startsWith("!")) text = "Mimiku: " + text
+  return text.length > CHAT_MAX_LENGTH ? text.slice(0, CHAT_MAX_LENGTH - 3) + "..." : text
 }
 
 function friendlyError(error) {
@@ -226,6 +263,7 @@ function createTikTokAdapter(overrides = {}) {
   const setTimer = overrides.setTimer || setTimeout
   const clearTimer = overrides.clearTimer || clearTimeout
   const log = overrides.log || console
+  const getCredentials = overrides.getCredentials || (() => null)
 
   let connection = null
   let username = ""
@@ -233,12 +271,60 @@ function createTikTokAdapter(overrides = {}) {
   let attempts = 0
   let reconnectTimer = null
   let generation = 0 // invalida callbacks de conexiones antiguas
+  let sendReplies = false
+  let sender = null // { conn, generation, queue, busy, failures, disabled }
+  let sendNote = "" // por que no se envia, para la UI
   let status = { state: "disconnected", username: "", error: null, attempts: 0 }
 
   const combos = createGiftComboTracker({ emit: event => eventEngine.emit(event), setTimer, clearTimer })
 
   function setStatus(state, error = null) {
     status = { state, username, error, attempts }
+  }
+
+  function canSend() {
+    return Boolean(sender && !sender.disabled && sender.generation === generation && status.state === "connected")
+  }
+
+  // ── Cola de envio ──────────────────────────────────────────────────────
+  function pump(activeSender) {
+    if (activeSender.busy || activeSender.disabled) return
+    const text = activeSender.queue.shift()
+    if (text === undefined) return
+    activeSender.busy = true
+    Promise.resolve()
+      .then(() => activeSender.conn.sendMessage(text))
+      .then(() => { activeSender.failures = 0 })
+      .catch(error => {
+        activeSender.failures++
+        log.warn("[tiktok] no se pudo enviar el mensaje:", error?.message || error)
+        if (activeSender.failures >= SEND_MAX_CONSECUTIVE_FAILURES) {
+          activeSender.disabled = true
+          activeSender.queue.length = 0
+          sendNote = "Se desactivó el envío tras varios fallos (sesión caducada o clave de API inválida)."
+        }
+      })
+      .finally(() => {
+        // Espera minima entre envios, aunque el anterior haya fallado.
+        const timer = setTimer(() => { activeSender.busy = false; pump(activeSender) }, SEND_MIN_INTERVAL_MS)
+        if (timer && typeof timer.unref === "function") timer.unref()
+      })
+  }
+
+  function say(message) {
+    if (!canSend()) return false
+    const text = prepareOutgoing(message)
+    if (!text) return false
+    if (sender.queue.length >= SEND_QUEUE_MAX) return false // mejor perder una respuesta que inundar el chat
+    sender.queue.push(text)
+    pump(sender)
+    return true
+  }
+
+  // Contexto que llevan los eventos de chat: responden por el chat de TikTok
+  // solo mientras el envio este realmente disponible.
+  function replyContext() {
+    return canSend() ? { canReply: true, reply: say } : NO_REPLY_CONTEXT
   }
 
   function safeEmit(event) {
@@ -251,7 +337,7 @@ function createTikTokAdapter(overrides = {}) {
       if (myGeneration !== generation) return
       try { handler(data) } catch (error) { log.error("[tiktok] error procesando evento:", error.message) }
     }
-    conn.on("chat", guard(data => safeEmit(normalizeChat(data))))
+    conn.on("chat", guard(data => safeEmit(normalizeChat(data, replyContext()))))
     conn.on("follow", guard(data => safeEmit(normalizeFollow(data))))
     conn.on("like", guard(data => safeEmit(normalizeLike(data))))
     conn.on("gift", guard(data => combos.handle(data)))
@@ -278,9 +364,18 @@ function createTikTokAdapter(overrides = {}) {
     if (myGeneration !== generation) return
     setStatus(attempts ? "reconnecting" : "connecting")
     try {
-      const conn = await connectionFactory(username)
+      const credentials = sendReplies ? getCredentials() : null
+      if (sendReplies && !hasCompleteCredentials(credentials)) {
+        sendNote = "Faltan credenciales para responder en el chat de TikTok."
+      }
+      const usable = hasCompleteCredentials(credentials) ? credentials : null
+      const conn = await connectionFactory(username, { credentials: usable })
       if (myGeneration !== generation) return
       connection = conn
+      sender = usable && typeof conn.sendMessage === "function"
+        ? { conn, generation: myGeneration, queue: [], busy: false, failures: 0, disabled: false }
+        : null
+      if (sender) sendNote = ""
       bind(conn, myGeneration)
       await conn.connect()
       if (myGeneration !== generation) return
@@ -309,6 +404,8 @@ function createTikTokAdapter(overrides = {}) {
     disconnect()
     username = cleaned
     autoReconnect = options.autoReconnect !== false
+    sendReplies = options.sendReplies === true
+    sendNote = ""
     attempts = 0
     generation++
     return attemptConnect(generation)
@@ -321,6 +418,7 @@ function createTikTokAdapter(overrides = {}) {
     combos.flushAll()
     const previous = connection
     connection = null
+    sender = null
     if (previous) {
       try { Promise.resolve(previous.disconnect()).catch(() => {}) } catch { /* ya cerrada */ }
     }
@@ -328,12 +426,19 @@ function createTikTokAdapter(overrides = {}) {
     setStatus("disconnected")
   }
 
-  return { connect, disconnect, getStatus: () => ({ ...status }) }
+  return {
+    connect, disconnect, say,
+    getStatus: () => ({ ...status, sendReplies, canSend: canSend(), sendNote: sendReplies && !canSend() ? sendNote : "" }),
+  }
 }
 
 let defaultAdapter = null
 function getDefaultTikTokAdapter() {
-  if (!defaultAdapter) defaultAdapter = createTikTokAdapter()
+  if (!defaultAdapter) {
+    defaultAdapter = createTikTokAdapter({
+      getCredentials: () => require("../../services/secret-store.js").getDefaultSecretStore().getTikTokCredentials(),
+    })
+  }
   return defaultAdapter
 }
 
@@ -345,4 +450,8 @@ module.exports = {
   normalizeFollow,
   normalizeLike,
   COMBO_IDLE_FLUSH_MS,
+  prepareOutgoing,
+  CHAT_MAX_LENGTH,
+  SEND_MIN_INTERVAL_MS,
+  SEND_MAX_CONSECUTIVE_FAILURES,
 }

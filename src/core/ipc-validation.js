@@ -57,6 +57,7 @@ function configUpdates(value) {
         enabled: input.integrations.tiktok.enabled === true,
         username: text(input.integrations.tiktok.username, { max: 40 }),
         autoReconnect: input.integrations.tiktok.autoReconnect !== false,
+        sendReplies: input.integrations.tiktok.sendReplies === true,
       }
     }
   }
