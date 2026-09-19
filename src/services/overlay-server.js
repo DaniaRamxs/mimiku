@@ -5,6 +5,9 @@ const { randomUUID } = require("node:crypto")
 
 const clients = new Set()
 let _wss = null
+let _server = null
+let _started = false
+let _status = { running: false, error: null }
 
 const OVERLAY_PATH = path.join(__dirname, "overlay.html")
 const PANEL_DIR = path.join(__dirname, "..", "..", "mod-panel")
@@ -23,14 +26,71 @@ const MIME = {
 }
 
 function start() {
-  const apiHandler = require("./local-api.js").createLocalApiHandler({
+  if (_started) return
+  _started = true
+  // Event Engine compartido: se registran Command Engine y Sound Trigger
+  // Engine UNA sola vez aquí (no en twitch.js), porque start() siempre
+  // corre al arrancar Mimiku, se conecte o no Twitch. Si el registro
+  // dependiera de que se cargue twitch.js, un streamer que solo use SSN
+  // (sin conectar nunca Twitch) no tendría comandos ni sound triggers.
+  const eventEngine = require("../core/events/event-engine.js").getDefaultEventEngine()
+  const vipService = require("./vips.js")
+  vipService.init(payload => broadcast(payload))
+  require("../core/interactions/command-engine.js").registerCommandEngine(eventEngine, {
+    // La salida visual pertenece al runtime local, no a Twitch. Así los
+    // minijuegos recibidos por SSN también llegan a la fuente de OBS.
+    overlay: broadcast,
+    notify: (channel, payload) => require("../integrations/twitch/twitch-adapter.js").sendToRenderer(channel, payload),
+    vipService,
+  })
+  require("../core/interactions/sound-trigger-engine.js").registerSoundTriggerEngine(eventEngine)
+  eventEngine.subscribe("chat_message", vipService.handleChatMessage)
+  // Regalos de plataformas de directo (TikTok): puntos + donaciones + reglas de Mimic.
+  const giftService = require("./gifts.js")
+  giftService.registerGiftConsumer(eventEngine, giftService.getDefaultGiftService())
+  // Rangos (superfan): barrido periodico por cambio de mes o caducidad de overrides.
+  // Solo se anuncia en el overlay la ENTRADA al rango; las salidas no se anuncian.
+  require("./ranks.js").getDefaultRankService().start()
+  eventEngine.subscribe("rank_change", event => {
+    if (event.payload?.change !== "enter") return
+    const label = require("./ranks.js").rankLabel(event.payload.rankId)
+    broadcast({ type: "alert", text: `${event.actor.displayName} ahora es ${label}`, duration: 5000 })
+  })
+
+  // Actividad general de chat (Fase 1.5): viewers activos + XP/niveles/
+  // widget de avatar/AFK/mini-reto. Mismo motivo que Command/Sound arriba —
+  // registrado siempre al arrancar, nunca solo al conectar Twitch.
+  const activityTracker = require("../core/interactions/activity-consumer.js")
+    .getDefaultActivityTracker({ onKingUpdate: king => king && broadcast({ type: "king_update", username: king.username, display: king.displayName, messages: king.messages }) })
+  require("../core/interactions/activity-consumer.js").registerActivityConsumer(eventEngine, activityTracker)
+  require("../core/interactions/chat-activity-consumers.js").registerChatActivityConsumers(eventEngine, {
+    xp: { getPointsPerMessage: event => vipService.pointsPerMessage(event, 2) },
+    challenge: { announce: msg => require("../integrations/twitch/twitch-adapter.js").say(msg) },
+    // Feed de chat multiplataforma para el Dashboard (Fase 1.6) — reemplaza
+    // a "twitch:message" como fuente; ver docs/multiplatform-architecture.md.
+    chatFeed: { notify: (channel, payload) => require("../integrations/twitch/twitch-adapter.js").sendToRenderer(channel, payload) },
+  })
+
+  const localApi = require("./local-api.js")
+  const apiHandler = localApi.createLocalApiHandler({
     platform: require("./local-runtime.js").getLocalPlatform(),
     getChannel: () => require("./currentChannel.js").get(),
     token: API_TOKEN,
     broadcast,
     arenaService: require("./arena.js"),
   })
-  const server = require("http").createServer((req, res) => {
+  // Social Stream Ninja es una fuente OPCIONAL: si el streamer nunca la
+  // configura, esta ruta simplemente nunca recibe una request y no hace nada.
+  // No es un requisito de arranque de Mimiku.
+  const ssnRoute = localApi.createSocialStreamNinjaRoute({
+    token: require("./app-config.js").getSocialStreamNinjaToken(),
+    adapter: require("../integrations/social-stream-ninja/social-stream-ninja-adapter.js").getDefaultSocialStreamNinjaAdapter(),
+  })
+  _server = require("http").createServer((req, res) => {
+    if (req.url.startsWith(localApi.SSN_PATH_PREFIX)) {
+      ssnRoute(req, res)
+      return
+    }
     if (req.url.startsWith("/api/v1/")) {
       apiHandler(req, res)
       return
@@ -98,8 +158,41 @@ function start() {
     const ch = require("./currentChannel.js").get()
     if (ch) ws.send(JSON.stringify({ type: "set_channel", channel: ch }))
   })
+  // Sin este handler, un puerto 7778 ocupado (otra instancia de Mimiku,
+  // otra app) tira una excepción no capturada que cierra toda la app.
+  _wss.on("error", error => reportServerError("ws:7778", error))
 
-  server.listen(7777, "127.0.0.1", () => console.log("[overlay] 127.0.0.1:7777 / ws :7778"))
+  _server.on("error", error => reportServerError("http:7777", error))
+  _server.listen(7777, "127.0.0.1", () => {
+    _status = { running: true, error: null }
+    console.log("[overlay] 127.0.0.1:7777 / ws :7778")
+  })
+}
+
+// Puerto ocupado (u otro fallo de arranque) no debe crashear Mimiku — se
+// registra un estado consultable desde la UI (ver ipc "overlay:getStatus")
+// en vez de dejar una excepción sin capturar.
+function reportServerError(where, error) {
+  const friendly = error.code === "EADDRINUSE"
+    ? `No se pudo iniciar el servidor local (${where}). Comprueba si otra instancia de Mimiku u otra aplicación está usando ese puerto.`
+    : `El servidor local (${where}) falló: ${error.message}`
+  _status = { running: false, error: friendly }
+  console.error("[overlay]", friendly)
+}
+
+function getStatus() { return _status }
+
+function stop() {
+  for (const client of clients) {
+    try { client.terminate() } catch {}
+  }
+  clients.clear()
+  try { _wss?.close() } catch {}
+  try { _server?.close() } catch {}
+  _wss = null
+  _server = null
+  _started = false
+  _status = { running: false, error: null }
 }
 
 function broadcast(payload) {
@@ -109,4 +202,4 @@ function broadcast(payload) {
   console.log("[overlay] broadcast", payload.type, "→", sent, "de", clients.size, "clientes")
 }
 
-module.exports = { start, broadcast, clients, getApiToken: () => API_TOKEN }
+module.exports = { start, stop, broadcast, clients, getApiToken: () => API_TOKEN, getStatus }

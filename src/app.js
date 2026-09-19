@@ -12,31 +12,20 @@ const arenaPage  = require("./pages/arena.js")
 const cardsPage  = require("./pages/cards.js")
 const eventsPage = require("./pages/events-panel.js")
 const mimicsPage = require("./pages/mimics.js")
+const roulettePage = require("./pages/roulette.js")
+const chestsPage = require("./pages/chests.js")
 const levelsPage = require("./pages/levels.js")
 const emotesPage = require("./pages/emotes.js")
+const vipsPage = require("./pages/vips.js")
 const vtuberPage = require("./pages/vtuber.js")
 const widgetsPage = require("./pages/widgets.js")
+const commandsPage = require("./pages/commands.js")
 
-window.economyPage  = economy
-window.overlayPage  = overlay
-window.settingsPage = settings
-window.modsPage     = modsPage
-window.afkPage      = afkPage
-window.gamesPage    = gamesPage
-window.arenaPage    = arenaPage
-window.cardsPage    = cardsPage
-window.deleteCard   = (id) => cardsPage.deleteCard(id)
-window.uploadCardImage = (file) => cardsPage.uploadCardImage(file)
-window.eventsPage   = eventsPage
-window.mimicsPage   = mimicsPage
-window.levelsPage   = levelsPage
-window.emotesPage   = emotesPage
-window.vtuberPage   = vtuberPage
-window.widgetsPage  = widgetsPage
-
-window.minimize = () => ipcRenderer.invoke("app:minimize")
-window.maximize = () => ipcRenderer.invoke("app:maximize")
-window.quit     = () => ipcRenderer.invoke("app:quit")
+const windowControls = {
+  minimize: () => ipcRenderer.invoke("app:minimize"),
+  maximize: () => ipcRenderer.invoke("app:maximize"),
+  quit: () => ipcRenderer.invoke("app:quit"),
+}
 
 const pages    = {}
 const navItems = {}
@@ -52,20 +41,52 @@ function showPage(id) {
   if (id === "economy") { economy.renderRanking(); economy.renderLog() }
   if (id === "mods")    modsPage.refreshModList()
   if (id === "cards")   { cardsPage.loadCards(); cardsPage.loadPacks() }
-  if (id === "mimics")  { mimicsPage.loadMimics(); mimicsPage.loadBoxes() }
+  if (id === "mimics")  { mimicsPage.loadMimics(); mimicsPage.loadBoxes(); roulettePage.loadRoulette(); chestsPage.loadChestInventory() }
   if (id === "levels")  { levelsPage.initLevels() }
   if (id === "emotes")  { emotesPage.initEmotes() }
+  if (id === "vips")    { vipsPage.initVips() }
   if (id === "vtuber")  { vtuberPage.initVtuber() }
   if (id === "arena")   { arenaPage.initArena() }
   if (id === "events")  eventsPage.refreshStatus()
   if (id === "widgets") widgetsPage.initWidgets()
+  if (id === "commands") commandsPage.initCommands()
 }
-window.showPage = showPage
-window.showToast = function(msg) {
+function showToast(msg) {
   const t = document.getElementById("toast")
   if (!t) return
   t.textContent = msg; t.classList.add("show")
   setTimeout(() => t.classList.remove("show"), 3000)
+}
+
+const cardsFacade = {
+  ...cardsPage,
+  uploadCardImage: () => cardsPage.uploadCardImage(document.getElementById("card-img-file")?.files?.[0]),
+}
+
+const rendererApi = {
+  economyPage: economy,
+  overlayPage: overlay,
+  settingsPage: settings,
+  modsPage,
+  afkPage,
+  gamesPage,
+  arenaPage,
+  cardsPage: cardsFacade,
+  deleteCard: id => cardsPage.deleteCard(id),
+  uploadCardImage: cardsFacade.uploadCardImage,
+  eventsPage,
+  mimicsPage,
+  roulettePage,
+  chestsPage,
+  levelsPage,
+  emotesPage,
+  vipsPage,
+  vtuberPage,
+  widgetsPage,
+  commandsPage,
+  ...windowControls,
+  showPage,
+  showToast,
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -77,6 +98,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   dashboard.initDashboard()
   const appConfig = await settings.initSettings()
+  const version = await ipcRenderer.invoke("app:getVersion")
+  const versionLabel = document.getElementById("app-version")
+  if (versionLabel) versionLabel.textContent = `Mimiku v${version}`
   overlay.initOverlay()
   economy.initEconomy()
   modsPage.initMods()
@@ -86,15 +110,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   eventsPage.initEvents()
   mimicsPage.initMimics()  // Panel Director del Caos
 
-  const ch  = appConfig.streamer.twitchChannel || localStorage.getItem("mimiku_channel")
-  const tok = localStorage.getItem("mimiku_token")
-  if (ch) ipcRenderer.invoke("twitch:connect", { channel: ch, token: tok || "" })
+  const workspaceId = appConfig.workspace?.id || localStorage.getItem("mimiku_channel") || ""
+  if (workspaceId) localStorage.setItem("mimiku_channel", workspaceId)
+  const twitchChannel = appConfig.streamer.twitchChannel || ""
+  if (twitchChannel) ipcRenderer.invoke("twitch:connect", { channel: twitchChannel })
 
   if (!appConfig.onboarding.completed) {
     document.getElementById("onboarding-display-name").value = appConfig.streamer.displayName || ""
-    document.getElementById("onboarding-twitch-channel").value = ch || ""
+    document.getElementById("onboarding-twitch-channel").value = twitchChannel
     document.getElementById("onboarding-modal").style.display = "flex"
   }
 
   ipcRenderer.on("mods:command", (_, cmd) => modsPage.onModCommand(cmd))
 })
+
+module.exports = rendererApi

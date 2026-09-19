@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src http: https: data:; media-src http: https: data: blob:; connect-src ws://127.0.0.1:7778; frame-src http: https:; font-src data:">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:transparent;overflow:hidden;font-family:sans-serif;width:100vw;height:100vh}
@@ -485,6 +486,20 @@ body.shake-strong{animation:shake-strong .6s ease-in-out;}
 .cab-info{min-width:0;}
 .cab-name{font-size:13px;font-weight:700;color:#fafafa;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;}
 .cab-level{font-size:11px;color:#c4b5fd;font-weight:600;margin-top:1px;}
+
+/* ── Ruleta de cofres ─────────────────────────────────────────────────── */
+#chest-roulette{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.92);opacity:0;transition:opacity .35s ease,transform .35s ease;pointer-events:none;z-index:9500;display:flex;flex-direction:column;align-items:center;gap:14px;text-shadow:0 2px 6px rgba(0,0,0,.7)}
+#chest-roulette.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.cr-title{font:700 22px system-ui,sans-serif;color:#fff}
+.cr-stage{position:relative;width:340px;height:340px;margin-top:22px;display:flex;align-items:center;justify-content:center}
+.cr-wheel{position:absolute;inset:0;border-radius:50%;border:6px solid #f5c542;box-shadow:0 0 30px rgba(0,0,0,.55);will-change:transform;transition:transform 4.2s cubic-bezier(.12,.75,.15,1)}
+.cr-label{position:absolute;left:50%;top:50%;width:0;height:0}
+.cr-label span{position:absolute;left:0;top:-146px;transform:translateX(-50%);font:700 13px system-ui,sans-serif;color:#fff;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.cr-pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:28px solid #f5c542;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));z-index:2}
+.cr-die{width:200px;height:200px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#8b5cf6,#4c1d95);clip-path:polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%);font:800 76px system-ui,sans-serif;color:#fff}
+.cr-die-sides{font:600 14px system-ui,sans-serif;color:#ddd}
+.cr-result{font:800 30px system-ui,sans-serif;color:#f5c542;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease}
+.cr-result.show{opacity:1;transform:translateY(0)}
 </style>
 </head>
 <body>
@@ -682,7 +697,10 @@ body.shake-strong{animation:shake-strong .6s ease-in-out;}
 </div>
 
 <script>
-var ws      = new WebSocket("ws://localhost:7778");
+var ws      = null;
+var reconnectTimer = null;
+var reconnectDelay = 1000;
+var overlayClosing = false;
 var layer   = document.getElementById("widgets-layer");
 var alertEl = document.getElementById("alert-box");
 var gameEl  = document.getElementById("game-box");
@@ -690,9 +708,150 @@ var widgets = {};
 var alertTimer, gameTimer, rouletteTimer, kingTimer, coinTimer;
 var channel = null;
 
-ws.onopen = function() { ws.send(JSON.stringify({type:"get_channel"})); };
+// OBS puede abrir el overlay antes que Mimiku o mantenerlo abierto al reiniciar.
+function scheduleOverlayReconnect() {
+  if (overlayClosing || reconnectTimer !== null) return;
+  reconnectTimer = setTimeout(function() {
+    reconnectTimer = null;
+    connectOverlay();
+  }, reconnectDelay);
+  reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+}
 
-ws.onmessage = function(e) {
+function disconnectOverlaySocket(socket) {
+  if (ws !== socket) return;
+  ws = null;
+  socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
+  if (socket.readyState < WebSocket.CLOSING) socket.close();
+  scheduleOverlayReconnect();
+}
+
+function connectOverlay() {
+  if (overlayClosing || ws) return;
+  var socket;
+  try {
+    socket = new WebSocket("ws://127.0.0.1:7778");
+  } catch (error) {
+    scheduleOverlayReconnect();
+    return;
+  }
+  ws = socket;
+  socket.onopen = function() {
+    if (overlayClosing || ws !== socket) return;
+    reconnectDelay = 1000;
+    socket.send(JSON.stringify({type:"get_channel"}));
+  };
+  socket.onmessage = handleOverlayMessage;
+  socket.onclose = socket.onerror = function() { disconnectOverlaySocket(socket); };
+}
+
+window.addEventListener("beforeunload", function() {
+  overlayClosing = true;
+  clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  if (ws) disconnectOverlaySocket(ws);
+});
+
+// ── Ruleta de cofres (!ruletacofres) ─────────────────────────────────────
+var CR_COLORS = ["#7c3aed", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#ec4899", "#6366f1", "#14b8a6"];
+var CR_SPIN_MS = 4200;
+var CR_RESULT_HOLD_MS = 5000;
+var chestRouletteQueue = [];
+var chestRouletteBusy = false;
+
+function crEl(tag, className, text) {
+  var node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+}
+
+// Varios giros seguidos se muestran uno tras otro, nunca encimados.
+function showChestRoulette(m) {
+  chestRouletteQueue.push(m);
+  if (!chestRouletteBusy) nextChestRoulette();
+}
+
+function nextChestRoulette() {
+  var m = chestRouletteQueue.shift();
+  if (!m) { chestRouletteBusy = false; return; }
+  chestRouletteBusy = true;
+
+  var root = document.getElementById("chest-roulette");
+  if (!root) { root = crEl("div"); root.id = "chest-roulette"; document.body.appendChild(root); }
+  root.textContent = "";
+  var result = crEl("div", "cr-result");
+  var stage = crEl("div", "cr-stage");
+  root.appendChild(crEl("div", "cr-title", m.user + " gira la ruleta de cofres"));
+  root.appendChild(stage);
+  root.appendChild(result);
+  requestAnimationFrame(function () { root.classList.add("show"); });
+
+  if (m.mode === "segments" && m.segments && m.segments.length) crSpinWheel(stage, m);
+  else crRollDie(stage, m);
+
+  setTimeout(function () {
+    // El nombre del segmento solo se agrega si aporta algo distinto de "N cofres".
+    var prize = "Gana " + m.chests + (m.chests === 1 ? " cofre" : " cofres");
+    if (m.label && !/cofre/i.test(m.label)) prize += " (" + m.label + ")";
+    result.textContent = prize;
+    result.classList.add("show");
+  }, CR_SPIN_MS + 200);
+  setTimeout(function () {
+    root.classList.remove("show");
+    setTimeout(nextChestRoulette, 450);
+  }, CR_SPIN_MS + 200 + CR_RESULT_HOLD_MS);
+}
+
+function crSpinWheel(stage, m) {
+  var total = 0, i;
+  for (i = 0; i < m.segments.length; i++) total += m.segments[i].weight;
+  var wheel = crEl("div", "cr-wheel");
+  var stops = [], start = 0, mids = [];
+  for (i = 0; i < m.segments.length; i++) {
+    var span = (m.segments[i].weight / total) * 360;
+    stops.push(CR_COLORS[i % CR_COLORS.length] + " " + start + "deg " + (start + span) + "deg");
+    mids.push({ start: start, span: span });
+    var label = crEl("div", "cr-label");
+    label.style.transform = "rotate(" + (start + span / 2) + "deg)";
+    label.appendChild(crEl("span", "", m.segments[i].label));
+    wheel.appendChild(label);
+    start += span;
+  }
+  wheel.style.background = "conic-gradient(" + stops.join(",") + ")";
+  stage.appendChild(wheel);
+  stage.appendChild(crEl("div", "cr-pointer"));
+
+  // El puntero esta arriba (0 grados). Se gira la rueda para que el segmento
+  // ganador quede bajo el puntero, con un margen aleatorio dentro del segmento.
+  var win = mids[m.segmentIndex] || mids[0];
+  var jitter = (Math.random() - 0.5) * win.span * 0.6;
+  var finalAngle = 360 * 6 - (win.start + win.span / 2 + jitter);
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { wheel.style.transform = "rotate(" + finalAngle + "deg)"; });
+  });
+}
+
+function crRollDie(stage, m) {
+  var die = crEl("div", "cr-die", "?");
+  stage.appendChild(die);
+  var sides = m.sides || 20;
+  var startedAt = Date.now();
+  // Cambia rapido al principio y se frena hacia el final, como una tirada real.
+  function tick() {
+    var elapsed = Date.now() - startedAt;
+    if (elapsed >= CR_SPIN_MS) { die.textContent = String(m.roll != null ? m.roll : m.chests); return; }
+    die.textContent = String(1 + Math.floor(Math.random() * sides));
+    setTimeout(tick, 50 + (elapsed / CR_SPIN_MS) * 250);
+  }
+  tick();
+  var caption = crEl("div", "cr-die-sides", "d" + sides);
+  caption.style.position = "absolute";
+  caption.style.bottom = "-6px";
+  stage.appendChild(caption);
+}
+
+function handleOverlayMessage(e) {
   var m = JSON.parse(e.data);
   if (m.type === "set_channel")   channel = m.channel;
   if (m.type === "alert")         showAlert(m.text, m.duration);
@@ -704,6 +863,7 @@ ws.onmessage = function(e) {
   if (m.type === "widget_move")   moveWidget(m.widget_id, m.x, m.y);
   if (m.type === "widget_resize") resizeWidget(m.widget_id, m.w, m.h);
   if (m.type === "game_roulette") showRouletteAnimation(m);
+  if (m.type === "chest_roulette") showChestRoulette(m);
   if (m.type === "game_bj")       showBjResult(m);
   if (m.type === "game_slots")    showSlotsResult(m);
   if (m.type === "game_event")     handleGameEvent(m);
@@ -732,7 +892,9 @@ ws.onmessage = function(e) {
   if (m.type === "afk_count")        afkCount(m);
   if (m.type === "afk_count_break")  afkCountBreak(m);
   if (m.type === "afk_goal_reached") afkGoalReached(m);
-};
+}
+
+connectOverlay();
 
 // ── Ruleta ────────────────────────────────────────────────────────────────────
 var RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
@@ -841,7 +1003,13 @@ function showRouletteAnimation(m) {
   requestAnimationFrame(animate);
 
   // también mostrar en game-box
-  gameEl.innerHTML = "<span style='font-size:18px'>🎡</span><span>" + m.msg + "</span>";
+  gameEl.replaceChildren();
+  var rouletteIcon = document.createElement("span");
+  rouletteIcon.style.fontSize = "18px";
+  rouletteIcon.textContent = "🎡";
+  var rouletteText = document.createElement("span");
+  rouletteText.textContent = m.msg || "";
+  gameEl.append(rouletteIcon, rouletteText);
   gameEl.classList.add("show");
   clearTimeout(gameTimer);
   gameTimer = setTimeout(function() { gameEl.classList.remove("show"); }, 8000);
@@ -858,10 +1026,19 @@ function showCoinResult(m) {
   var icon = m.win ? "🪙" : "🟤"
   var label = m.win ? "¡CARA! GANASTE" : "CRUZ. Perdiste"
   var color = m.win ? "#22c55e" : "#ef4444"
-  gameEl.innerHTML =
-    "<span style='font-size:22px'>" + icon + "</span>" +
-    "<span style='color:" + color + ";font-weight:700'>" + label + "</span>" +
-    "<span style='color:#a1a1aa;font-size:13px'>@" + m.username + " " + (m.win ? "+" : "-") + m.amount + " pts</span>"
+  gameEl.replaceChildren();
+  var coinIcon = document.createElement("span");
+  coinIcon.style.fontSize = "22px";
+  coinIcon.textContent = icon;
+  var coinLabel = document.createElement("span");
+  coinLabel.style.color = color;
+  coinLabel.style.fontWeight = "700";
+  coinLabel.textContent = label;
+  var coinText = document.createElement("span");
+  coinText.style.color = "#a1a1aa";
+  coinText.style.fontSize = "13px";
+  coinText.textContent = "@" + (m.username || "") + " " + (m.win ? "+" : "-") + (Number(m.amount) || 0) + " pts";
+  gameEl.append(coinIcon, coinLabel, coinText);
   gameEl.classList.add("show")
   gameTimer = setTimeout(function() { gameEl.classList.remove("show") }, 4000)
 }
@@ -995,7 +1172,11 @@ function showBjResult(m) {
   iconEl.textContent  = c.icon;
   labelEl.textContent = c.label;
   labelEl.style.color = c.color;
-  textEl.innerHTML    = m.msg ? m.msg.replace(/ \| /g, "<br>") : "";
+  textEl.replaceChildren();
+  String(m.msg || "").split(" | ").forEach(function(part, index) {
+    if (index) textEl.appendChild(document.createElement("br"));
+    textEl.appendChild(document.createTextNode(part));
+  });
 
   // shake en lose/bust
   if (m.result === "lose" || m.result === "bust") {
@@ -1013,36 +1194,61 @@ function showBjResult(m) {
 
 // ── Widgets ───────────────────────────────────────────────────────────────────
 function addWidget(msg) {
-  var existing = widgets[msg.widget_id];
+  var widgetId = String(msg.widget_id || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 100);
+  if (!widgetId) return;
+  var existing = widgets[widgetId];
   if (existing) {
-    existing.style.left   = (msg.x||50)  + "px";
-    existing.style.top    = (msg.y||50)  + "px";
-    existing.style.width  = (msg.w||480) + "px";
-    existing.style.height = (msg.h||300) + "px";
+    existing.style.left   = finiteNumber(msg.x, 50, 0, 10000) + "px";
+    existing.style.top    = finiteNumber(msg.y, 50, 0, 10000) + "px";
+    existing.style.width  = finiteNumber(msg.w, 480, 200, 4000) + "px";
+    existing.style.height = finiteNumber(msg.h, 300, 120, 4000) + "px";
     return;
   }
   var el = document.createElement("div");
   el.className = "mod-widget";
-  el.id        = "mw_" + msg.widget_id;
-  el.style.left   = (msg.x||50)  + "px";
-  el.style.top    = (msg.y||50)  + "px";
-  el.style.width  = (msg.w||480) + "px";
-  el.style.height = (msg.h||300) + "px";
+  el.id        = "mw_" + widgetId;
+  el.style.left   = finiteNumber(msg.x, 50, 0, 10000) + "px";
+  el.style.top    = finiteNumber(msg.y, 50, 0, 10000) + "px";
+  el.style.width  = finiteNumber(msg.w, 480, 200, 4000) + "px";
+  el.style.height = finiteNumber(msg.h, 300, 120, 4000) + "px";
   var ct   = msg.content_type || msg.type;
-  var body = "";
-  if      (ct === "url")   body = '<iframe src="' + msg.content + '" allowfullscreen allow="autoplay;fullscreen"></iframe>';
-  else if (ct === "image") body = '<img src="' + msg.content + '" alt="">';
-  else                     body = '<div class="cw-text">' + (msg.content||"") + "</div>";
-  el.innerHTML =
-    '<div class="cw-header">' +
-      '<span class="mod-tag">MOD</span>' +
-      '<span>' + (msg.mod_display||msg.mod_username||"") + '</span>' +
-      '<span class="cw-close" onclick="removeWidget(\'' + msg.widget_id + '\')">✕</span>' +
-    '</div>' +
-    '<div class="cw-body">' + body + '</div>' +
-    '<div class="resize-handle"></div>';
+  var header = document.createElement("div");
+  header.className = "cw-header";
+  var modTag = document.createElement("span");
+  modTag.className = "mod-tag";
+  modTag.textContent = "MOD";
+  var modName = document.createElement("span");
+  modName.textContent = msg.mod_display || msg.mod_username || "";
+  var close = document.createElement("span");
+  close.className = "cw-close";
+  close.textContent = "✕";
+  close.addEventListener("click", function() { removeWidget(widgetId); });
+  header.append(modTag, modName, close);
+  var body = document.createElement("div");
+  body.className = "cw-body";
+  var contentUrl = safeMediaUrl(msg.content);
+  if (ct === "url" && contentUrl) {
+    var frame = document.createElement("iframe");
+    frame.src = contentUrl;
+    frame.allowFullscreen = true;
+    frame.setAttribute("allow", "autoplay;fullscreen");
+    body.appendChild(frame);
+  } else if (ct === "image" && contentUrl) {
+    var image = document.createElement("img");
+    image.src = contentUrl;
+    image.alt = "";
+    body.appendChild(image);
+  } else {
+    var text = document.createElement("div");
+    text.className = "cw-text";
+    text.textContent = msg.content || "";
+    body.appendChild(text);
+  }
+  var resizeHandle = document.createElement("div");
+  resizeHandle.className = "resize-handle";
+  el.append(header, body, resizeHandle);
   layer.appendChild(el);
-  widgets[msg.widget_id] = el;
+  widgets[widgetId] = el;
   makeDraggable(el);
   makeResizable(el);
 }
@@ -1079,6 +1285,20 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, function(c) {
     return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
   });
+}
+
+function finiteNumber(value, fallback, min, max) {
+  var parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+}
+
+function safeMediaUrl(value) {
+  try {
+    var parsed = new URL(String(value || ""), "http://127.0.0.1:7777");
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : "";
+  } catch (_) {
+    return "";
+  }
 }
 
 function showChatAvatar(m) {
@@ -1204,8 +1424,13 @@ function showCoinFlip(m) {
 
   // game-box también
   var icon = isCara ? "\uD83E\uDE99" : "\u2728";
-  gameEl.innerHTML = "<span style='font-size:18px'>" + icon + "</span><span>" +
-    (m.display||m.username) + (m.win ? " gan\u00f3 +" : " perdi\u00f3 -") + m.amount + " pts</span>";
+  gameEl.replaceChildren();
+  var resultIcon = document.createElement("span");
+  resultIcon.style.fontSize = "18px";
+  resultIcon.textContent = icon;
+  var resultText = document.createElement("span");
+  resultText.textContent = (m.display || m.username || "") + (m.win ? " gan\u00f3 +" : " perdi\u00f3 -") + (Number(m.amount) || 0) + " pts";
+  gameEl.append(resultIcon, resultText);
   gameEl.classList.add("show");
   clearTimeout(gameTimer);
   gameTimer = setTimeout(function() { gameEl.classList.remove("show"); }, 5000);
@@ -1228,24 +1453,32 @@ function placeMimicRandom(overlay) {
 function showMimicImage(m) {
   var overlay = document.getElementById("mimic-media-overlay")
   var inner   = document.getElementById("mimic-media-inner")
-  if (!overlay || !m.url) return
-  inner.innerHTML = '<img src="' + m.url + '" alt="">'
+  var url = safeMediaUrl(m.url)
+  if (!overlay || !url) return
+  var image = document.createElement("img")
+  image.src = url
+  image.alt = ""
+  inner.replaceChildren(image)
   placeMimicRandom(overlay)
   overlay.classList.add("show")
   clearTimeout(mimicMediaTimer)
   mimicMediaTimer = setTimeout(function() {
     overlay.classList.remove("show")
-    setTimeout(function(){ inner.innerHTML = "" }, 400)
+    setTimeout(function(){ inner.replaceChildren() }, 400)
   }, m.duration || 3000)
 }
 
 function showMimicVideo(m) {
   var overlay = document.getElementById("mimic-media-overlay")
   var inner   = document.getElementById("mimic-media-inner")
-  if (!overlay || !m.url) return
-  var vol = (typeof m.volume === "number") ? m.volume : 0.8
-  inner.innerHTML = '<video src="' + m.url + '" autoplay playsinline></video>'
-  var vid = inner.querySelector("video")
+  var url = safeMediaUrl(m.url)
+  if (!overlay || !url) return
+  var vol = finiteNumber(m.volume, 0.8, 0, 1)
+  var vid = document.createElement("video")
+  vid.src = url
+  vid.autoplay = true
+  vid.playsInline = true
+  inner.replaceChildren(vid)
   if (vid) {
     vid.volume = vol
     vid.muted  = false
@@ -1264,21 +1497,23 @@ function showMimicVideo(m) {
   clearTimeout(mimicMediaTimer)
   mimicMediaTimer = setTimeout(function() {
     overlay.classList.remove("show")
-    setTimeout(function(){ inner.innerHTML = "" }, 400)
+    setTimeout(function(){ inner.replaceChildren() }, 400)
   }, m.duration || 5000)
 }
 
 function playMimicSound(m) {
-  if (!m.url) return
-  var audio = new Audio(m.url)
-  audio.volume = (typeof m.volume === "number") ? m.volume : 0.8
+  var url = safeMediaUrl(m.url)
+  if (!url) return
+  var audio = new Audio(url)
+  audio.volume = finiteNumber(m.volume, 0.8, 0, 1)
   audio.play().catch(function(e){ console.warn("mimic sound:", e) })
 }
 
 function playEmoteSound(m) {
-  if (!m.url) return
-  var audio = new Audio(m.url)
-  audio.volume = (typeof m.volume === "number") ? m.volume : 0.8
+  var url = safeMediaUrl(m.url)
+  if (!url) return
+  var audio = new Audio(url)
+  audio.volume = finiteNumber(m.volume, 0.8, 0, 1)
   audio.play().catch(function(e){ console.warn("emote sound:", e) })
 }
 

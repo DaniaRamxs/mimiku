@@ -3,10 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: http://127.0.0.1:7777; media-src 'self' blob: data: http://127.0.0.1:7777; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Mimiku</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/app.css">
 </head>
 <body>
@@ -28,17 +26,19 @@
     <button class="nav-item" data-page="games">🎮 Minijuegos</button>
     <button class="nav-item" data-page="arena">🏟 Arena</button>
     <button class="nav-item" data-page="economy">◈ Economía</button>
+    <button class="nav-item" data-page="commands">⌘ Comandos</button>
     <button class="nav-item" data-page="overlay">◉ Overlay</button>
     <button class="nav-item" data-page="events">⚡ Eventos</button>
     <button class="nav-item" data-page="cards">🃏 Cartas</button>
     <button class="nav-item" data-page="mimics">✨ Mimics</button>
     <button class="nav-item" data-page="levels">⭐ Niveles</button>
     <button class="nav-item" data-page="emotes">🔊 Emotes</button>
+    <button class="nav-item" data-page="vips">💎 VIPs</button>
     <button class="nav-item" data-page="vtuber">🎭 VTuber</button>
     <button class="nav-item" data-page="widgets">🧩 Widgets</button>
     <button class="nav-item" data-page="settings">⚙ Ajustes</button>
     <div class="sidebar-spacer"></div>
-    <div class="sidebar-footer">Mimiku v0.1.0</div>
+    <div class="sidebar-footer" id="app-version">Mimiku</div>
   </nav>
 
   <main id="content">
@@ -51,9 +51,10 @@
         <div class="stat-card"><span class="label">Puntos totales</span><span class="value" id="stat-points">0</span></div>
         <div class="stat-card"><span class="label">Eventos</span><span class="value" id="stat-events">0</span></div>
         <div class="stat-card"><span class="label">Canal</span><span class="value muted" id="stat-status">Offline</span></div>
+        <div class="stat-card"><span class="label">Servidor local</span><span class="value muted" id="stat-server">…</span></div>
       </div>
       <h2 class="section-title">Feed de eventos</h2>
-      <div id="feed"><p class="empty">Conecta Twitch en Ajustes para ver eventos en vivo…</p></div>
+      <div id="feed"><p class="empty">Conecta Twitch o Social Stream Ninja para ver mensajes de Twitch/YouTube/TikTok en vivo aquí…</p></div>
     </div>
 
     <!-- Mods -->
@@ -379,9 +380,9 @@
         </div>
         <div class="economy-side">
           <div class="panel">
-            <div class="panel-header"><span class="panel-title">Dar puntos</span></div>
+            <div class="panel-header"><span class="panel-title">Dar puntos</span><button class="btn-ghost" onclick="window.economyPage.loadGrantViewers()">↻ Viewers</button></div>
             <div class="form-group">
-              <label>Usuario<input id="grant-user" type="text" placeholder="username"></label>
+              <label>Viewer activo<select id="grant-user"><option value="">Sin viewers activos todavía</option></select></label>
               <label>Puntos<input id="grant-amount" type="number" placeholder="100" min="-9999" max="9999"></label>
               <button class="btn-primary" onclick="window.economyPage.grantPoints()">Aplicar</button>
             </div>
@@ -397,6 +398,26 @@
       </div>
     </div>
 
+    <!-- Comandos -->
+    <div id="commands" class="page">
+      <div class="page-header">
+        <h1>Comandos</h1>
+        <p class="page-sub">Activa comandos, limita su plataforma y añade cooldown por viewer.</p>
+      </div>
+      <div class="panel" style="max-width:900px">
+        <div class="panel-header"><span class="panel-title">Catálogo local</span></div>
+        <p class="desc">Los comandos consumen eventos normalizados. Social Stream Ninja ejecuta efectos y muestra la respuesta dentro de Mimiku, pero no escribe de vuelta al chat.</p>
+        <p class="desc">Cada comando puede limitarse a rangos concretos. Un rango siempre es de una plataforma: el Superfan de TikTok y el VIP de Twitch son distintos y solo se combinan si los marcas a la vez.</p>
+        <h4 style="margin:14px 0 4px">Comandos compartidos entre plataformas</h4>
+        <div class="command-head"><span>Comando</span><span>Activo</span><span>Plataforma</span><span>Cooldown (s)</span><span>Rangos</span><span></span></div>
+        <div id="commands-list"><p class="empty">Cargando comandos…</p></div>
+        <h4 style="margin:22px 0 4px">Comandos exclusivos de TikTok</h4>
+        <p class="desc">Aparecen aquí los comandos cuya plataforma es TikTok. Cambia la plataforma de un comando compartido a TikTok para moverlo.</p>
+        <div class="command-head"><span>Comando</span><span>Activo</span><span>Plataforma</span><span>Cooldown (s)</span><span>Rangos</span><span></span></div>
+        <div id="commands-tiktok-list"><p class="empty">Cargando comandos…</p></div>
+      </div>
+    </div>
+
     <!-- Overlay -->
     <div id="overlay" class="page">
       <div class="page-header"><h1>Overlay</h1></div>
@@ -404,7 +425,7 @@
         <div class="panel-header"><span class="panel-title">Browser Source URL</span></div>
         <p class="desc">Agrega esta URL como Browser Source en OBS Studio:</p>
         <div class="url-box">
-          <span>http://localhost:7777/overlay</span>
+          <span>http://127.0.0.1:7777/overlay</span>
           <button onclick="window.overlayPage.copyUrl()">Copiar</button>
         </div>
       </div>
@@ -638,6 +659,47 @@
 
       <p class="section-label" style="margin-top:2rem">CAJAS DE MIMICS</p>
       <div id="boxes-grid" class="boxes-grid"><p class="empty">Cargando…</p></div>
+
+      <p class="section-label" style="margin-top:2rem">RULETA DE COFRES</p>
+      <div class="panel" style="max-width:760px">
+        <p class="desc">Los viewers giran la ruleta con <strong>!ruletacofres</strong> y reciben cofres sin abrir en su inventario. La plataforma y el rango que pueden usarla se configuran en Comandos (por ejemplo, solo Superfan de TikTok). No confundir con <strong>!ruleta</strong>, el casino de puntos.</p>
+        <div class="form-group form-stack">
+          <label class="check-row"><input id="roulette-enabled" type="checkbox"> Activar la ruleta de cofres</label>
+          <label>Caja que se entrega
+            <select id="roulette-box" class="field-select"></select>
+          </label>
+          <label>Cooldown por viewer (segundos)
+            <input id="roulette-cooldown" type="number" min="0" max="604800" value="3600">
+          </label>
+          <label>Modo de premio
+            <select id="roulette-mode" class="field-select" onchange="window.roulettePage.updateModeFields()">
+              <option value="segments">Segmentos con probabilidad</option>
+              <option value="dice">Dado de N caras</option>
+            </select>
+          </label>
+          <div id="roulette-dice-fields">
+            <label>Caras del dado (2 a 1000). Entrega tantos cofres como salga.
+              <input id="roulette-sides" type="number" min="2" max="1000" value="20">
+            </label>
+          </div>
+          <div id="roulette-segment-fields" style="display:none">
+            <p class="desc" style="margin:0 0 8px">Cada segmento tiene un peso: la probabilidad es su peso entre la suma de todos.</p>
+            <div id="roulette-segments"></div>
+            <button class="btn-ghost" style="width:auto" onclick="window.roulettePage.addSegment()">+ Añadir segmento</button>
+          </div>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn-primary" onclick="window.roulettePage.saveRoulette()">Guardar ruleta</button>
+            <button class="btn-ghost" onclick="window.roulettePage.previewRoulette()">Probar en el overlay</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-label" style="margin-top:2rem">COFRES SIN ABRIR DE LOS VIEWERS</p>
+      <div class="panel" style="max-width:760px">
+        <p class="desc">Los viewers los abren con <strong>!abrircofre</strong> (o <strong>!abrircofre 3</strong>) y consultan cuántos tienen con <strong>!cofres</strong>. Cada apertura reparte los Mimics de la caja según sus probabilidades por rareza.</p>
+        <div id="chest-inventory" class="backup-list"><p class="empty">Cargando…</p></div>
+        <div class="btn-row" style="margin-top:10px"><button class="btn-ghost" onclick="window.chestsPage.loadChestInventory()">Actualizar</button></div>
+      </div>
     </div>
 
     <!-- Cartas -->
@@ -659,7 +721,7 @@
                 <div style="display:flex;gap:6px;align-items:center">
                   <input id="card-img" type="url" placeholder="https://...jpg" style="flex:1">
                   <button class="btn-ghost" onclick="document.getElementById('card-img-file').click()" style="white-space:nowrap;padding:8px 10px;font-size:12px">📁 Subir</button>
-                  <input id="card-img-file" type="file" accept="image/*" style="display:none" onchange="window.cardsPage.uploadCardImage(this.files[0])">
+                  <input id="card-img-file" type="file" accept="image/*" style="display:none" onchange="window.cardsPage.uploadCardImage()">
                 </div>
                 <p id="card-img-uploading" class="field-hint" style="display:none">Subiendo imagen…</p>
               </label>
@@ -727,11 +789,21 @@
         <input type="checkbox" id="emotes-enabled" checked onchange="window.emotesPage.toggleEnabled(this.checked)">
         Sistema activado
       </label>
+      <label class="emotes-master" style="margin-top:8px">Volumen general
+        <input id="emotes-master-volume" type="range" min="0" max="1" step="0.05" value="1" onchange="window.emotesPage.setMasterVolume(this.value)">
+      </label>
 
       <div class="card-block" style="margin-top:1rem">
         <p class="section-label">AGREGAR SONIDO</p>
         <div class="emote-add-row">
           <input type="text" id="new-emote-name" placeholder="Nombre del emote (ej: MiCanalPog)">
+          <select id="new-emote-platform">
+            <option value="all">Todas las plataformas</option>
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="kick">Kick</option>
+          </select>
           <label class="emote-cd">cooldown <input type="number" id="new-emote-cd" min="0" value="5">s</label>
           <button class="btn-primary" style="width:auto;padding:9px 18px" onclick="window.emotesPage.pickEmoteFile()">📁 Elegir audio y agregar</button>
         </div>
@@ -740,6 +812,68 @@
 
       <p class="section-label" style="margin-top:1.5rem">TUS SONIDOS</p>
       <div id="emotes-list" class="emotes-list"><p class="empty">Cargando…</p></div>
+    </div>
+
+    <!-- VIPs -->
+    <div id="vips" class="page">
+      <div class="page-header">
+        <h1>VIPs</h1>
+        <p class="page-sub">Configura los puntos por mensaje y las alertas de sonido de tus VIPs</p>
+      </div>
+
+      <label class="emotes-master">
+        <input type="checkbox" id="vips-enabled" checked onchange="window.vipsPage.toggleEnabled(this.checked)">
+        Beneficios VIP activados
+      </label>
+      <p class="field-hint" style="margin-top:8px">Los badges VIP de Twitch y Social Stream Ninja se detectan automáticamente. También puedes agregar nombres manualmente.</p>
+
+      <div class="vip-layout">
+        <div class="card-block">
+          <p class="section-label">PUNTOS POR MENSAJE</p>
+          <div class="vip-setting-row">
+            <label>VIP gana <input id="vips-points" type="number" min="0" max="1000000" value="5"> puntos</label>
+            <button class="btn-primary" style="width:auto;padding:9px 18px" onclick="window.vipsPage.savePoints()">Guardar</button>
+          </div>
+          <p class="field-hint" style="margin-top:8px">Este valor reemplaza los puntos normales del mensaje mientras el beneficio VIP esté activo.</p>
+        </div>
+
+        <div class="card-block">
+          <p class="section-label">AGREGAR VIP MANUAL</p>
+          <div class="vip-setting-row">
+            <input id="new-vip-username" type="text" maxlength="100" placeholder="Nombre de usuario">
+            <select id="new-vip-platform">
+              <option value="all">Todas</option>
+              <option value="twitch">Twitch</option>
+              <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
+              <option value="kick">Kick</option>
+            </select>
+            <button class="btn-primary" style="width:auto;padding:9px 18px" onclick="window.vipsPage.addUser()">+ Agregar</button>
+          </div>
+          <div id="vips-users-list" class="vip-list"><p class="empty-small">No hay VIPs manuales.</p></div>
+        </div>
+      </div>
+
+      <div class="card-block" style="margin-top:1rem">
+        <p class="section-label">ALERTA DE SONIDO VIP</p>
+        <div class="vip-sound-add">
+          <input id="new-vip-sound-command" type="text" maxlength="40" placeholder="Comando, ej. !bruh">
+          <select id="new-vip-sound-platform">
+            <option value="all">Todas las plataformas</option>
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="kick">Kick</option>
+          </select>
+          <label>temporizador <input id="new-vip-sound-cd" type="number" min="0" max="86400" value="10"> s</label>
+          <label>volumen <input id="new-vip-sound-volume" type="number" min="0" max="1" step="0.1" value="0.8"></label>
+          <button class="btn-primary" style="width:auto;padding:9px 18px" onclick="window.vipsPage.pickSoundFile()">📁 Elegir audio</button>
+        </div>
+        <p class="field-hint" style="margin-top:8px">La alerta se activa cuando alguien usa ese comando. El temporizador evita repetirla demasiado seguido.</p>
+      </div>
+
+      <p class="section-label" style="margin-top:1.5rem">ALERTAS CONFIGURADAS</p>
+      <div id="vips-sounds-list" class="vip-list"><p class="empty">Cargando…</p></div>
     </div>
 
     <!-- Niveles -->
@@ -929,13 +1063,14 @@
     <div id="settings" class="page">
       <div class="page-header"><h1>Ajustes</h1></div>
       <div class="panel" style="max-width:480px">
-        <div class="panel-header"><span class="panel-title">Perfil y conexión Twitch</span></div>
+        <div class="panel-header"><span class="panel-title">Perfil e integración Twitch (opcional)</span></div>
         <div class="form-group">
           <label>Nombre del streamer<input id="streamer-display-name" type="text" placeholder="Tu nombre público"></label>
-          <label>Canal<input id="channel" type="text" placeholder="tu_canal"></label>
+          <label>Canal de Twitch<input id="channel" type="text" placeholder="tu_canal (opcional)"></label>
           <label>OAuth Token
             <input id="token" type="password" placeholder="oauth:xxxxxxxxxxxxxxxxxxxx">
-            <span class="field-hint">Obtén tu token en twitchapps.com/tmi</span>
+            <span class="field-hint">Mimiku lo guarda cifrado con la protección del sistema. Obtén el token en twitchapps.com/tmi.</span>
+            <span class="field-hint">Estado: <strong id="twitch-token-status">No configurado</strong></span>
           </label>
           <div class="btn-row">
             <button class="btn-primary" onclick="window.settingsPage.saveSettings()">Guardar y conectar</button>
@@ -955,7 +1090,136 @@
           <button class="btn-ghost" onclick="window.settingsPage.saveLegacyCloudConfig()">Guardar puente heredado</button>
         </div>
         <button class="btn-primary" onclick="window.settingsPage.importFromMimiku1()" id="btn-sync">Importar desde Mimiku 1</button>
+      </div>
+
+      <div class="panel" style="max-width:520px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Social Stream Ninja</span></div>
+        <p class="desc">Opcional. Conectá Social Stream Ninja para recibir chat de YouTube, TikTok y otras plataformas además de Twitch. No sustituye a Twitch ni requiere conexión a internet para el resto de Mimiku.</p>
+
+        <ol style="margin:0 0 1rem;padding-left:1.3rem;font-size:13px;color:var(--text-secondary);display:flex;flex-direction:column;gap:6px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px 14px 32px">
+          <li>Abrí <strong>Social Stream Ninja Desktop</strong> en tu PC.</li>
+          <li>En su menú: <strong>File → Enable Local Server (3003)</strong>.</li>
+          <li>En <strong>Mechanics → Connections &amp; Integrations</strong>, activá <strong>Send messages to Dock from Extension via server</strong>.</li>
+          <li>No hace falta activar acceso por LAN — Mimiku se conecta en tu misma máquina.</li>
+        </ol>
+
+        <div class="form-group">
+          <span class="field-hint" style="display:block;margin-bottom:10px">Estado: <strong id="ssn-conn-status">⚪ No conectado</strong></span>
+          <p id="ssn-error-msg" class="field-hint" style="display:none;font-size:12px;color:var(--danger);margin:8px 0 0;line-height:1.4"></p>
+          <p id="ssn-relay-hint" class="field-hint" style="display:none;font-size:12px;color:var(--warning);margin:8px 0 0;line-height:1.4"></p>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn-primary" id="ssn-detect-btn" onclick="window.settingsPage.detectSsn()">Detectar Social Stream Ninja</button>
+            <button class="btn-primary" id="ssn-connect-btn" style="display:none" onclick="window.settingsPage.connectSsn()">Conectar</button>
+            <button class="btn-ghost" id="ssn-disconnect-btn" style="display:none" onclick="window.settingsPage.disconnectSsn()">Desconectar</button>
+          </div>
+          <div id="ssn-connected-info" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <span class="field-hint">Servidor local: <strong id="ssn-server-addr">—</strong></span>
+              <span class="field-hint">Plataformas detectadas: <span id="ssn-platforms">—</span></span>
+              <span class="field-hint">Último evento: <span id="ssn-last-event">—</span></span>
+            </div>
+          </div>
         </div>
+
+        <details style="margin-top:14px">
+          <summary style="cursor:pointer">Modo avanzado / heredado (postserver)</summary>
+          <p class="desc" style="margin-top:8px">Solo si preferís el método anterior de pegar una URL en el dock de Social Stream Ninja. No es necesario si usás "Conectar" arriba.</p>
+          <label>URL para pegar en "postserver" del dock
+            <input id="ssn-post-url" type="text" readonly>
+          </label>
+          <div class="btn-row">
+            <button class="btn-ghost" onclick="window.settingsPage.copySsnUrl()">Copiar URL</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">TikTok LIVE</span></div>
+        <p class="desc">Conecta el chat, follows, likes y regalos de tu directo de TikTok. Usa una librería no oficial: TikTok puede romperla sin aviso y no afecta al resto de Mimiku.</p>
+        <div class="form-group form-stack">
+          <label>Usuario de TikTok
+            <input id="tiktok-username" type="text" placeholder="tu_usuario (sin @)" maxlength="40">
+          </label>
+          <label class="check-row">
+            <input id="tiktok-auto-reconnect" type="checkbox" checked> Reconectar automáticamente
+          </label>
+          <span class="field-hint">Estado: <strong id="tiktok-status">Desconectado</strong></span>
+          <p id="tiktok-error" class="field-hint" style="display:none;font-size:12px;color:var(--danger);margin:8px 0 0;line-height:1.4"></p>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn-primary" id="tiktok-connect-btn" onclick="window.settingsPage.connectTikTok()">Conectar</button>
+            <button class="btn-ghost" id="tiktok-disconnect-btn" style="display:none" onclick="window.settingsPage.disconnectTikTok()">Desconectar</button>
+          </div>
+        </div>
+
+        <h4 style="margin:18px 0 6px">Regalos: monedas a puntos</h4>
+        <p class="desc">Cada regalo siempre suma puntos y queda registrado como donación. Sin regla propia se usa la tasa general.</p>
+        <div class="form-row">
+          <label>ID de regalo (vacío = todos)<input id="gift-rate-id" type="text" maxlength="100" placeholder="general"></label>
+          <label>Puntos por moneda<input id="gift-rate-value" type="number" min="0" step="0.1" value="1"></label>
+          <button class="btn-primary" onclick="window.settingsPage.saveGiftRate()">Guardar tasa</button>
+        </div>
+        <div id="gift-rate-list" class="field-hint" style="margin-top:8px"></div>
+
+        <h4 style="margin:18px 0 6px">Regalos que disparan un Mimic</h4>
+        <p class="desc">Opcional. Se evalúa al cerrarse el combo, con el total acumulado de regalos.</p>
+        <div class="form-row">
+          <label>ID de regalo (vacío = cualquiera)<input id="gift-rule-id" type="text" maxlength="100" placeholder="cualquiera"></label>
+          <label>Cantidad mínima<input id="gift-rule-min" type="number" min="1" value="1"></label>
+          <label>Mimic<select id="gift-rule-mimic" class="field-select"></select></label>
+          <button class="btn-primary" onclick="window.settingsPage.saveGiftRule()">Añadir regla</button>
+        </div>
+        <div id="gift-rule-list" class="field-hint" style="margin-top:8px"></div>
+
+        <h4 style="margin:18px 0 6px">Rango de Superfan</h4>
+        <p class="desc">Se calcula con las monedas regaladas en el mes calendario en curso y se recalcula cada mes. Un umbral de 0 lo desactiva. Al alcanzarlo, el viewer accede solo a los comandos de ese rango.</p>
+        <div class="form-row">
+          <label>Monedas mínimas en el mes<input id="superfan-threshold" type="number" min="0" step="1" value="0"></label>
+          <button class="btn-primary" onclick="window.settingsPage.saveSuperfanThreshold()">Guardar umbral</button>
+        </div>
+
+        <h4 style="margin:18px 0 6px">Asignaciones manuales de Superfan</h4>
+        <p class="desc">Pisan el cálculo automático hasta que caduquen. Conceder da el rango; Negar lo quita aunque llegue al umbral.</p>
+        <div class="form-row">
+          <label>Usuario de TikTok<input id="override-username" type="text" maxlength="80" placeholder="usuario"></label>
+          <label>Efecto<select id="override-effect" class="field-select"><option value="grant">Conceder</option><option value="deny">Negar</option></select></label>
+          <label>Caduca (opcional)<input id="override-expires" type="date"></label>
+          <label>Motivo<input id="override-reason" type="text" maxlength="500" placeholder="por qué"></label>
+          <button class="btn-primary" onclick="window.settingsPage.addRankOverride()">Añadir</button>
+        </div>
+        <div id="override-list" class="field-hint" style="margin-top:8px"></div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Doctor de Stream</span></div>
+        <p class="desc">Comprueba SQLite, servidor local, integraciones y archivos de sonido antes de salir en directo. El reporte no incluye tokens, salas SSN ni mensajes del chat.</p>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="window.settingsPage.runDiagnostics()">Ejecutar diagnóstico</button>
+          <button class="btn-ghost" onclick="window.settingsPage.exportDiagnostics()">Exportar reporte</button>
+        </div>
+        <div id="doctor-results" class="doctor-results"><span class="field-hint">Todavía no se ejecutó el diagnóstico.</span></div>
+        <div class="diagnostic-simulator">
+          <strong>Simular mensaje local</strong>
+          <span class="field-hint">Recorre el Event Engine con una identidad ficticia para probar chat, actividad y triggers. No contacta ninguna plataforma.</span>
+          <div class="diagnostic-simulator-row">
+            <select id="diagnostic-platform">
+              <option value="twitch">Twitch</option>
+              <option value="youtube" selected>YouTube</option>
+              <option value="tiktok">TikTok</option>
+            </select>
+            <input id="diagnostic-message" type="text" maxlength="300" value="hola desde Mimiku" aria-label="Mensaje de prueba">
+            <button class="btn-ghost" onclick="window.settingsPage.simulateChatEvent()">Enviar prueba</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Copias de seguridad SQLite</span></div>
+        <p class="desc">Crea una copia íntegra de tu comunidad local. Mimiku conserva automáticamente las cinco más recientes.</p>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="window.settingsPage.createBackup()">Crear copia ahora</button>
+          <button class="btn-ghost" onclick="window.settingsPage.refreshBackups()">Actualizar lista</button>
+        </div>
+        <div id="backup-list" class="backup-list"><span class="field-hint">Cargando…</span></div>
       </div>
     </div>
 
@@ -1122,8 +1386,11 @@
         <input id="gift-firstn" type="number" min="1" value="10">
       </div>
       <div id="gift-user-row" class="lvl-field" style="margin-top:12px;display:none">
-        <label>Usuario de Twitch</label>
-        <input id="gift-user" type="text" placeholder="nombre_usuario">
+        <label>Viewer activo</label>
+        <select id="gift-user" class="event-select" style="width:100%">
+          <option value="">Elige un viewer activo…</option>
+        </select>
+        <span class="field-hint">Se muestran los viewers activos con su plataforma real (Twitch/YouTube/TikTok) — así el regalo nunca va a la identidad equivocada.</span>
       </div>
 
       <p class="field-hint" style="margin-top:10px;font-size:11px;color:var(--text-muted)">Los viewers activos son quienes han escrito en el chat durante este stream.</p>
@@ -1139,10 +1406,10 @@
   <div class="modal-card" style="max-width:520px">
     <div class="modal-header"><h2>Configura tu Mimiku</h2></div>
     <div class="mimic-editor-body" style="display:block">
-      <p class="desc">Esta instalación empieza vacía. Estos datos pertenecen al streamer y pueden cambiarse después en Ajustes.</p>
+      <p class="desc">Esta instalación empieza vacía. Solo necesitas un nombre para crear tu comunidad local; Twitch es opcional y puede configurarse después.</p>
       <div class="form-group">
         <label>Tu nombre público<input id="onboarding-display-name" type="text" maxlength="80" placeholder="Ej: Luna"></label>
-        <label>Tu canal de Twitch<input id="onboarding-twitch-channel" type="text" maxlength="25" placeholder="Ej: lunatv"></label>
+        <label>Canal de Twitch <span class="field-hint">(opcional)</span><input id="onboarding-twitch-channel" type="text" maxlength="25" placeholder="Ej: lunatv"></label>
       </div>
     </div>
     <div class="modal-footer">
@@ -1152,6 +1419,5 @@
 </div>
 
 <div id="toast"></div>
-<script src="./app.js"></script>
 </body>
 </html>

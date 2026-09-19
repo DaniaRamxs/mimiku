@@ -13,6 +13,9 @@
   --accent-cyan:    #06b6d4;
   --accent-pink:    #ec4899;
   --accent-dim:     rgba(139, 92, 246, 0.18);
+  --accent-d:       var(--accent-dim);
+  --surface:        var(--bg-surface);
+  --bg:             var(--bg-base);
   --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
   --accent-gradient-pink: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
   --border:         rgba(255, 255, 255, 0.08);
@@ -22,6 +25,7 @@
   --glass-border:   1px solid rgba(255, 255, 255, 0.08);
   --success:        #10b981;
   --danger:         #f43f5e;
+  --warning:        #f59e0b;
   --radius:         12px;
   --shadow-glow:    0 0 20px rgba(139, 92, 246, 0.25);
   --shadow-card:    0 8px 32px 0 rgba(0, 0, 0, 0.37);
@@ -38,6 +42,28 @@ body {
   overflow: hidden;
   user-select: none;
 }
+
+.command-head,.command-row{display:grid;grid-template-columns:minmax(220px,1fr) 60px 110px 100px 160px 80px;gap:12px;align-items:center}
+.rank-picker{position:relative;font-size:12px}
+.rank-picker summary{cursor:pointer;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-elevated);color:var(--text-secondary);list-style:none}
+.rank-picker[open] summary{color:var(--text-primary)}
+.rank-picker .rank-options{position:absolute;z-index:5;top:100%;left:0;min-width:220px;margin-top:4px;padding:8px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--border);border-radius:9px;background:var(--bg-elevated)}
+.rank-picker label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.command-head{padding:8px 10px;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.command-row{padding:12px 10px;border-top:1px solid var(--border)}
+.command-info{display:flex;flex-direction:column;gap:3px}
+.command-info span{font-size:12px;color:var(--text-secondary)}
+.command-row input[type="number"]{width:100%}
+@media (max-width:1050px){.command-head{display:none}.command-row{grid-template-columns:1fr 54px 120px}.command-row input[type="number"]{grid-column:1/2}.command-row .rank-picker{grid-column:2/4}.command-row button{grid-column:3/4}}
+.doctor-results,.backup-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.doctor-row,.backup-row{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg-elevated)}
+.doctor-row span,.backup-row span{font-size:12px;color:var(--text-secondary)}
+.doctor-row.ok strong{color:var(--success)}
+.diagnostic-simulator{display:flex;flex-direction:column;gap:7px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.diagnostic-simulator-row{display:grid;grid-template-columns:120px minmax(180px,1fr) auto;gap:8px;align-items:center}
+.diagnostic-simulator-row select,.diagnostic-simulator-row input{width:100%;padding:9px 11px;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text-primary);font-family:inherit}
+@media(max-width:720px){.diagnostic-simulator-row{grid-template-columns:1fr}.diagnostic-simulator-row .btn-ghost{width:100%}}
+.doctor-row.warning strong{color:var(--danger)}
 
 /* ── Titlebar ─────────────────────────────────────────────────────────────── */
 #titlebar {
@@ -440,6 +466,22 @@ code { background:var(--bg-elevated); border:1px solid var(--border); border-rad
 .emote-name { padding:6px 10px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-family:inherit; font-size:13px; font-weight:600; }
 .emote-file { font-size:11px; color:var(--text-muted); }
 
+/* ── Página VIPs ── */
+.vip-layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:1rem; }
+.vip-setting-row, .vip-sound-add { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.vip-setting-row label, .vip-sound-add label { font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:6px; }
+.vip-setting-row input[type="text"], .vip-sound-add input[type="text"] { flex:1; min-width:150px; padding:9px 12px; background:var(--surface); border:1px solid var(--border); border-radius:7px; color:var(--text-primary); font-family:inherit; font-size:13px; }
+.vip-setting-row input[type="number"], .vip-sound-add input[type="number"] { width:76px; padding:7px 8px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-family:inherit; font-size:12px; }
+.vip-setting-row select, .vip-sound-add select, .vip-sound-row select { padding:8px 9px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-family:inherit; font-size:12px; }
+.vip-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.vip-row { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:9px 12px; flex-wrap:wrap; font-size:13px; }
+.vip-row > span, .vip-sound-info { flex:1; min-width:150px; }
+.vip-sound-info { display:flex; flex-direction:column; gap:3px; }
+.vip-sound-row label { font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.vip-sound-row input { width:60px; padding:5px 7px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:5px; color:var(--text-primary); font-family:inherit; font-size:11px; }
+.vip-sound-row .vip-command-input { width:92px; }
+@media(max-width:900px){ .vip-layout { grid-template-columns:1fr; } }
+
 /* ── Probabilidades de caja (loot table) ── */
 .odds-presets { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
 .odds-preset-btn { flex:1; min-width:70px; padding:6px 8px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text-secondary); font-family:inherit; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; }
@@ -487,3 +529,15 @@ code { background:var(--bg-elevated); border:1px solid var(--border); border-rad
 .vts-discovered-chip { padding:8px 14px; background:var(--surface); border:1px solid var(--accent); border-radius:8px; color:var(--accent); font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
 .vts-discovered-chip:hover { background:var(--accent); color:#fff; }
 .block-note { font-size:12px; color:var(--text-muted); font-style:italic; }
+
+/* Formularios en columna y filas que envuelven (Ajustes y Mimics) */
+.form-stack{display:flex;flex-direction:column;gap:12px}
+.form-stack label,.form-row label{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.form-stack input[type="text"],.form-stack input[type="number"],.form-stack input[type="date"],.form-stack select{width:100%;max-width:360px}
+.form-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:6px}
+.form-row input[type="text"],.form-row input[type="number"],.form-row input[type="date"],.form-row select{min-width:130px}
+.field-select{background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none}
+.check-row{flex-direction:row!important;align-items:center!important;gap:8px}
+.segment-head,.roulette-segment-row{display:grid;grid-template-columns:minmax(120px,1fr) 90px 90px 70px 64px;gap:8px;align-items:center}
+.segment-head{margin-bottom:4px;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.roulette-segment-row{margin-bottom:6px}

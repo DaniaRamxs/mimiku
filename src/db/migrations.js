@@ -364,6 +364,130 @@ const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_local_outbox_pending ON local_outbox(status, created_at);
     `,
   },
+  {
+    version: 3,
+    name: "tiktok_gifts_and_person_groups",
+    // Función en vez de SQL plano: ALTER TABLE ADD COLUMN no admite IF NOT EXISTS,
+    // así que se comprueba a mano para que sea seguro sobre bases de beta.
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS persons (
+          id TEXT PRIMARY KEY,
+          display_name TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS donations (
+          id TEXT PRIMARY KEY,
+          idempotency_key TEXT NOT NULL UNIQUE,
+          channel_id TEXT NOT NULL,
+          viewer_id TEXT NOT NULL REFERENCES viewer_identities(id),
+          platform TEXT NOT NULL,
+          gift_id TEXT NOT NULL DEFAULT '',
+          gift_name TEXT NOT NULL DEFAULT '',
+          gift_count INTEGER NOT NULL DEFAULT 1 CHECK(gift_count >= 1),
+          coins INTEGER NOT NULL DEFAULT 0 CHECK(coins >= 0),
+          points_awarded INTEGER NOT NULL DEFAULT 0 CHECK(points_awarded >= 0),
+          month_key TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_donations_month
+          ON donations(channel_id, month_key, viewer_id);
+        CREATE TABLE IF NOT EXISTS gift_point_rates (
+          channel_id TEXT NOT NULL,
+          platform TEXT NOT NULL,
+          gift_id TEXT NOT NULL DEFAULT '*',
+          points_per_coin REAL NOT NULL CHECK(points_per_coin >= 0),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          PRIMARY KEY(channel_id, platform, gift_id)
+        );
+        CREATE TABLE IF NOT EXISTS gift_mimic_rules (
+          id TEXT PRIMARY KEY,
+          channel_id TEXT NOT NULL,
+          platform TEXT NOT NULL DEFAULT 'tiktok',
+          gift_id TEXT NOT NULL DEFAULT '*',
+          min_count INTEGER NOT NULL DEFAULT 1 CHECK(min_count >= 1),
+          mimic_id TEXT NOT NULL REFERENCES mimics_local(id) ON DELETE CASCADE,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `)
+      const columns = db.prepare("PRAGMA table_info(viewer_identities)").all()
+      if (!columns.some(column => column.name === "person_id")) {
+        // Preparado para agrupar cuentas en una persona; hoy nada lo lee ni lo escribe.
+        db.exec("ALTER TABLE viewer_identities ADD COLUMN person_id TEXT REFERENCES persons(id)")
+      }
+    },
+  },
+  {
+    version: 4,
+    name: "rank_state_and_overrides",
+    up: `
+      -- Ultimo estado conocido de cada rango por viewer: permite detectar
+      -- cuando alguien ENTRA o SALE del rango y anunciarlo una sola vez.
+      CREATE TABLE IF NOT EXISTS rank_state (
+        channel_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL REFERENCES viewer_identities(id) ON DELETE CASCADE,
+        rank TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 0,
+        since TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY(channel_id, viewer_id, rank)
+      );
+      -- Asignaciones manuales: pisan el calculo automatico mientras no caduquen.
+      CREATE TABLE IF NOT EXISTS rank_overrides (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL REFERENCES viewer_identities(id) ON DELETE CASCADE,
+        rank TEXT NOT NULL,
+        effect TEXT NOT NULL DEFAULT 'grant' CHECK(effect IN ('grant', 'deny')),
+        expires_at TEXT,
+        granted_by TEXT NOT NULL DEFAULT '',
+        granted_at TEXT NOT NULL DEFAULT (datetime('now')),
+        reason TEXT NOT NULL DEFAULT ''
+      );
+      CREATE INDEX IF NOT EXISTS idx_rank_overrides_viewer
+        ON rank_overrides(channel_id, viewer_id, rank);
+    `,
+  },
+  {
+    version: 5,
+    name: "chest_inventory_and_roulette",
+    up: `
+      -- Inventario de cofres (cajas) SIN abrir por viewer.
+      CREATE TABLE IF NOT EXISTS viewer_boxes_local (
+        channel_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL REFERENCES viewer_identities(id) ON DELETE CASCADE,
+        box_id TEXT NOT NULL REFERENCES mimic_boxes_local(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL DEFAULT 0 CHECK(quantity >= 0),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY(channel_id, viewer_id, box_id)
+      );
+      -- Auditoria e idempotencia de cada entrega de cofres.
+      CREATE TABLE IF NOT EXISTS box_grant_history (
+        id TEXT PRIMARY KEY,
+        idempotency_key TEXT NOT NULL UNIQUE,
+        channel_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL REFERENCES viewer_identities(id),
+        box_id TEXT NOT NULL,
+        quantity INTEGER NOT NULL CHECK(quantity >= 1),
+        source TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      -- Registro de giros de la ruleta de cofres; tambien sirve para el cooldown.
+      CREATE TABLE IF NOT EXISTS roulette_spins (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL REFERENCES viewer_identities(id),
+        mode TEXT NOT NULL,
+        roll INTEGER,
+        label TEXT NOT NULL DEFAULT '',
+        chests INTEGER NOT NULL,
+        box_id TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_roulette_spins_viewer
+        ON roulette_spins(channel_id, viewer_id, created_at DESC);
+    `,
+  },
 ]
 
 function applyMigrations(db) {
@@ -380,7 +504,8 @@ function applyMigrations(db) {
   for (const migration of MIGRATIONS) {
     if (applied.get(migration.version)) continue
     db.transaction(() => {
-      db.exec(migration.up)
+      if (typeof migration.up === "function") migration.up(db)
+      else db.exec(migration.up)
       markApplied.run(migration.version, migration.name)
     })()
   }

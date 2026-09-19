@@ -231,6 +231,48 @@ function createLocalPlatform(db) {
         return db.prepare("SELECT * FROM mimic_gifts_local WHERE id = ?").get(id)
       })()
     },
+    // Dispara un Mimic sin pasar por el inventario del viewer (p. ej. por una
+    // regla de regalos). Idempotente por `idempotencyKey`. `used_at` se guarda
+    // en ISO 8601 porque la cola de mimics.js lo compara como texto contra un ISO.
+    trigger(channelId, viewerId, mimicId, idempotencyKey) {
+      const ch = channel(channelId)
+      const key = text(idempotencyKey, 240)
+      if (!key) throw new Error("Se requiere una clave idempotente")
+      return db.transaction(() => {
+        const existing = db.prepare("SELECT * FROM mimic_uses_local WHERE request_key = ?").get(key)
+        if (existing) return existing
+        if (!this.get(mimicId)) throw new Error("Mimic no encontrado")
+        const id = randomUUID()
+        db.prepare(`INSERT INTO mimic_uses_local(id, request_key, channel_id, viewer_id, mimic_id, used_at) VALUES (?, ?, ?, ?, ?, ?)`)
+          .run(id, key, ch, viewerId, mimicId, new Date().toISOString())
+        insertHistory(ch, viewerId, "trigger", mimicId, 0, `history:${key}`)
+        return db.prepare("SELECT * FROM mimic_uses_local WHERE id = ?").get(id)
+      })()
+    },
+    // Entrega cofres (cajas) SIN abrir al inventario del viewer. Idempotente
+    // por `idempotencyKey`: repetir la misma clave no duplica la entrega.
+    grantBoxes(channelId, viewerId, boxId, quantity, idempotencyKey, source = "") {
+      const ch = channel(channelId)
+      const qty = positiveInteger(quantity)
+      const key = text(idempotencyKey, 240)
+      if (!key) throw new Error("Se requiere una clave idempotente")
+      return db.transaction(() => {
+        if (db.prepare("SELECT 1 FROM box_grant_history WHERE idempotency_key = ?").get(key)) return this.boxInventory(ch, viewerId)
+        if (!db.prepare("SELECT 1 FROM mimic_boxes_local WHERE id = ?").get(boxId)) throw new Error("Caja no encontrada")
+        ensureWallet(ch, viewerId)
+        db.prepare(`INSERT INTO viewer_boxes_local(channel_id, viewer_id, box_id, quantity) VALUES (?, ?, ?, ?)
+          ON CONFLICT(channel_id, viewer_id, box_id) DO UPDATE SET quantity=quantity+excluded.quantity, updated_at=datetime('now')`)
+          .run(ch, viewerId, boxId, qty)
+        db.prepare(`INSERT INTO box_grant_history(id, idempotency_key, channel_id, viewer_id, box_id, quantity, source)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`).run(randomUUID(), key, ch, viewerId, boxId, qty, text(source, 60))
+        return this.boxInventory(ch, viewerId)
+      })()
+    },
+    boxInventory(channelId, viewerId) {
+      return db.prepare(`SELECT vb.box_id, vb.quantity, b.name, b.icon FROM viewer_boxes_local vb
+        JOIN mimic_boxes_local b ON b.id=vb.box_id WHERE vb.channel_id=? AND vb.viewer_id=? AND vb.quantity>0 ORDER BY b.name`)
+        .all(channel(channelId), viewerId)
+    },
     inventory(channelId, viewerId) {
       return db.prepare(`SELECT vm.*, m.name, m.icon, m.rarity, m.sequence_json FROM viewer_mimics_local vm
         JOIN mimics_local m ON m.id=vm.mimic_id WHERE vm.channel_id=? AND vm.viewer_id=? ORDER BY m.name`)
