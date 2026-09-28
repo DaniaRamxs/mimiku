@@ -22,6 +22,8 @@ const ANY_HOST = "0.0.0.0"
 const DEFAULT_HTTP_PORT = 7777
 
 const OVERLAY_PATH = path.join(__dirname, "overlay.html")
+// Overlay 2: segunda fuente para OBS con los widgets nuevos (avatares flotantes...).
+const OVERLAY2_PATH = path.join(__dirname, "overlay2.html")
 const PANEL_DIR = path.join(__dirname, "..", "..", "mod-panel")
 const API_TOKEN = randomUUID()
 
@@ -147,9 +149,9 @@ function createRequestHandler({ localApi, apiHandler, ssnRoute }) {
       apiHandler(req, res)
       return
     }
-    if (req.url === "/overlay") {
+    if (req.url === "/overlay" || req.url === "/overlay2") {
       // leer el archivo en cada request — sin cache
-      const html = fs.readFileSync(OVERLAY_PATH, "utf8")
+      const html = fs.readFileSync(req.url === "/overlay2" ? OVERLAY2_PATH : OVERLAY_PATH, "utf8")
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -216,6 +218,7 @@ function handleConnection(ws) {
   // Un overlay que se (re)conecta a mitad de directo recibe el Top 3 actual.
   try {
     ws.send(JSON.stringify(require("./widgets.js").chatTopConfigMessage()))
+    ws.send(JSON.stringify(require("./widgets.js").floatAvatarsConfigMessage()))
     ws.send(JSON.stringify({ type: "chat_top", ...require("./chat-top.js").getDefaultChatTopService().snapshot() }))
   } catch (error) {
     console.warn("[chat-top] no se pudo enviar el estado inicial:", error.message)

@@ -10,6 +10,7 @@ async function initWidgets() {
   cfg = await ipcRenderer.invoke("widgets:getConfig")
   renderAvatarsForm()
   initChatTop()
+  initFloatAvatars()
   await initLoyalty()
 }
 
@@ -106,6 +107,55 @@ function renderChatTopLive(snapshot) {
   el.innerHTML = entries.map((entry, index) => `
     <div class="wg-top-row"><b>#${index + 1}</b><span>${escapeHtml(entry.name)} <span style="color:var(--text-muted)">(${escapeHtml(entry.platform)})</span></span>
     <strong>${Number(entry.messages).toLocaleString("es")} mensajes</strong></div>`).join("")
+}
+
+// ── Avatares flotantes (!estado, Overlay 2) ──────────────────────────────────
+function initFloatAvatars() {
+  const f = cfg.floatAvatars || {}
+  setField("wg-fa-enabled",    f.enabled !== false)
+  setField("wg-fa-duration",   f.duration_s ?? 45)
+  setField("wg-fa-max",        f.max_on_screen ?? 8)
+  setField("wg-fa-chars",      f.status_max ?? 40)
+  setField("wg-fa-size",       f.size ?? 84)
+  setField("wg-fa-speed",      f.speed ?? 140)
+  setField("wg-fa-theme",      f.theme || "noche")
+  setField("wg-fa-collisions", f.collisions !== false)
+  for (const [id, unit] of [["wg-fa-size", "px"], ["wg-fa-speed", " px/s"]]) {
+    const input = document.getElementById(id)
+    const label = document.getElementById(`${id}-v`)
+    if (!input || !label) continue
+    label.textContent = `${input.value}${unit}`
+    input.oninput = () => { label.textContent = `${input.value}${unit}` }
+  }
+  ipcRenderer.invoke("overlay:getStatus").then(status => {
+    const url = document.getElementById("wg-fa-url")
+    if (url && status && status.baseUrl) url.textContent = `${status.baseUrl}/overlay2`
+  }).catch(() => {})
+}
+
+async function saveFloatAvatarsConfig() {
+  const number = id => parseInt(document.getElementById(id).value, 10)
+  try {
+    cfg = await ipcRenderer.invoke("widgets:setConfig", { floatAvatars: {
+      enabled:       document.getElementById("wg-fa-enabled").checked,
+      duration_s:    number("wg-fa-duration"),
+      max_on_screen: number("wg-fa-max"),
+      status_max:    number("wg-fa-chars"),
+      size:          number("wg-fa-size"),
+      speed:         number("wg-fa-speed"),
+      theme:         document.getElementById("wg-fa-theme").value,
+      collisions:    document.getElementById("wg-fa-collisions").checked,
+    } })
+    initFloatAvatars()
+    showToast("Avatares flotantes guardados")
+  } catch (error) {
+    showToast(`No se pudo guardar: ${error.message}`)
+  }
+}
+
+async function testFloatAvatars() {
+  await ipcRenderer.invoke("floatAvatars:test")
+  showToast("Avatares de prueba enviados al Overlay 2")
 }
 
 // ── Tarjeta de fidelidad (!claim) ─────────────────────────────────────────────
@@ -218,4 +268,5 @@ module.exports = {
   initWidgets, saveAvatarsConfig, testAvatars,
   saveLoyaltyConfig, previewLoyalty, newLoyaltyStream,
   saveChatTopConfig, previewChatTop,
+  saveFloatAvatarsConfig, testFloatAvatars,
 }

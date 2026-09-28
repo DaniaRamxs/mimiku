@@ -318,6 +318,14 @@ ipcMain.handle("loyalty:preview", (_, completed) => {
   return payload
 })
 
+// ── IPC: avatares flotantes (!estado, Overlay 2) ─────────────────────────────
+// Prueba: tres avatares de ejemplo rebotando, sin pasar por el chat.
+ipcMain.handle("floatAvatars:test", () => {
+  const demo = [["demo:1", "LunaGamer", "comiendo", "#ff4df0"], ["demo:2", "SolecitoXD", "haciendo la tarea", "#22d3ee"], ["demo:3", "KaiserDelChat", "viendo el stream desde el bus", "#a3e635"]]
+  for (const [key, name, status, color] of demo) overlay().broadcast({ type: "float_avatar", key, name, status, color, avatar: null })
+  return { ok: true }
+})
+
 // ── IPC: Top 3 del chat ──────────────────────────────────────────────────────
 function chatTop() { return require("./src/services/chat-top.js").getDefaultChatTopService() }
 const CHAT_TOP_PREVIEW_STEP_MS = 2500

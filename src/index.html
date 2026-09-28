@@ -429,6 +429,11 @@
           <span id="overlay-url-label">http://127.0.0.1:7777/overlay</span>
           <button onclick="window.overlayPage.copyUrl()">Copiar</button>
         </div>
+        <p class="desc" style="margin-top:12px">Overlay 2 (avatares flotantes con !estado). Agrégalo como otra Browser Source a pantalla completa:</p>
+        <div class="url-box">
+          <span id="overlay2-url-label">http://127.0.0.1:7777/overlay2</span>
+          <button onclick="window.overlayPage.copyUrl2()">Copiar</button>
+        </div>
       </div>
       <div class="panel" style="max-width:560px;margin-bottom:1rem">
         <div class="panel-header"><span class="panel-title">Probar alerta</span></div>
@@ -1093,6 +1098,69 @@
             El directo se detecta igual que en la tarjeta de fidelidad (stream de Twitch en vivo, o las horas sin chat configuradas allí). El botón "Empezar directo nuevo" de la tarjeta también reinicia este top.
           </p>
         </div>
+      </div>
+
+      <div class="panel" style="max-width:640px;margin-top:1rem">
+        <div class="panel-header">
+          <span class="panel-title">Avatares flotantes (!estado) · Overlay 2</span>
+          <button class="btn-ghost" onclick="window.widgetsPage.testFloatAvatars()">Probar</button>
+        </div>
+        <p class="desc">Un sub escribe <strong>!estado comiendo</strong> y su foto de Twitch aparece con un bocadillo rebotando por la pantalla, como el logo de los DVD. Si vuelve a usarlo, cambia su estado sin duplicarse; <strong>!estado quitar</strong> lo retira.</p>
+
+        <div class="url-box" style="margin:10px 0 4px">
+          <span id="wg-fa-url">http://127.0.0.1:7777/overlay2</span>
+          <button onclick="window.overlayPage.copyUrl2()">Copiar</button>
+        </div>
+        <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Este widget vive en el Overlay 2: agrega esa URL como otra Browser Source a pantalla completa (1920x1080).</p>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-fa-enabled">
+          Activado
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Tiempo en pantalla (seg)</label>
+            <input id="wg-fa-duration" type="number" min="5" max="600">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Máximo a la vez</label>
+            <input id="wg-fa-max" type="number" min="1" max="30">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Letras del estado</label>
+            <input id="wg-fa-chars" type="number" min="5" max="80">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Tamaño de la foto <span id="wg-fa-size-v"></span></label>
+            <input id="wg-fa-size" type="range" min="40" max="200" step="4">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Velocidad <span id="wg-fa-speed-v"></span></label>
+            <input id="wg-fa-speed" type="range" min="20" max="600" step="10">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Estilo</label>
+            <select id="wg-fa-theme" class="event-select" style="width:100%">
+              <option value="noche">Noche (oscuro)</option>
+              <option value="pastel">Pastel (claro)</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-fa-collisions">
+          Los avatares chocan entre sí
+        </label>
+
+        <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-top:.5rem">
+          Por defecto solo lo pueden usar subs y mods de Twitch, con 20 s de espera por persona. Puedes cambiarlo en la sección Comandos (!estado).
+        </p>
+
+        <button class="btn-primary" style="margin-top:12px" onclick="window.widgetsPage.saveFloatAvatarsConfig()">Guardar configuración</button>
       </div>
 
       <div class="panel" style="max-width:640px;margin-top:1rem">

@@ -29,6 +29,7 @@ function createCommandEngine(overrides = {}) {
   const rouletteService = () => overrides.roulette || require("../../services/roulette.js").getDefaultRouletteService()
   const boxService = () => overrides.boxes || require("../../services/boxes.js").getDefaultBoxService()
   const loyaltyService = () => overrides.loyalty || require("../../services/loyalty.js").getDefaultLoyaltyService()
+  const floatAvatars = () => overrides.floatAvatars || require("../../services/float-avatars.js").getDefaultFloatAvatars()
   const commandConfig = overrides.commandConfig || { evaluate: () => ({ allowed: true }), record: () => {} }
 
   const now = overrides.now || Date.now
@@ -193,6 +194,19 @@ function createCommandEngine(overrides = {}) {
       }
       say(`@${display} giró la ruleta y ganó ${result.chests} ${result.chests === 1 ? "cofre" : "cofres"} (${result.label}).`)
       overlay(result.overlay)
+      return
+    }
+
+    // Avatar flotante con estado en el Overlay 2 (solo subs por defecto, ver command-config).
+    if (cmd === "!estado" || cmd === "!status") {
+      const { isRemoveRequest } = require("../../services/float-avatars.js")
+      const statusText = trimmed.slice(parts[0].length).trim()
+      if (!statusText) { say(`Uso: !estado <tu estado> (ej: !estado comiendo). !estado quitar lo retira.`); return }
+      if (isRemoveRequest(statusText)) { floatAvatars().remove(actorIdentity); return }
+      const color = event.metadata && event.metadata.color
+      Promise.resolve(floatAvatars().show(actorIdentity, statusText, color)).then(result => {
+        if (!result.ok && result.reason === "empty") say(`@${display} tu estado no puede ser solo un enlace.`)
+      }).catch(error => console.error("[float-avatars]", error.message))
       return
     }
 

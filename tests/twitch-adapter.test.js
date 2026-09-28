@@ -14,7 +14,7 @@ test("normaliza un mensaje de tmi.js al contrato interno de Mimiku", () => {
   assert.equal(event.type, "chat_message")
   assert.equal(event.id, "msg-abc")
   assert.deepEqual(event.actor, {
-    platformUserId: "12345", username: "luna", displayName: "Luna", avatarUrl: "", isModerator: false,
+    platformUserId: "12345", username: "luna", displayName: "Luna", avatarUrl: "", isModerator: false, isSubscriber: true,
   })
   assert.equal(event.message.text, "hola mundo")
   assert.equal(event.metadata.channel, "streamer")
@@ -26,6 +26,16 @@ test("sin display-name/user-id/id, cae a defaults razonables", () => {
   assert.equal(event.id, null)
   assert.equal(event.actor.displayName, "bob")
   assert.equal(event.actor.platformUserId, "")
+})
+
+test("isSubscriber reconoce sub, founder y al propio streamer", () => {
+  const { isSubscriber } = require("../src/integrations/twitch/twitch-adapter.js")
+  assert.equal(isSubscriber({ badges: { subscriber: "12" } }), true)
+  assert.equal(isSubscriber({ badges: { founder: "0" } }), true)
+  assert.equal(isSubscriber({ badges: { broadcaster: "1" } }), true)
+  assert.equal(isSubscriber({ subscriber: true }), true)
+  assert.equal(isSubscriber({ badges: { vip: "1" } }), false)
+  assert.equal(isSubscriber({}), false)
 })
 
 test("isMod reconoce mod, broadcaster y user-type mod", () => {

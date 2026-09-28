@@ -18,6 +18,8 @@ const COMMANDS = [
   { name: "!cofres", aliases: [], category: "Mimics", description: "Muestra cuantos cofres sin abrir tiene el viewer." },
   { name: "!abrircofre", aliases: ["!abrir"], category: "Mimics", description: "Abre cofres del inventario y entrega Mimics (opcional: cantidad)." },
   { name: "!ruletacofres", aliases: [], category: "Mimics", description: "Gira la ruleta de cofres (premio en cofres, no en puntos)." },
+  { name: "!estado", aliases: ["!status"], category: "Fidelidad", description: "Pone tu avatar flotando en el Overlay 2 con tu estado (ej: !estado comiendo). !estado quitar lo retira.",
+    defaultPlatform: "twitch", defaultCooldownSeconds: 20, defaultAllowedRanks: ["twitch:sub", "twitch:mod"] },
   { name: "!claim", aliases: [], category: "Fidelidad", description: "Sella la tarjeta de fidelidad semanal (una vez por directo).", defaultPlatform: "twitch" },
   { name: "!slots", aliases: ["!tragamonedas"], category: "Juegos", description: "Juega a tragamonedas." },
   { name: "!bj", aliases: ["!blackjack"], category: "Juegos", description: "Entra a Blackjack." },
@@ -65,7 +67,7 @@ function createCommandConfigService(platform, getChannel, { now = Date.now, rank
       enabled: saved.enabled !== false,
       platform: PLATFORM_SCOPES.has(saved.platform) ? saved.platform : (item.defaultPlatform || "all"),
       cooldownSeconds: Math.min(3600, Math.max(0, Number(saved.cooldownSeconds ?? item.defaultCooldownSeconds) || 0)),
-      allowedRanks: normalizeAllowedRanks(saved.allowedRanks),
+      allowedRanks: normalizeAllowedRanks(saved.allowedRanks === undefined ? item.defaultAllowedRanks : saved.allowedRanks),
     }
   }
   function list() { return COMMANDS.map(item => settingsFor(item.name)) }

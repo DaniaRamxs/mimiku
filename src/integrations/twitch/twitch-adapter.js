@@ -52,6 +52,13 @@ function isVip(tags) {
   return tags?.badges?.vip === "1" || tags?.badges?.vip === 1 || tags?.badges?.vip === true
 }
 
+// Sub del canal: insignia de suscriptor o de "founder" (los primeros subs de
+// un canal ven la de founder en lugar de la de sub). El streamer tambien vale.
+function isSubscriber(tags) {
+  const badges = tags?.badges || {}
+  return tags?.subscriber === true || badges.subscriber !== undefined || badges.founder !== undefined || badges.broadcaster !== undefined
+}
+
 // Normalización pura de un mensaje de tmi.js al contrato interno de Mimiku.
 // No depende de que haya un client de tmi.js conectado: solo transforma la
 // forma de `tags`. Exportada para poder probarla de forma aislada.
@@ -69,6 +76,7 @@ function normalizeTwitchChatMessage({ tags, message, channel, replyFn }) {
       avatarUrl: "",
       isModerator: isMod(tags),
       ...(isVip(tags) ? { isVip: true } : {}),
+      ...(isSubscriber(tags) ? { isSubscriber: true } : {}),
     },
     message: { text: message, emotes: [] },
     metadata: { channel, color: tags.color || "#7c6ef5", badges: tags.badges || {}, capabilities: { reply: true } },
@@ -247,7 +255,7 @@ function getActiveViewers() {
 module.exports = {
   connect, disconnect, setWindow, setBroadcast, setEventEngine,
   say: sayPublic, getActiveViewers, startMiniChallenge,
-  normalizeTwitchChatMessage, isMod, isVip,
+  normalizeTwitchChatMessage, isMod, isVip, isSubscriber,
   // Puente genérico hacia la ventana del renderer (Fase 1.6): no es
   // "Twitch decidiendo algo del chat", es simplemente dónde ya vivía la
   // referencia a `win` — igual que notify/overlay ya se inyectan en

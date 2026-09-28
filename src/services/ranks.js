@@ -1,4 +1,4 @@
-// services/ranks.js — rangos de viewer por plataforma (superfan, vip, mod).
+// services/ranks.js — rangos de viewer por plataforma (superfan, vip, mod, sub).
 //
 // Regla de oro: un rango SIEMPRE va calificado por plataforma ("tiktok:superfan",
 // "twitch:vip"). Son rangos distintos y nunca se mezclan: un evento de Twitch
@@ -17,14 +17,14 @@ const { randomUUID } = require("node:crypto")
 const { monthKeyOf } = require("./gifts.js")
 
 const PLATFORMS = ["twitch", "youtube", "tiktok", "kick"]
-const RANKS = ["superfan", "vip", "mod"]
+const RANKS = ["superfan", "vip", "mod", "sub"]
 const AUTO_RANK = "superfan"
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000
 const MAX_THRESHOLD_COINS = 1_000_000_000
-const RANK_ID_PATTERN = /^(twitch|youtube|tiktok|kick):(superfan|vip|mod)$/
+const RANK_ID_PATTERN = /^(twitch|youtube|tiktok|kick):(superfan|vip|mod|sub)$/
 
 const PLATFORM_LABELS = { twitch: "Twitch", youtube: "YouTube", tiktok: "TikTok", kick: "Kick" }
-const RANK_LABELS = { superfan: "Superfan", vip: "VIP", mod: "Moderador" }
+const RANK_LABELS = { superfan: "Superfan", vip: "VIP", mod: "Moderador", sub: "Suscriptor" }
 
 function isValidRankId(value) {
   return typeof value === "string" && RANK_ID_PATTERN.test(value)
@@ -125,6 +125,8 @@ function createRankService({ platform, getChannel, emit = () => {}, now = () => 
       mod: event?.actor?.isModerator === true,
       vip: event?.actor?.isVip === true || Boolean(isVipEvent(event)),
       superfan: false,
+      // Suscriptor: lo marca el adaptador de la plataforma (insignia de Twitch).
+      sub: event?.actor?.isSubscriber === true,
     }
     const held = []
     for (const rank of RANKS) {

@@ -4,6 +4,8 @@ const { ipcRenderer } = require("electron")
 async function initOverlay() {
   const label = document.getElementById("overlay-url-label")
   if (label) label.textContent = await overlayUrl()
+  const label2 = document.getElementById("overlay2-url-label")
+  if (label2) label2.textContent = `${await overlayUrl()}2`
 }
 
 async function overlayUrl() {
@@ -14,6 +16,11 @@ async function overlayUrl() {
 async function copyUrl() {
   navigator.clipboard.writeText(await overlayUrl())
   showToast("URL copiada al portapapeles")
+}
+
+async function copyUrl2() {
+  navigator.clipboard.writeText(`${await overlayUrl()}2`)
+  showToast("URL del Overlay 2 copiada")
 }
 
 async function sendTestAlert() {
@@ -40,4 +47,4 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500)
 }
 
-module.exports = { initOverlay, copyUrl, sendTestAlert, updateTicker }
+module.exports = { initOverlay, copyUrl, copyUrl2, sendTestAlert, updateTicker }

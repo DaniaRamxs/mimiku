@@ -3,6 +3,8 @@ const fs   = require("fs")
 const path = require("path")
 const { app } = require("electron")
 
+const { normalizeFloatAvatars, FLOAT_AVATARS_DEFAULTS } = require("./float-avatars.js")
+
 const DATA_FILE = path.join(app.getPath("userData"), "widgets-config.json")
 
 const DEFAULT_CONFIG = {
@@ -22,6 +24,8 @@ const DEFAULT_CONFIG = {
     title: "Top del chat",
     show_counts: true,
   },
+  // Avatares flotantes con estado (!estado), en el Overlay 2.
+  floatAvatars: FLOAT_AVATARS_DEFAULTS,
 }
 
 const CHAT_TOP_POSITIONS = [
@@ -60,6 +64,7 @@ function load() {
       _config = {
         avatars: { ...DEFAULT_CONFIG.avatars, ...(data.avatars || {}) },
         chatTop: normalizeChatTop(data.chatTop || {}),
+        floatAvatars: normalizeFloatAvatars(data.floatAvatars || {}),
       }
     }
   } catch (e) {}
@@ -82,6 +87,8 @@ function init(channel, broadcastFn) {
 }
 
 function chatTopConfigMessage() { return { type: "chat_top_config", ...load().chatTop } }
+function floatAvatarsConfigMessage() { return { type: "float_avatars_config", ...load().floatAvatars } }
+function getFloatAvatarsConfig() { return load().floatAvatars }
 function getChatTopConfig() { return load().chatTop }
 
 function setBroadcast(fn) { _broadcast = fn }
@@ -92,9 +99,11 @@ function setConfig(updates) {
   load()
   if (updates.avatars) _config.avatars = { ..._config.avatars, ...updates.avatars }
   if (updates.chatTop) _config.chatTop = normalizeChatTop({ ..._config.chatTop, ...updates.chatTop })
+  if (updates.floatAvatars) _config.floatAvatars = normalizeFloatAvatars({ ..._config.floatAvatars, ...updates.floatAvatars })
   save()
   if (_broadcast) _broadcast({ type: "avatars_config", ...publicAvatarsConfig(_config.avatars) })
   if (_broadcast && updates.chatTop) _broadcast(chatTopConfigMessage())
+  if (_broadcast && updates.floatAvatars) _broadcast(floatAvatarsConfigMessage())
   return _config
 }
 
@@ -154,5 +163,6 @@ function testAvatar() {
 module.exports = {
   init, setBroadcast, getConfig, setConfig,
   getChatTopConfig, chatTopConfigMessage, normalizeChatTop,
+  getFloatAvatarsConfig, floatAvatarsConfigMessage, normalizeFloatAvatars,
   onChatMessage, testAvatar,
 }

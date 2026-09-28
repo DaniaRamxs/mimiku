@@ -4,16 +4,18 @@ let commands = []
 
 const PLATFORM_OPTIONS = [["all", "Todas"], ["twitch", "Twitch"], ["youtube", "YouTube"], ["tiktok", "TikTok"], ["kick", "Kick"]]
 const PLATFORM_LABEL = { twitch: "Twitch", youtube: "YouTube", tiktok: "TikTok", kick: "Kick" }
-const RANK_LABEL = { superfan: "Superfan", vip: "VIP", mod: "Moderador" }
+const RANK_LABEL = { superfan: "Superfan", vip: "VIP", mod: "Moderador", sub: "Suscriptor" }
 
 // Rangos que se pueden exigir segun la plataforma elegida. Cada uno va
 // calificado por plataforma ("tiktok:superfan"): nunca se mezclan solos.
-// Superfan solo existe en TikTok, que es donde hay regalos.
+// Superfan solo existe en TikTok, que es donde hay regalos; Suscriptor solo
+// en Twitch, que es donde Mimiku lee la insignia de sub.
 function rankOptionsFor(platform) {
   const platforms = platform === "all" ? Object.keys(PLATFORM_LABEL) : [platform]
   const options = []
   for (const platformName of platforms) {
     if (platformName === "tiktok") options.push(`${platformName}:superfan`)
+    if (platformName === "twitch") options.push(`${platformName}:sub`)
     options.push(`${platformName}:vip`, `${platformName}:mod`)
   }
   return options
