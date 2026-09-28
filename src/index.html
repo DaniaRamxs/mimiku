@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: http://127.0.0.1:7777; media-src 'self' blob: data: http://127.0.0.1:7777; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: http://127.0.0.1:*; media-src 'self' blob: data: http://127.0.0.1:*; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Mimiku</title>
   <link rel="stylesheet" href="styles/app.css">
 </head>
@@ -36,6 +36,7 @@
     <button class="nav-item" data-page="vips">💎 VIPs</button>
     <button class="nav-item" data-page="vtuber">🎭 VTuber</button>
     <button class="nav-item" data-page="widgets">🧩 Widgets</button>
+    <button class="nav-item" data-page="subathon">◷ Subathon</button>
     <button class="nav-item" data-page="settings">⚙ Ajustes</button>
     <div class="sidebar-spacer"></div>
     <div class="sidebar-footer" id="app-version">Mimiku</div>
@@ -425,7 +426,7 @@
         <div class="panel-header"><span class="panel-title">Browser Source URL</span></div>
         <p class="desc">Agrega esta URL como Browser Source en OBS Studio:</p>
         <div class="url-box">
-          <span>http://127.0.0.1:7777/overlay</span>
+          <span id="overlay-url-label">http://127.0.0.1:7777/overlay</span>
           <button onclick="window.overlayPage.copyUrl()">Copiar</button>
         </div>
       </div>
@@ -433,15 +434,6 @@
         <div class="panel-header"><span class="panel-title">Probar alerta</span></div>
         <button class="btn-primary" onclick="window.overlayPage.sendTestAlert()">Enviar alerta de prueba</button>
       </div>
-      <div class="panel" style="max-width:560px;margin-bottom:1rem">
-        <div class="panel-header">
-          <span class="panel-title">👑 Rey del Chat</span>
-          <span id="king-badge-status" class="game-badge">Oculto</span>
-        </div>
-        <p class="desc">Muestra el viewer con más mensajes en el stream actual. Se actualiza automáticamente.</p>
-        <button class="btn-primary" id="btn-king-toggle" onclick="window.overlayPage.toggleKing()">👁 Mostrar en overlay</button>
-      </div>
-
       <div class="panel" style="max-width:560px">
         <div class="panel-header"><span class="panel-title">Ticker</span></div>
         <div class="input-row">
@@ -1047,6 +1039,140 @@
       </div>
 
       <div class="panel" style="max-width:640px;margin-top:1rem">
+        <div class="panel-header">
+          <span class="panel-title">Top 3 del chat</span>
+          <button class="btn-ghost" onclick="window.widgetsPage.previewChatTop()">Probar animación</button>
+        </div>
+        <p class="desc">Tabla en vivo con los 3 viewers que más mensajes escribieron en este directo. Se reordena al instante con cada mensaje y se reinicia sola en cada directo nuevo. Los comandos (!) no cuentan.</p>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-top-enabled">
+          Activado
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <div class="lvl-field" style="flex:2">
+            <label>Título</label>
+            <input id="wg-top-title" type="text" maxlength="30" placeholder="Top del chat">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Estilo</label>
+            <select id="wg-top-theme" class="event-select" style="width:100%">
+              <option value="noche">Noche (oscuro)</option>
+              <option value="pastel">Pastel (claro)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="lvl-field">
+          <label>Posición en pantalla</label>
+          <div id="wg-top-position" class="wg-pos-grid">
+            <button type="button" data-pos="top-left">Arriba izq.</button>
+            <button type="button" data-pos="top-center">Arriba centro</button>
+            <button type="button" data-pos="top-right">Arriba der.</button>
+            <button type="button" data-pos="middle-left">Centro izq.</button>
+            <span></span>
+            <button type="button" data-pos="middle-right">Centro der.</button>
+            <button type="button" data-pos="bottom-left">Abajo izq.</button>
+            <button type="button" data-pos="bottom-center">Abajo centro</button>
+            <button type="button" data-pos="bottom-right">Abajo der.</button>
+          </div>
+        </div>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-top-counts">
+          Mostrar número de mensajes
+        </label>
+
+        <button class="btn-primary" style="margin-top:14px" onclick="window.widgetsPage.saveChatTopConfig()">Guardar configuración</button>
+
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border, rgba(255,255,255,.08))">
+          <div class="panel-title" style="margin-bottom:8px;font-size:13px">Top de este directo</div>
+          <div id="wg-top-live" class="desc">Todavía no hay mensajes en este directo.</div>
+          <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-top:8px">
+            El directo se detecta igual que en la tarjeta de fidelidad (stream de Twitch en vivo, o las horas sin chat configuradas allí). El botón "Empezar directo nuevo" de la tarjeta también reinicia este top.
+          </p>
+        </div>
+      </div>
+
+      <div class="panel" style="max-width:640px;margin-top:1rem">
+        <div class="panel-header">
+          <span class="panel-title">Tarjeta de fidelidad (!claim)</span>
+          <span style="display:flex;gap:6px">
+            <button class="btn-ghost" onclick="window.widgetsPage.previewLoyalty(false)">Probar sello</button>
+            <button class="btn-ghost" onclick="window.widgetsPage.previewLoyalty(true)">Probar completa</button>
+          </span>
+        </div>
+        <p class="desc">Cada viewer escribe !claim una vez por directo y recibe un sello. La tarjeta es semanal (se renueva cada lunes); al completarla recibe los puntos de premio automáticamente y aparece en la lista de abajo para que le entregues tu premio extra.</p>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-loy-enabled">
+          Activada
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <div class="lvl-field" style="flex:2">
+            <label>Título de la tarjeta</label>
+            <input id="wg-loy-title" type="text" maxlength="40" placeholder="Tarjeta de fidelidad">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Estilo</label>
+            <select id="wg-loy-theme" class="event-select" style="width:100%">
+              <option value="noche">Noche (oscuro)</option>
+              <option value="pastel">Pastel (claro)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Sellos por tarjeta</label>
+            <input id="wg-loy-stamps" type="number" min="2" max="14" value="10">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Puntos al completarla</label>
+            <input id="wg-loy-reward" type="number" min="0" max="10000000" step="1000" value="20000">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Posición</label>
+            <select id="wg-loy-position" class="event-select" style="width:100%">
+              <option value="bottom-right">Abajo derecha</option>
+              <option value="bottom-left">Abajo izquierda</option>
+              <option value="top-right">Arriba derecha</option>
+              <option value="top-left">Arriba izquierda</option>
+              <option value="center">Centro</option>
+            </select>
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Duración en pantalla (seg)</label>
+            <input id="wg-loy-duration" type="number" min="3" max="30" value="7">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Horas sin chat = directo nuevo</label>
+            <input id="wg-loy-gap" type="number" min="1" max="12" value="3">
+          </div>
+        </div>
+
+        <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-top:.5rem;margin-bottom:8px">
+          Con Twitch conectado, cada directo se detecta por el stream en vivo de Twitch. Sin ese dato, empieza un directo nuevo tras las horas indicadas sin mensajes en el chat. También puedes empezarlo a mano.
+        </p>
+
+        <button class="btn-primary" style="margin-top:8px" onclick="window.widgetsPage.saveLoyaltyConfig()">Guardar configuración</button>
+
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border, rgba(255,255,255,.08))">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <span id="wg-loy-stream" class="desc" style="margin:0">Directo actual: sin datos</span>
+            <button class="btn-ghost" onclick="window.widgetsPage.newLoyaltyStream()">Empezar directo nuevo</button>
+          </div>
+          <div class="panel-title" style="margin:14px 0 8px;font-size:13px">Tarjetas completadas esta semana</div>
+          <div id="wg-loy-completions" class="desc">Nadie ha completado la tarjeta todavía.</div>
+        </div>
+      </div>
+
+      <div class="panel" style="max-width:640px;margin-top:1rem">
         <div class="panel-header"><span class="panel-title">💡 Ideas para próximos widgets</span></div>
         <ul class="feature-list">
           <li>🔥 Racha de mensajes — destaca quién lleva más días seguidos escribiendo</li>
@@ -1057,6 +1183,93 @@
           <li>📊 Mini leaderboard flotante (top 3 de puntos/XP en vivo)</li>
         </ul>
       </div>
+    </div>
+
+    <!-- Subathon -->
+    <div id="subathon" class="page">
+      <div class="page-header">
+        <h1>Subathon</h1>
+        <p class="page-sub">Contador extensible y metas de subs y bits para el overlay</p>
+      </div>
+
+      <div class="panel" style="max-width:760px">
+        <div class="panel-header">
+          <span class="panel-title">Contador extensible</span>
+          <button class="btn-ghost" onclick="window.subathonPage.previewTime()">Probar animación</button>
+        </div>
+        <div class="sa-panel-clock">
+          <div id="sa-p-clock" class="sa-panel-time">00:00:00</div>
+          <div id="sa-p-status" class="sa-panel-status">Sin empezar</div>
+          <div class="sa-panel-actions">
+            <button class="btn-primary" id="sa-p-start" onclick="window.subathonPage.start()">Empezar</button>
+            <button class="btn-ghost" id="sa-p-pause" onclick="window.subathonPage.pause()">Pausar</button>
+            <button class="btn-ghost" onclick="window.subathonPage.reset()">Reiniciar</button>
+          </div>
+        </div>
+
+        <div class="sa-panel-grid">
+          <div>
+            <div class="panel-title sa-sub">Fijar tiempo restante</div>
+            <div class="sa-hm">
+              <label>Horas<input id="sa-p-set-h" type="number" min="0" max="720" value="4"></label>
+              <label>Minutos<input id="sa-p-set-m" type="number" min="0" max="59" value="0"></label>
+              <button class="btn-ghost" onclick="window.subathonPage.setRemaining()">Fijar</button>
+            </div>
+            <p class="field-hint sa-hint">Antes de empezar, este es el tiempo inicial.</p>
+          </div>
+          <div>
+            <div class="panel-title sa-sub">Añadir tiempo a mano</div>
+            <div class="sa-hm">
+              <label>Origen
+                <select id="sa-p-source" class="event-select">
+                  <option value="StreamElements">StreamElements</option>
+                  <option value="Yape">Yape</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </label>
+              <label style="flex:2">Nota (quién / cuánto)<input id="sa-p-note" type="text" maxlength="60" placeholder="Ej: Luna 20 soles"></label>
+            </div>
+            <div class="sa-hm">
+              <label>Horas<input id="sa-p-add-h" type="number" min="0" max="720" value="0"></label>
+              <label>Minutos<input id="sa-p-add-m" type="number" min="0" max="59" value="10"></label>
+              <button class="btn-primary" onclick="window.subathonPage.addTime(1)">Añadir</button>
+              <button class="btn-ghost" onclick="window.subathonPage.addTime(-1)">Quitar</button>
+            </div>
+            <div class="sa-quick">
+              <button type="button" onclick="window.subathonPage.quickAdd(5)">+5 min</button>
+              <button type="button" onclick="window.subathonPage.quickAdd(10)">+10 min</button>
+              <button type="button" onclick="window.subathonPage.quickAdd(30)">+30 min</button>
+              <button type="button" onclick="window.subathonPage.quickAdd(60)">+1 h</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-title sa-sub">Suma automática desde Twitch</div>
+        <div class="sa-hm">
+          <label>Minutos por sub<input id="sa-p-per-sub" type="number" min="0" max="1440" value="10"></label>
+          <label>Minutos por cada 100 bits<input id="sa-p-per-bits" type="number" min="0" max="1440" value="10"></label>
+        </div>
+        <label class="lvl-check"><input type="checkbox" id="sa-p-tiers"> Los subs tier 2 cuentan x2 y los tier 3 x5</label>
+        <p class="field-hint sa-hint">Cuentan subs, resubs y subs regalados (cada regalo es un sub). Los bits se acumulan: 150 bits suman 10 min y los 50 que sobran esperan al siguiente cheer. Solo suma con el contador en marcha o en pausa.</p>
+
+        <div class="panel-title sa-sub">Apariencia</div>
+        <div class="sa-hm">
+          <label style="flex:2">Título<input id="sa-p-title" type="text" maxlength="30" placeholder="Subathon"></label>
+          <label>Colores<select id="sa-p-palette" class="event-select"></select></label>
+          <label>Color 1<input id="sa-p-c1" type="color"></label>
+          <label>Color 2<input id="sa-p-c2" type="color"></label>
+        </div>
+        <div class="sa-hm" style="align-items:flex-start">
+          <div><div class="sa-label">Posición</div><div id="sa-p-position" class="wg-pos-grid sa-pos"></div></div>
+          <label>Tamaño <span id="sa-p-size-v">100%</span><input id="sa-p-size" type="range" min="50" max="200" step="5" value="100"></label>
+        </div>
+        <button class="btn-primary" style="margin-top:12px" onclick="window.subathonPage.saveTimerConfig()">Guardar contador</button>
+
+        <div class="panel-title sa-sub" style="margin-top:18px">Últimas sumas</div>
+        <div id="sa-p-history" class="desc">Todavía no se ha sumado tiempo.</div>
+      </div>
+
+      <div id="sa-goal-panels"></div>
     </div>
 
     <!-- Ajustes -->
@@ -1211,6 +1424,34 @@
           <button class="btn-primary" onclick="window.settingsPage.addRankOverride()">Añadir</button>
         </div>
         <div id="override-list" class="field-hint" style="margin-top:8px"></div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Overlay y red local</span></div>
+        <p class="desc">Servidor que sirve el overlay a OBS y a TikTok LIVE Studio. Los cambios reinician solo el servidor, sin cerrar Mimiku.</p>
+        <div id="overlay-net-status" class="doctor-row"><span class="field-hint">Cargando estado…</span></div>
+        <div class="form-group" style="margin-top:12px">
+          <label>Puerto del overlay (HTTP y WebSocket /ws)
+            <input id="overlay-net-port" type="number" min="1" max="65535" placeholder="7777">
+            <span class="field-hint">Usa 80 para una URL sin puerto (http://tu-host/overlay). Si está ocupado, Mimiku vuelve a la configuración anterior y te avisa.</span>
+          </label>
+          <label>Puerto WebSocket adicional
+            <input id="overlay-net-ws-port" type="number" min="0" max="65535" placeholder="7778">
+            <span class="field-hint">Opcional, solo por compatibilidad. Pon 0 para desactivarlo.</span>
+          </label>
+          <label><input id="overlay-net-lan" type="checkbox"> Permitir acceso desde la red local (escuchar en 0.0.0.0)
+            <span class="field-hint">Desmárcalo para limitar el servidor a este equipo (127.0.0.1). El panel de mods y la API local nunca se abren a la red.</span>
+          </label>
+          <label>Hostname personalizado
+            <input id="overlay-net-hostname" type="text" placeholder="overlay.mimiku.dev">
+            <span class="field-hint">Solo se muestra en la lista de URLs. Debes apuntarlo tú a 127.0.0.1 en el archivo hosts de Windows; Mimiku no lo modifica.</span>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="window.overlayDiagnosticsPage.saveOverlayConfig()">Guardar y reiniciar servidor</button>
+          <button class="btn-ghost" id="overlay-net-probe" onclick="window.overlayDiagnosticsPage.probeOverlayUrls()">Probar todas las URLs</button>
+        </div>
+        <div id="overlay-net-urls" class="doctor-results"></div>
       </div>
 
       <div class="panel" style="max-width:620px;margin-top:1rem">

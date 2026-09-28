@@ -19,7 +19,9 @@ const emotesPage = require("./pages/emotes.js")
 const vipsPage = require("./pages/vips.js")
 const vtuberPage = require("./pages/vtuber.js")
 const widgetsPage = require("./pages/widgets.js")
+const subathonPage = require("./pages/subathon.js")
 const commandsPage = require("./pages/commands.js")
+const overlayDiagnosticsPage = require("./pages/overlay-diagnostics.js")
 
 const windowControls = {
   minimize: () => ipcRenderer.invoke("app:minimize"),
@@ -49,7 +51,9 @@ function showPage(id) {
   if (id === "arena")   { arenaPage.initArena() }
   if (id === "events")  eventsPage.refreshStatus()
   if (id === "widgets") widgetsPage.initWidgets()
+  if (id === "subathon") subathonPage.initSubathon().catch(error => console.error("[Subathon]", error))
   if (id === "commands") commandsPage.initCommands()
+  if (id === "settings") overlayDiagnosticsPage.refreshOverlayDiagnostics().catch(error => console.error("[OverlayDiagnostics]", error))
 }
 function showToast(msg) {
   const t = document.getElementById("toast")
@@ -83,7 +87,9 @@ const rendererApi = {
   vipsPage,
   vtuberPage,
   widgetsPage,
+  subathonPage,
   commandsPage,
+  overlayDiagnosticsPage,
   ...windowControls,
   showPage,
   showToast,
@@ -98,6 +104,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   dashboard.initDashboard()
   const appConfig = await settings.initSettings()
+  overlayDiagnosticsPage.initOverlayDiagnostics().catch(error => console.error("[OverlayDiagnostics]", error))
   const version = await ipcRenderer.invoke("app:getVersion")
   const versionLabel = document.getElementById("app-version")
   if (versionLabel) versionLabel.textContent = `Mimiku v${version}`

@@ -1,13 +1,25 @@
 const fs = require("fs")
 const path = require("path")
+const http = require("node:http")
 const { WebSocketServer } = require("ws")
 const { randomUUID } = require("node:crypto")
+const overlayNetwork = require("./overlay-network.js")
 
 const clients = new Set()
+// _wss atiende las conexiones por el puerto HTTP (ruta /ws, sin puerto extra);
+// _legacyWss es el puerto WebSocket aparte (7778 por defecto) que ya existía.
 let _wss = null
+let _legacyWss = null
 let _server = null
+let _handleRequest = null
+let _activeConfig = null
 let _started = false
-let _status = { running: false, error: null }
+let _status = emptyStatus()
+
+const WS_PATH = "/ws"
+const LOOPBACK_HOST = "127.0.0.1"
+const ANY_HOST = "0.0.0.0"
+const DEFAULT_HTTP_PORT = 7777
 
 const OVERLAY_PATH = path.join(__dirname, "overlay.html")
 const PANEL_DIR = path.join(__dirname, "..", "..", "mod-panel")
@@ -23,6 +35,10 @@ const MIME = {
   ".mp4": "video/mp4",
   ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
   ".m4a": "audio/mp4", ".webm": "audio/webm",
+}
+
+function emptyStatus() {
+  return { running: false, error: null, httpPort: null, wsPort: null, host: null, wsError: null }
 }
 
 function start() {
@@ -44,6 +60,21 @@ function start() {
     vipService,
   })
   require("../core/interactions/sound-trigger-engine.js").registerSoundTriggerEngine(eventEngine)
+  // Directos (tarjeta de fidelidad y Top 3 del chat): Twitch dice cuando
+  // empieza cada directo y, sin ese dato, la actividad del chat lo mantiene abierto.
+  require("./twitch-live-status.js").getDefaultLiveStatus().start()
+  // Subathon: vigila cuando el contador llega a 0.
+  require("./subathon.js").getDefaultSubathon().start()
+  // Top 3 del chat: cuenta mensajes del directo actual y avisa al overlay cuando cambia.
+  const chatTop = require("./chat-top.js").getDefaultChatTopService(snapshot => {
+    broadcast({ type: "chat_top", ...snapshot })
+    require("../integrations/twitch/twitch-adapter.js").sendToRenderer("chatTop:update", snapshot)
+  })
+  eventEngine.subscribe("chat_message", event => {
+    try { chatTop.recordMessage(event) } catch (error) {
+      console.warn("[chat-top] no se pudo contar el mensaje:", error.message)
+    }
+  })
   eventEngine.subscribe("chat_message", vipService.handleChatMessage)
   // Regalos de plataformas de directo (TikTok): puntos + donaciones + reglas de Mimic.
   const giftService = require("./gifts.js")
@@ -61,7 +92,7 @@ function start() {
   // widget de avatar/AFK/mini-reto. Mismo motivo que Command/Sound arriba —
   // registrado siempre al arrancar, nunca solo al conectar Twitch.
   const activityTracker = require("../core/interactions/activity-consumer.js")
-    .getDefaultActivityTracker({ onKingUpdate: king => king && broadcast({ type: "king_update", username: king.username, display: king.displayName, messages: king.messages }) })
+    .getDefaultActivityTracker()
   require("../core/interactions/activity-consumer.js").registerActivityConsumer(eventEngine, activityTracker)
   require("../core/interactions/chat-activity-consumers.js").registerChatActivityConsumers(eventEngine, {
     xp: { getPointsPerMessage: event => vipService.pointsPerMessage(event, 2) },
@@ -86,7 +117,28 @@ function start() {
     token: require("./app-config.js").getSocialStreamNinjaToken(),
     adapter: require("../integrations/social-stream-ninja/social-stream-ninja-adapter.js").getDefaultSocialStreamNinjaAdapter(),
   })
-  _server = require("http").createServer((req, res) => {
+  _handleRequest = createRequestHandler({ localApi, apiHandler, ssnRoute })
+  startNetwork(currentOverlayConfig())
+}
+
+// Con el servidor accesible desde la red local, la API, el panel de mods (que
+// incrusta el token de la API) y la ruta de SSN solo deben responder a
+// conexiones de esta misma máquina. El overlay, /assets y /audio son públicos.
+function isLoopbackRequest(req) {
+  const address = req.socket.remoteAddress || ""
+  return address === "::1" || address.startsWith("127.") || address.startsWith("::ffff:127.")
+}
+
+function createRequestHandler({ localApi, apiHandler, ssnRoute }) {
+  return (req, res) => {
+    const isPrivileged = req.url.startsWith(localApi.SSN_PATH_PREFIX)
+      || req.url.startsWith("/api/v1/")
+      || req.url.startsWith("/panel")
+    if (isPrivileged && !isLoopbackRequest(req)) {
+      res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" })
+      res.end("Solo disponible desde este equipo")
+      return
+    }
     if (req.url.startsWith(localApi.SSN_PATH_PREFIX)) {
       ssnRoute(req, res)
       return
@@ -140,59 +192,164 @@ function start() {
     } else {
       res.writeHead(404); res.end()
     }
-  })
+  }
+}
 
-  _wss = new WebSocketServer({ port: 7778, host: "127.0.0.1" })
-  _wss.on("connection", ws => {
-    clients.add(ws)
-    ws.on("close", () => clients.delete(ws))
-    ws.on("message", data => {
-      try {
-        const msg = JSON.parse(data.toString())
-        if (msg.type === "get_channel") {
-          const ch = require("./currentChannel.js").get()
-          ws.send(JSON.stringify({ type: "set_channel", channel: ch }))
-        }
-      } catch {}
+function currentOverlayConfig() {
+  return require("./app-config.js").getAppConfig().overlay
+}
+
+function handleConnection(ws) {
+  clients.add(ws)
+  ws.on("close", () => clients.delete(ws))
+  ws.on("message", data => {
+    try {
+      const msg = JSON.parse(data.toString())
+      if (msg.type === "get_channel") {
+        const ch = require("./currentChannel.js").get()
+        ws.send(JSON.stringify({ type: "set_channel", channel: ch }))
+      }
+    } catch {}
+  })
+  const ch = require("./currentChannel.js").get()
+  if (ch) ws.send(JSON.stringify({ type: "set_channel", channel: ch }))
+  // Un overlay que se (re)conecta a mitad de directo recibe el Top 3 actual.
+  try {
+    ws.send(JSON.stringify(require("./widgets.js").chatTopConfigMessage()))
+    ws.send(JSON.stringify({ type: "chat_top", ...require("./chat-top.js").getDefaultChatTopService().snapshot() }))
+  } catch (error) {
+    console.warn("[chat-top] no se pudo enviar el estado inicial:", error.message)
+  }
+  try {
+    const subathon = require("./subathon.js").getDefaultSubathon()
+    ws.send(JSON.stringify({ type: "subathon_timer", ...subathon.timer.snapshot() }))
+    for (const type of subathon.goals.types) ws.send(JSON.stringify({ type: "subathon_goal", ...subathon.goals.snapshot(type) }))
+  } catch (error) {
+    console.warn("[subathon] no se pudo enviar el estado inicial:", error.message)
+  }
+}
+
+function listen(server, port, host) {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(port, host, () => {
+      server.removeListener("error", reject)
+      resolve()
     })
-    const ch = require("./currentChannel.js").get()
-    if (ch) ws.send(JSON.stringify({ type: "set_channel", channel: ch }))
-  })
-  // Sin este handler, un puerto 7778 ocupado (otra instancia de Mimiku,
-  // otra app) tira una excepción no capturada que cierra toda la app.
-  _wss.on("error", error => reportServerError("ws:7778", error))
-
-  _server.on("error", error => reportServerError("http:7777", error))
-  _server.listen(7777, "127.0.0.1", () => {
-    _status = { running: true, error: null }
-    console.log("[overlay] 127.0.0.1:7777 / ws :7778")
   })
 }
 
-// Puerto ocupado (u otro fallo de arranque) no debe crashear Mimiku — se
-// registra un estado consultable desde la UI (ver ipc "overlay:getStatus")
-// en vez de dejar una excepción sin capturar.
+function listenWebSocket(port, host) {
+  return new Promise((resolve, reject) => {
+    const wss = new WebSocketServer({ port, host })
+    wss.once("error", reject)
+    wss.once("listening", () => {
+      wss.removeListener("error", reject)
+      wss.on("error", error => reportServerError("ws:" + port, error))
+      resolve(wss)
+    })
+  })
+}
+
+function closeServer(server) {
+  return new Promise(resolve => {
+    if (!server) { resolve(); return }
+    server.close(() => resolve())
+    // Sin esto, las conexiones keep-alive mantienen el puerto ocupado y un
+    // reinicio con el mismo puerto falla con EADDRINUSE.
+    server.closeAllConnections?.()
+  })
+}
+
+async function stopNetwork() {
+  for (const client of clients) {
+    try { client.terminate() } catch {}
+  }
+  clients.clear()
+  const [server, wss, legacy] = [_server, _wss, _legacyWss]
+  _server = _wss = _legacyWss = null
+  await Promise.all([closeServer(server), closeServer(wss), closeServer(legacy)])
+}
+
+// Levanta HTTP (+ WebSocket) con la configuración dada. Nunca lanza: deja el
+// resultado en _status para que la UI lo consulte (ver ipc "overlay:getStatus").
+async function startNetwork(config) {
+  await stopNetwork()
+  const host = config.allowLan ? ANY_HOST : LOOPBACK_HOST
+  const server = http.createServer(_handleRequest)
+  const wss = new WebSocketServer({ noServer: true })
+  wss.on("connection", handleConnection)
+  server.on("upgrade", (req, socket, head) => {
+    if (req.url.split("?")[0] !== WS_PATH) { socket.destroy(); return }
+    wss.handleUpgrade(req, socket, head, ws => wss.emit("connection", ws, req))
+  })
+  try {
+    await listen(server, config.httpPort, host)
+    // Recién ahora: un fallo de listen() ya lo maneja el catch de abajo.
+    server.on("error", error => reportServerError("http:" + config.httpPort, error))
+  } catch (error) {
+    const friendly = overlayNetwork.describeListenError(error, { host, port: config.httpPort })
+    _status = { ...emptyStatus(), error: friendly, httpPort: config.httpPort, host }
+    console.error("[overlay]", friendly)
+    return _status
+  }
+  _server = server
+  _wss = wss
+  _activeConfig = config
+
+  // El puerto WebSocket aparte es opcional: si está ocupado el overlay sigue
+  // funcionando por /ws en el puerto HTTP, así que solo se avisa.
+  let wsError = null
+  if (config.wsPort) {
+    try {
+      _legacyWss = await listenWebSocket(config.wsPort, host)
+      _legacyWss.on("connection", handleConnection)
+    } catch (error) {
+      wsError = overlayNetwork.describeListenError(error, { host, port: config.wsPort })
+      console.error("[overlay]", wsError)
+    }
+  }
+  _status = {
+    running: true, error: null, httpPort: config.httpPort, host, wsError,
+    wsPort: _legacyWss ? config.wsPort : null,
+  }
+  console.log(`[overlay] ${host}:${config.httpPort} / ws ${_status.wsPort || "solo /ws"}`)
+  return _status
+}
+
+// Aplica una configuración nueva sin cerrar la app. Si no se puede (puerto
+// ocupado, sin permisos), restaura la anterior y devuelve el motivo.
+async function reconfigure(config) {
+  if (!_started) throw new Error("El servidor local todavía no se inició")
+  const previous = _activeConfig
+  const status = await startNetwork(config)
+  if (status.running) return { ok: true, status }
+  const error = status.error
+  if (previous) await startNetwork(previous)
+  return { ok: false, error, status: _status }
+}
+
+// Error de ejecución con el servidor ya levantado (el de arranque lo maneja
+// startNetwork). Queda como estado consultable en vez de una excepción sin
+// capturar que cerraría toda la app.
 function reportServerError(where, error) {
-  const friendly = error.code === "EADDRINUSE"
-    ? `No se pudo iniciar el servidor local (${where}). Comprueba si otra instancia de Mimiku u otra aplicación está usando ese puerto.`
-    : `El servidor local (${where}) falló: ${error.message}`
-  _status = { running: false, error: friendly }
+  const friendly = `El servidor local (${where}) falló: ${error.message}`
+  _status = { ..._status, running: false, error: friendly }
   console.error("[overlay]", friendly)
 }
 
 function getStatus() { return _status }
 
 function stop() {
-  for (const client of clients) {
-    try { client.terminate() } catch {}
-  }
-  clients.clear()
-  try { _wss?.close() } catch {}
-  try { _server?.close() } catch {}
-  _wss = null
-  _server = null
+  stopNetwork().catch(() => {})
   _started = false
-  _status = { running: false, error: null }
+  _activeConfig = null
+  _status = emptyStatus()
+}
+
+// Base para URLs que Mimiku genera hacia su propio servidor (audio, assets).
+function getBaseUrl() {
+  return `http://${LOOPBACK_HOST}:${_status.httpPort || DEFAULT_HTTP_PORT}`
 }
 
 function broadcast(payload) {
@@ -202,4 +359,4 @@ function broadcast(payload) {
   console.log("[overlay] broadcast", payload.type, "→", sent, "de", clients.size, "clientes")
 }
 
-module.exports = { start, stop, broadcast, clients, getApiToken: () => API_TOKEN, getStatus }
+module.exports = { start, stop, reconfigure, broadcast, clients, getApiToken: () => API_TOKEN, getStatus, getBaseUrl }

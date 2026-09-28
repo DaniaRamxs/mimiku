@@ -1,5 +1,8 @@
 const { viewerIdentityKey } = require("../core/identity/viewer-identity.js")
 const { isValidRankId } = require("./ranks.js")
+const {
+  LIVE_EFFECTS, EFFECT_CATEGORY, EFFECT_DEFAULT_PLATFORM, EFFECT_DEFAULT_COOLDOWN_SECONDS,
+} = require("../core/interactions/live-effects.js")
 
 const COMMANDS = [
   { name: "!puntos", aliases: [], category: "Economía", description: "Muestra el saldo del viewer." },
@@ -15,6 +18,7 @@ const COMMANDS = [
   { name: "!cofres", aliases: [], category: "Mimics", description: "Muestra cuantos cofres sin abrir tiene el viewer." },
   { name: "!abrircofre", aliases: ["!abrir"], category: "Mimics", description: "Abre cofres del inventario y entrega Mimics (opcional: cantidad)." },
   { name: "!ruletacofres", aliases: [], category: "Mimics", description: "Gira la ruleta de cofres (premio en cofres, no en puntos)." },
+  { name: "!claim", aliases: [], category: "Fidelidad", description: "Sella la tarjeta de fidelidad semanal (una vez por directo).", defaultPlatform: "twitch" },
   { name: "!slots", aliases: ["!tragamonedas"], category: "Juegos", description: "Juega a tragamonedas." },
   { name: "!bj", aliases: ["!blackjack"], category: "Juegos", description: "Entra a Blackjack." },
   { name: "!hit", aliases: [], category: "Juegos", description: "Pide carta en Blackjack." },
@@ -28,6 +32,11 @@ const COMMANDS = [
   { name: "!misterio", aliases: ["!mystery"], category: "Tienda", description: "Activa un evento misterioso." },
   { name: "!info", aliases: [], category: "Ayuda", description: "Muestra los comandos configurados para VIPs." },
   { name: "!comandos", aliases: ["!cmds"], category: "Ayuda", description: "Lista comandos disponibles." },
+  // Efectos de directo: gratis, solo animaciones. Nacen exclusivos de TikTok.
+  ...LIVE_EFFECTS.map(effect => ({
+    name: effect.name, aliases: effect.aliases, category: EFFECT_CATEGORY, description: effect.description,
+    defaultPlatform: EFFECT_DEFAULT_PLATFORM, defaultCooldownSeconds: EFFECT_DEFAULT_COOLDOWN_SECONDS,
+  })),
 ]
 
 const PLATFORM_SCOPES = new Set(["all", "twitch", "youtube", "tiktok", "kick"])
@@ -54,8 +63,8 @@ function createCommandConfigService(platform, getChannel, { now = Date.now, rank
     return {
       ...item,
       enabled: saved.enabled !== false,
-      platform: PLATFORM_SCOPES.has(saved.platform) ? saved.platform : "all",
-      cooldownSeconds: Math.min(3600, Math.max(0, Number(saved.cooldownSeconds) || 0)),
+      platform: PLATFORM_SCOPES.has(saved.platform) ? saved.platform : (item.defaultPlatform || "all"),
+      cooldownSeconds: Math.min(3600, Math.max(0, Number(saved.cooldownSeconds ?? item.defaultCooldownSeconds) || 0)),
       allowedRanks: normalizeAllowedRanks(saved.allowedRanks),
     }
   }
@@ -64,13 +73,15 @@ function createCommandConfigService(platform, getChannel, { now = Date.now, rank
     const item = find(command)
     if (!item) throw new Error("Comando desconocido")
     const current = load()
-    const previous = current[item.name] || {}
+    // Base = lo vigente (guardado o por defecto), para que editar un solo campo
+    // de un efecto no le quite su plataforma/cooldown por defecto.
+    const previous = settingsFor(item.name)
     current[item.name] = {
-      enabled: updates.enabled === undefined ? previous.enabled !== false : updates.enabled === true,
-      platform: PLATFORM_SCOPES.has(updates.platform) ? updates.platform : (previous.platform || "all"),
+      enabled: updates.enabled === undefined ? previous.enabled : updates.enabled === true,
+      platform: PLATFORM_SCOPES.has(updates.platform) ? updates.platform : previous.platform,
       cooldownSeconds: Math.min(3600, Math.max(0, Number(updates.cooldownSeconds ?? previous.cooldownSeconds) || 0)),
       allowedRanks: updates.allowedRanks === undefined
-        ? normalizeAllowedRanks(previous.allowedRanks)
+        ? previous.allowedRanks
         : normalizeAllowedRanks(updates.allowedRanks),
     }
     platform.moderation.setConfig(getChannel(), "commands", current)

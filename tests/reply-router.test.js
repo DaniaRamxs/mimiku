@@ -38,3 +38,23 @@ test("reply router still replies natively when the capability is declared true",
   reply.send({ platform: "twitch", actor: { username: "luna" }, metadata: { capabilities: { reply: true } }, reply: msg => native.push(msg) }, "hola")
   assert.deepEqual(native, ["hola"])
 })
+
+test("reply router muestra tambien en el overlay la respuesta a TikTok, recortada a una linea", () => {
+  const overlay = []
+  const reply = createReplyRouter({ showOnOverlay: payload => overlay.push(payload) })
+  const event = { platform: "tiktok", actor: { username: "lunatok" }, metadata: { capabilities: { reply: false } } }
+  reply.send(event, "@Luna tenes 42 puntos")
+  reply.send(event, "linea uno\nlinea dos " + "x".repeat(300))
+  assert.deepEqual(overlay[0], { type: "reply_toast", text: "@Luna tenes 42 puntos", duration: 6000 })
+  assert.equal(overlay[1].text.length, 110)
+  assert.ok(!overlay[1].text.includes("\n"))
+  assert.ok(overlay[1].text.endsWith("..."))
+})
+
+test("reply router no toca el overlay para Twitch ni para YouTube por SSN", () => {
+  const overlay = []
+  const reply = createReplyRouter({ showOnOverlay: payload => overlay.push(payload) })
+  reply.send({ platform: "twitch", actor: { username: "a" }, reply() {} }, "hola")
+  reply.send({ source: "social-stream-ninja", platform: "youtube", actor: { username: "b" } }, "hola")
+  assert.deepEqual(overlay, [])
+})

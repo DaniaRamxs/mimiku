@@ -2,19 +2,17 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src http: https: data:; media-src http: https: data: blob:; connect-src ws://127.0.0.1:7778; frame-src http: https:; font-src data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src http: https: data:; media-src http: https: data: blob:; connect-src 'self' ws:; frame-src http: https:; font-src data:">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:transparent;overflow:hidden;font-family:sans-serif;width:100vw;height:100vh}
 
-#toolbar{position:fixed;top:10px;right:10px;z-index:99999;display:flex;gap:6px;align-items:center;background:rgba(10,10,15,.88);border:1px solid rgba(124,110,245,.4);border-radius:8px;padding:5px 10px;}
-#toolbar button{background:rgba(124,110,245,.2);border:1px solid rgba(124,110,245,.4);color:#e8e8f0;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;}
-#toolbar button:hover{background:rgba(124,110,245,.5);}
-.dot{width:6px;height:6px;border-radius:50%;background:#7c6ef5;box-shadow:0 0 6px #7c6ef5;}
-.logo-txt{font-size:11px;color:#7c6ef5;font-weight:700;letter-spacing:.06em}
 
 #alert-box{position:fixed;top:48px;left:50%;transform:translateX(-50%) translateY(-10px);background:rgba(124,110,245,.93);color:#fff;border-radius:12px;padding:12px 28px;font-size:20px;font-weight:700;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 32px rgba(0,0,0,.5);z-index:9999;}
 #alert-box.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* Respuestas a comandos de plataformas sin chat de salida (TikTok): abajo, sobre el ticker, para no pisar la ruleta ni las alertas. */
+#reply-toast{position:fixed;bottom:52px;left:50%;transform:translateX(-50%) translateY(10px);max-width:88vw;background:rgba(10,10,15,.9);border:1px solid rgba(124,110,245,.65);color:#fff;border-radius:12px;padding:10px 22px;font-size:20px;font-weight:700;text-align:center;overflow-wrap:anywhere;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;box-shadow:0 4px 32px rgba(0,0,0,.5);z-index:9997;}
+#reply-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* ── Ruleta grande ── */
 #roulette-overlay{
@@ -82,27 +80,6 @@ body{background:transparent;overflow:hidden;font-family:sans-serif;width:100vw;h
   border-image:linear-gradient(90deg,#ff0000,#ff7700,#ffff00,#00ff00,#0000ff,#8b00ff) 1;
 }
 @keyframes rainbow-pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
-
-/* ── Rey del Chat ── */
-#king-overlay{
-  position:fixed;bottom:52px;right:16px;
-  z-index:9991;opacity:0;pointer-events:none;
-  transition:opacity .4s,transform .4s;
-  transform:translateX(20px);
-}
-#king-overlay.show{opacity:1;transform:translateX(0);}
-.king-card{
-  background:rgba(10,10,15,.92);border:1px solid rgba(245,158,11,.4);
-  border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;
-  box-shadow:0 0 20px rgba(245,158,11,.15);min-width:200px;
-}
-.king-crown{font-size:20px;animation:crown-bounce .8s ease-in-out infinite;}
-@keyframes crown-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-.king-info{flex:1;min-width:0;}
-.king-label{font-size:9px;font-weight:700;color:rgba(245,158,11,.8);text-transform:uppercase;letter-spacing:.08em;}
-.king-name{font-size:14px;font-weight:700;color:#fafafa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.king-msgs{font-size:11px;color:#a1a1aa;margin-top:1px;}
-.king-badge{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;flex-shrink:0;}
 
 /* ── Boss overlay ── */
 #boss-overlay{
@@ -229,27 +206,6 @@ body{background:transparent;overflow:hidden;font-family:sans-serif;width:100vw;h
 .cw-body img{width:100%;height:100%;object-fit:contain;display:block;}
 .cw-text{padding:14px;color:#e8e8f0;font-size:15px;word-break:break-word;line-height:1.6;}
 
-/* ── Rey del Chat widget ── */
-#king-widget{
-  position:fixed;bottom:40px;left:20px;z-index:9996;
-  background:linear-gradient(135deg,rgba(10,10,15,.97) 0%,rgba(234,179,8,.08) 100%);
-  border:2px solid rgba(234,179,8,.6);
-  border-radius:16px;padding:14px 20px;
-  display:flex;align-items:center;gap:14px;
-  opacity:0;transform:translateY(30px) scale(.92);
-  transition:opacity .5s cubic-bezier(.17,.67,.35,1.4),transform .5s cubic-bezier(.17,.67,.35,1.4);
-  pointer-events:none;
-  box-shadow:0 0 32px rgba(234,179,8,.25),0 8px 32px rgba(0,0,0,.6);
-  min-width:240px;
-}
-#king-widget.show{opacity:1;transform:translateY(0) scale(1);}
-#king-crown{font-size:40px;line-height:1;filter:drop-shadow(0 0 12px rgba(234,179,8,.8));animation:crown-bounce 2s ease-in-out infinite;}
-@keyframes crown-bounce{0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-6px) rotate(3deg)}}
-#king-info{display:flex;flex-direction:column;gap:2px;}
-#king-label{font-size:9px;font-weight:700;color:rgba(234,179,8,.8);text-transform:uppercase;letter-spacing:.12em;}
-#king-name{font-size:18px;font-weight:800;color:#eab308;text-shadow:0 0 20px rgba(234,179,8,.6);line-height:1.1;}
-#king-stats{font-size:11px;color:rgba(232,232,240,.6);margin-top:2px;}
-#king-bonus{font-size:12px;font-weight:700;color:#4ade80;}
 
 /* ── Cara o Cruz overlay ── */
 #coin-overlay{
@@ -500,17 +456,229 @@ body.shake-strong{animation:shake-strong .6s ease-in-out;}
 .cr-die-sides{font:600 14px system-ui,sans-serif;color:#ddd}
 .cr-result{font:800 30px system-ui,sans-serif;color:#f5c542;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease}
 .cr-result.show{opacity:1;transform:translateY(0)}
+/* ── Tarjeta de fidelidad (!claim) ── */
+#loyalty-layer{position:fixed;z-index:9990;pointer-events:none;padding:18px}
+#loyalty-layer.pos-bottom-left{left:0;bottom:44px}
+#loyalty-layer.pos-bottom-right{right:0;bottom:44px}
+#loyalty-layer.pos-top-left{left:0;top:10px}
+#loyalty-layer.pos-top-right{right:0;top:10px}
+#loyalty-layer.pos-center{left:50%;top:50%;transform:translate(-50%,-50%)}
+.loy-card{
+  --loy-bg:#15121f;--loy-bg2:#221c36;--loy-ink:#a996ff;--loy-ink-deep:#7c6ef5;--loy-text:#f1eefe;--loy-muted:#9a92c0;
+  --loy-slot:rgba(169,150,255,.32);--loy-gold:#f5c542;
+  position:relative;width:392px;padding:18px 20px 16px 32px;border-radius:18px;color:var(--loy-text);
+  font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  background:
+    radial-gradient(circle at 1px 1px,rgba(255,255,255,.06) 1px,transparent 1.5px) 0 0/14px 14px,
+    linear-gradient(150deg,var(--loy-bg2),var(--loy-bg) 62%);
+  border:1.5px solid rgba(169,150,255,.35);
+  box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08);
+  opacity:0;transform:translateY(26px) rotate(-3deg) scale(.92);
+  transition:opacity .45s cubic-bezier(.2,.9,.3,1.3),transform .55s cubic-bezier(.2,.9,.3,1.3);
+}
+.loy-card.theme-pastel{
+  --loy-bg:#fff4e8;--loy-bg2:#ffe7ef;--loy-ink:#ff6f9c;--loy-ink-deep:#e2487c;--loy-text:#5b3a48;--loy-muted:#a07a88;
+  --loy-slot:rgba(226,72,124,.34);--loy-gold:#e39a0c;
+  background:
+    radial-gradient(circle at 1px 1px,rgba(226,72,124,.12) 1px,transparent 1.5px) 0 0/14px 14px,
+    linear-gradient(150deg,var(--loy-bg2),var(--loy-bg) 62%);
+  border-color:rgba(226,72,124,.35);box-shadow:0 18px 44px rgba(90,40,60,.35);
+}
+/* Troquel de tarjeta perforada en el borde izquierdo */
+.loy-card::before{content:"";position:absolute;left:11px;top:18px;bottom:18px;width:8px;
+  background:radial-gradient(circle,rgba(0,0,0,.5) 3px,transparent 3.5px) 0 0/8px 16px;opacity:.6}
+.loy-card.theme-pastel::before{background:radial-gradient(circle,rgba(160,110,130,.45) 3px,transparent 3.5px) 0 0/8px 16px}
+.loy-card.show{opacity:1;transform:translateY(0) rotate(0) scale(1)}
+.loy-card.hide{opacity:0;transform:translateY(18px) scale(.95);transition-duration:.35s}
+.loy-card.impact{animation:loyImpact .32s ease-out}
+@keyframes loyImpact{0%{transform:scale(1)}30%{transform:scale(.975) translateY(2px)}100%{transform:scale(1)}}
+.loy-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.loy-title{font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--loy-ink)}
+.loy-week{font-size:11px;color:var(--loy-muted);white-space:nowrap}
+.loy-who{display:flex;align-items:center;gap:12px;margin:10px 0 14px}
+.loy-pic{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+  background:var(--loy-ink-deep);color:#fff;font-weight:800;font-size:20px;overflow:hidden;box-shadow:0 0 0 3px var(--loy-slot)}
+.loy-pic img{width:100%;height:100%;object-fit:cover}
+.loy-name{font-size:24px;font-weight:800;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+.loy-grid{display:grid;gap:9px 0;justify-content:space-between}
+.loy-slot{position:relative;width:52px;height:52px;border-radius:50%;border:2px dashed var(--loy-slot);
+  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--loy-slot)}
+.loy-grid.cols-7 .loy-slot{width:42px;height:42px;font-size:13px}
+.loy-stamp{position:absolute;inset:-2px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 35% 30%,var(--loy-ink),var(--loy-ink-deep));
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.25),0 3px 10px rgba(0,0,0,.3)}
+.loy-stamp svg{width:58%;height:58%;fill:#fff;opacity:.95}
+.loy-slot.last .loy-stamp{background:radial-gradient(circle at 35% 30%,#ffe08a,var(--loy-gold))}
+.loy-stamp.new{animation:loyStamp .55s cubic-bezier(.3,1.4,.5,1) .45s both}
+@keyframes loyStamp{0%{opacity:0;transform:scale(2.6) rotate(-35deg)}60%{opacity:1;transform:scale(.88) rotate(6deg)}100%{opacity:1;transform:scale(1) rotate(var(--loy-rot,0deg))}}
+.loy-ring{position:absolute;inset:-6px;border-radius:50%;border:3px solid var(--loy-ink);opacity:0;pointer-events:none}
+.loy-ring.go{animation:loyRing .6s ease-out both}
+@keyframes loyRing{0%{opacity:.9;transform:scale(.8)}100%{opacity:0;transform:scale(1.7)}}
+.loy-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:13px}
+.loy-count{font-weight:800}
+.loy-count b{font-size:20px;color:var(--loy-ink)}
+.loy-prize{color:var(--loy-muted)}
+.loy-prize b{color:var(--loy-gold)}
+.loy-card.done{border-color:var(--loy-gold);box-shadow:0 0 0 2px rgba(245,197,66,.35),0 0 46px rgba(245,197,66,.45),0 18px 50px rgba(0,0,0,.5)}
+.loy-done{position:absolute;left:50%;top:56%;padding:6px 18px;border:4px double var(--loy-gold);border-radius:10px;
+  color:var(--loy-gold);font-size:30px;font-weight:900;letter-spacing:.14em;background:rgba(10,8,20,.72);
+  transform:translate(-50%,-50%) rotate(-12deg);opacity:0;text-align:center;line-height:1;white-space:nowrap}
+.loy-done small{display:block;font-size:14px;letter-spacing:.05em;margin-top:4px}
+.loy-card.theme-pastel .loy-done{background:rgba(255,250,244,.88)}
+.loy-done.go{animation:loyDone .6s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes loyDone{0%{opacity:0;transform:translate(-50%,-50%) rotate(-30deg) scale(2.4)}100%{opacity:1;transform:translate(-50%,-50%) rotate(-12deg) scale(1)}}
+/* ── Top 3 del chat (directo actual) ── */
+#chat-top{
+  --ct-bg:rgba(16,13,28,.9);--ct-bg2:rgba(40,30,72,.9);--ct-border:rgba(169,150,255,.35);--ct-text:#f1eefe;--ct-muted:#9a92c0;
+  --ct-accent:#a996ff;--ct-bar:rgba(169,150,255,.22);--ct-gold:#f5c542;--ct-silver:#c9d1e0;--ct-bronze:#d99058;
+  position:fixed;z-index:9989;width:330px;pointer-events:none;
+  font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--ct-text);
+  opacity:0;transition:opacity .45s ease,filter .45s ease;filter:blur(4px);
+}
+#chat-top.theme-pastel{
+  --ct-bg:rgba(255,246,238,.95);--ct-bg2:rgba(255,228,238,.95);--ct-border:rgba(226,72,124,.35);--ct-text:#5b3a48;--ct-muted:#a07a88;
+  --ct-accent:#e2487c;--ct-bar:rgba(226,72,124,.16);--ct-gold:#e39a0c;--ct-silver:#8d97aa;--ct-bronze:#c0703a;
+}
+#chat-top.show{opacity:1;filter:none}
+#chat-top.pos-top-left{top:16px;left:16px}
+#chat-top.pos-top-center{top:16px;left:50%;margin-left:-165px}
+#chat-top.pos-top-right{top:16px;right:16px}
+#chat-top.pos-middle-left{top:50%;left:16px;margin-top:-110px}
+#chat-top.pos-middle-right{top:50%;right:16px;margin-top:-110px}
+#chat-top.pos-bottom-left{bottom:52px;left:16px}
+#chat-top.pos-bottom-center{bottom:52px;left:50%;margin-left:-165px}
+#chat-top.pos-bottom-right{bottom:52px;right:16px}
+.ct-card{border-radius:18px;padding:12px 12px 10px;background:linear-gradient(160deg,var(--ct-bg2),var(--ct-bg) 70%);
+  border:1.5px solid var(--ct-border);box-shadow:0 16px 44px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07)}
+.ct-head{display:flex;align-items:center;gap:8px;padding:0 4px 8px}
+.ct-title{flex:1;font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--ct-accent)}
+.ct-live{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:.14em;color:#ff5a7a}
+.ct-live i{width:7px;height:7px;border-radius:50%;background:#ff3b64;box-shadow:0 0 0 0 rgba(255,59,100,.7);animation:ctLive 1.6s ease-out infinite}
+@keyframes ctLive{0%{box-shadow:0 0 0 0 rgba(255,59,100,.7)}100%{box-shadow:0 0 0 9px rgba(255,59,100,0)}}
+.ct-list{position:relative;height:174px}
+.ct-row{position:absolute;left:0;right:0;top:0;height:54px;transition:transform .7s cubic-bezier(.22,1.3,.36,1)}
+.ct-inner{position:relative;height:50px;display:flex;align-items:center;gap:10px;padding:0 12px 0 8px;border-radius:14px;overflow:hidden;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);transition:opacity .4s,transform .45s cubic-bezier(.22,1.3,.36,1)}
+#chat-top.theme-pastel .ct-inner{background:rgba(255,255,255,.55);border-color:rgba(226,72,124,.12)}
+.ct-row.enter .ct-inner{opacity:0;transform:translateX(46px) scale(.9)}
+.ct-row.leave .ct-inner{opacity:0;transform:scale(.86);transition-duration:.3s}
+.ct-bar{position:absolute;inset:0;transform-origin:left center;background:linear-gradient(90deg,var(--ct-bar),transparent);
+  transition:transform .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
+.ct-rank{position:relative;z-index:1;width:28px;height:28px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:900;color:#1b1430;background:var(--ct-bronze);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.ct-row.rank-1 .ct-rank{background:linear-gradient(145deg,#ffe28a,var(--ct-gold))}
+.ct-row.rank-2 .ct-rank{background:linear-gradient(145deg,#f1f4fa,var(--ct-silver))}
+.ct-rank.flip{animation:ctFlip .5s ease}
+@keyframes ctFlip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
+.ct-pic{position:relative;z-index:1;width:34px;height:34px;flex:none;border-radius:50%;overflow:visible;display:flex;align-items:center;justify-content:center;
+  background:var(--ct-accent);color:#fff;font-weight:800;font-size:15px}
+.ct-pic img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.ct-crown{position:absolute;top:-8px;left:50%;width:18px;height:12px;margin-left:-9px;fill:var(--ct-gold);opacity:0;
+  transform:translateY(6px) rotate(-12deg);transition:opacity .4s,transform .5s cubic-bezier(.3,1.6,.5,1);filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.ct-row.rank-1 .ct-crown{opacity:1;transform:translateY(0) rotate(-12deg)}
+.ct-name{position:relative;z-index:1;flex:1;min-width:0;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ct-count{position:relative;z-index:1;min-width:34px;text-align:right;font-size:18px;font-weight:900;color:var(--ct-accent);font-variant-numeric:tabular-nums}
+.ct-count small{display:block;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--ct-muted);text-transform:uppercase;margin-top:-2px}
+.ct-count.bump b{display:inline-block;animation:ctBump .45s cubic-bezier(.3,1.8,.5,1)}
+@keyframes ctBump{0%{transform:scale(1)}40%{transform:scale(1.45)}100%{transform:scale(1)}}
+.ct-plus{position:absolute;z-index:2;right:14px;top:6px;font-size:13px;font-weight:900;color:#4ade80;pointer-events:none;animation:ctPlus 1s ease-out forwards}
+@keyframes ctPlus{0%{opacity:0;transform:translateY(8px)}20%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}
+/* Brillo que recorre al #1 */
+.ct-row.rank-1 .ct-inner::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:35%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent);animation:ctShine 3.4s ease-in-out infinite}
+@keyframes ctShine{0%,55%{left:-40%}100%{left:120%}}
+.ct-row.rank-1 .ct-inner{border-color:rgba(245,197,66,.45);box-shadow:0 0 18px rgba(245,197,66,.18)}
+/* Adelantamiento: destello y flecha */
+.ct-row.rise .ct-inner{animation:ctRise .9s ease-out}
+@keyframes ctRise{0%{box-shadow:0 0 0 0 rgba(74,222,128,.0)}25%{box-shadow:0 0 0 3px rgba(74,222,128,.75),0 0 24px rgba(74,222,128,.5)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+.ct-up{position:absolute;z-index:2;left:40px;top:50%;width:14px;height:14px;margin-top:-7px;fill:#4ade80;opacity:0}
+.ct-row.rise .ct-up{animation:ctUp .9s ease-out}
+@keyframes ctUp{0%{opacity:0;transform:translateY(8px)}30%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+/* ── Subathon: contador y metas neon ── */
+.sa-wrap{position:fixed;z-index:9988;pointer-events:none;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif}
+.sa-wrap.pos-top-left{top:16px;left:16px}
+.sa-wrap.pos-top-center{top:16px;left:50%;transform:translateX(-50%)}
+.sa-wrap.pos-top-right{top:16px;right:16px}
+.sa-wrap.pos-middle-left{top:50%;left:16px;transform:translateY(-50%)}
+.sa-wrap.pos-middle-right{top:50%;right:16px;transform:translateY(-50%)}
+.sa-wrap.pos-bottom-left{bottom:52px;left:16px}
+.sa-wrap.pos-bottom-center{bottom:52px;left:50%;transform:translateX(-50%)}
+.sa-wrap.pos-bottom-right{bottom:52px;right:16px}
+.sa-scale{opacity:0;transition:opacity .5s ease}
+.sa-wrap.show .sa-scale{opacity:1}
+
+/* Contador */
+.sa-timer{position:relative;padding:12px 26px 14px;border-radius:20px;text-align:center;color:#fff;
+  background:radial-gradient(120% 140% at 50% 0%,var(--sa-a22),transparent 60%),rgba(8,6,16,.88);
+  border:2px solid var(--sa-a70);
+  box-shadow:0 0 18px var(--sa-a55),inset 0 0 22px var(--sa-b25),0 14px 40px rgba(0,0,0,.5)}
+.sa-timer-title{font-size:13px;font-weight:900;letter-spacing:.34em;text-transform:uppercase;color:var(--sa-b);
+  text-shadow:0 0 8px var(--sa-b)}
+.sa-clock{font-size:58px;font-weight:900;line-height:1.05;letter-spacing:.02em;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 6px #fff,0 0 16px var(--sa-a),0 0 34px var(--sa-a);transition:color .3s}
+.sa-clock .sep{opacity:.75;margin:0 2px}
+.sa-timer.tick .sep{animation:saSep 1s steps(1) infinite}
+@keyframes saSep{50%{opacity:.25}}
+.sa-state{height:16px;font-size:12px;font-weight:800;letter-spacing:.24em;color:var(--sa-b);text-transform:uppercase}
+.sa-timer.flash .sa-clock{animation:saFlash .8s ease-out}
+@keyframes saFlash{0%{transform:scale(1)}25%{transform:scale(1.12);text-shadow:0 0 10px #fff,0 0 30px var(--sa-b),0 0 60px var(--sa-b)}100%{transform:scale(1)}}
+.sa-timer.flash{animation:saRing .9s ease-out}
+@keyframes saRing{0%{box-shadow:0 0 18px var(--sa-a)}30%{box-shadow:0 0 0 6px var(--sa-b60),0 0 60px var(--sa-b)}100%{box-shadow:0 0 18px var(--sa-a55)}}
+.sa-timer.danger .sa-clock{color:#ffd1d9;text-shadow:0 0 6px #fff,0 0 18px #ff2e63,0 0 36px #ff2e63;animation:saDanger 1s ease-in-out infinite}
+@keyframes saDanger{50%{opacity:.7}}
+.sa-timer.ended .sa-clock{color:#ffd1d9;text-shadow:0 0 16px #ff2e63}
+.sa-add{position:absolute;left:50%;top:100%;z-index:2;white-space:nowrap;padding:6px 16px;border-radius:999px;
+  font-size:24px;font-weight:900;color:#fff;background:rgba(8,6,16,.9);border:1.5px solid var(--sa-b);
+  box-shadow:0 0 14px var(--sa-b60);text-shadow:0 0 8px var(--sa-b);transform:translate(-50%,0);animation:saAddDown 2.6s cubic-bezier(.2,.8,.3,1) forwards}
+.sa-add.up{top:auto;bottom:100%;animation-name:saAddUp}
+.sa-add small{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-align:center;opacity:.9}
+.sa-add.neg{border-color:#ff2e63;box-shadow:0 0 14px rgba(255,46,99,.6);text-shadow:0 0 8px #ff2e63}
+@keyframes saAddDown{0%{opacity:0;transform:translate(-50%,-10px) scale(.6)}14%{opacity:1;transform:translate(-50%,12px) scale(1.12)}26%{transform:translate(-50%,10px) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,40px) scale(.95)}}
+@keyframes saAddUp{0%{opacity:0;transform:translate(-50%,10px) scale(.6)}14%{opacity:1;transform:translate(-50%,-12px) scale(1.12)}26%{transform:translate(-50%,-10px) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-40px) scale(.95)}}
+
+/* Metas */
+.sa-goal{width:440px;padding:12px 16px 12px;border-radius:18px;color:#fff;background:rgba(8,6,16,.86);
+  border:1.5px solid var(--sa-a55);
+  box-shadow:0 0 calc(var(--sa-glow) * 16px) var(--sa-a45),0 14px 40px rgba(0,0,0,.45)}
+.sa-goal-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.sa-goal-title{flex:1;font-size:13px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:var(--sa-a);text-shadow:0 0 8px var(--sa-a)}
+.sa-goal-count{font-size:15px;font-weight:800;color:rgba(255,255,255,.75);font-variant-numeric:tabular-nums}
+.sa-goal-count b{font-size:24px;color:#fff;text-shadow:0 0 10px var(--sa-b)}
+.sa-goal-count.bump b{display:inline-block;animation:saBump .5s cubic-bezier(.3,1.8,.5,1)}
+@keyframes saBump{40%{transform:scale(1.4)}}
+.sa-segs{display:flex;gap:4px;align-items:center;height:30px}
+.sa-seg{flex:1;height:100%;border-radius:4px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden}
+.sa-goal.shape-dots .sa-seg{flex:0 0 auto;width:auto;height:auto;aspect-ratio:1/1;flex-basis:calc((100% - var(--sa-n) * 4px) / var(--sa-n));border-radius:50%}
+.sa-goal.shape-wave .sa-seg{border-radius:999px;height:var(--sa-h)}
+.sa-seg::after{content:"";position:absolute;inset:0;background:var(--sa-c);opacity:0;transition:opacity .45s}
+.sa-seg.on{border-color:var(--sa-c);box-shadow:0 0 calc(var(--sa-glow) * 12px) var(--sa-c),inset 0 0 6px rgba(255,255,255,.35)}
+.sa-seg.on::after{opacity:var(--sa-fill,1)}
+.sa-seg.pop{animation:saPop .55s cubic-bezier(.3,1.7,.5,1)}
+@keyframes saPop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.sa-goal.anim-pulse .sa-seg.on{animation:saPulse 1.6s ease-in-out infinite}
+@keyframes saPulse{50%{filter:brightness(1.6);box-shadow:0 0 calc(var(--sa-glow) * 22px) var(--sa-c)}}
+.sa-goal.anim-sweep-right .sa-seg.on,.sa-goal.anim-sweep-left .sa-seg.on{animation:saSweep 2.2s ease-in-out infinite;animation-delay:var(--sa-d)}
+@keyframes saSweep{0%,70%,100%{filter:brightness(1)}15%{filter:brightness(2.1) saturate(1.2)}}
+.sa-goal.anim-twinkle .sa-seg.on{animation:saTwinkle 2.8s ease-in-out infinite;animation-delay:var(--sa-d)}
+@keyframes saTwinkle{0%,80%,100%{filter:brightness(1)}88%{filter:brightness(2.4)}}
+.sa-goal.anim-flicker .sa-seg.on{animation:saFlicker 3.2s linear infinite;animation-delay:var(--sa-d)}
+@keyframes saFlicker{0%,19%,21%,23%,55%,57%,100%{opacity:1}20%,22%,56%{opacity:.35}}
+.sa-goal-foot{display:flex;justify-content:space-between;gap:10px;margin-top:9px;font-size:12px;font-weight:700;color:rgba(255,255,255,.62)}
+.sa-goal-foot .rw{color:var(--sa-b);text-shadow:0 0 6px var(--sa-b60);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sa-goal{position:relative}
+.sa-burst{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:18px;
+  background:rgba(8,6,16,.78);opacity:0;font-size:28px;font-weight:900;letter-spacing:.16em;color:#fff;text-shadow:0 0 10px var(--sa-b),0 0 26px var(--sa-b)}
+.sa-burst small{font-size:14px;letter-spacing:.06em;margin-top:2px;color:var(--sa-b)}
+.sa-goal.reached .sa-burst{animation:saBurst 4.4s ease forwards}
+@keyframes saBurst{0%{opacity:0;transform:scale(1.3)}10%{opacity:1;transform:scale(1)}85%{opacity:1}100%{opacity:0}}
+.sa-goal.reached .sa-seg.on{animation:saAll .5s ease-in-out 4 alternate}
+@keyframes saAll{to{filter:brightness(2.4)}}
 </style>
 </head>
 <body>
 
-<div id="toolbar">
-  <span class="dot"></span><span class="logo-txt">MIMIKU</span>
-  <button onclick="clearAll()">✕ Limpiar</button>
-  <button onclick="toggleToolbar()" id="hide-btn">Ocultar</button>
-</div>
-
 <div id="alert-box"></div>
+<div id="reply-toast"></div>
 
 <!-- Ruleta grande -->
 <div id="roulette-overlay">
@@ -534,19 +702,6 @@ body.shake-strong{animation:shake-strong .6s ease-in-out;}
 <canvas id="confetti-canvas"></canvas>
 <!-- Arcoíris -->
 <div id="rainbow-overlay"></div>
-
-<!-- Rey del Chat -->
-<div id="king-overlay">
-  <div class="king-card">
-    <span class="king-crown">👑</span>
-    <div class="king-info">
-      <div class="king-label">Rey del Chat</div>
-      <div class="king-name" id="king-name">—</div>
-      <div class="king-msgs" id="king-msgs">0 mensajes</div>
-    </div>
-    <div class="king-badge" id="king-badge">#1</div>
-  </div>
-</div>
 
 <!-- Boss overlay -->
 <div id="boss-overlay">
@@ -598,17 +753,6 @@ body.shake-strong{animation:shake-strong .6s ease-in-out;}
 </div>
 <div id="widgets-layer"></div>
 <div id="avatars-layer" class="pos-bottom-left"></div>
-
-<!-- Rey del Chat widget (esquina inferior izquierda) -->
-<div id="king-widget">
-  <div id="king-crown">👑</div>
-  <div id="king-info">
-    <div id="king-label">Rey del Chat</div>
-    <div id="king-name"></div>
-    <div id="king-stats"></div>
-    <div id="king-bonus"></div>
-  </div>
-</div>
 
 <!-- Cara o Cruz overlay -->
 <div id="coin-overlay">
@@ -705,7 +849,7 @@ var layer   = document.getElementById("widgets-layer");
 var alertEl = document.getElementById("alert-box");
 var gameEl  = document.getElementById("game-box");
 var widgets = {};
-var alertTimer, gameTimer, rouletteTimer, kingTimer, coinTimer;
+var alertTimer, gameTimer, rouletteTimer, coinTimer;
 var channel = null;
 
 // OBS puede abrir el overlay antes que Mimiku o mantenerlo abierto al reiniciar.
@@ -726,11 +870,23 @@ function disconnectOverlaySocket(socket) {
   scheduleOverlayReconnect();
 }
 
+// El WebSocket va por el mismo host y puerto desde el que se cargó la página
+// (ruta /ws), así funciona por localhost, IP de red local o hostname
+// personalizado. Sin location (p. ej. en pruebas) cae al puerto heredado.
+function overlaySocketUrl() {
+  try {
+    if (typeof location !== "undefined" && /^https?:$/.test(location.protocol) && location.host) {
+      return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
+    }
+  } catch (_) {}
+  return "ws://127.0.0.1:7778";
+}
+
 function connectOverlay() {
   if (overlayClosing || ws) return;
   var socket;
   try {
-    socket = new WebSocket("ws://127.0.0.1:7778");
+    socket = new WebSocket(overlaySocketUrl());
   } catch (error) {
     scheduleOverlayReconnect();
     return;
@@ -851,10 +1007,423 @@ function crRollDie(stage, m) {
   stage.appendChild(caption);
 }
 
+// ── Tarjeta de fidelidad (!claim) ─────────────────────────────────────────────
+// Al empezar el directo muchos viewers hacen !claim a la vez: las tarjetas van
+// en cola, una detras de otra, y se acortan si la cola crece.
+var loyaltyQueue = [], loyaltyBusy = false;
+var LOYALTY_QUEUE_MAX = 40, LOYALTY_FAST_MS = 3200;
+var LOYALTY_STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+
+function showLoyaltyCard(m) {
+  if (loyaltyQueue.length >= LOYALTY_QUEUE_MAX) loyaltyQueue.shift();
+  loyaltyQueue.push(m);
+  if (!loyaltyBusy) nextLoyaltyCard();
+}
+
+function loyaltyCardHtml(m, total, filled, fresh) {
+  var reward = Math.round(finiteNumber(m.rewardPoints, 0, 0, 1e9)).toLocaleString("es");
+  var week = /^\d{4}-\d{2}-\d{2}$/.test(m.week || "") ? m.week.slice(8, 10) + "/" + m.week.slice(5, 7) : "";
+  var avatarUrl = /^https:\/\//.test(m.avatar || "") ? m.avatar : "";
+  var cols = total > 10 ? 7 : 5;
+  var slots = "";
+  for (var i = 1; i <= total; i++) {
+    var stamp = "";
+    if (i <= filled) {
+      var rot = ((i * 37) % 21) - 10;
+      stamp = '<div class="loy-stamp' + (i === fresh ? " new" : "") + '" style="--loy-rot:' + rot + 'deg;transform:rotate(' + rot + 'deg)">' + LOYALTY_STAR + '</div>' +
+        (i === fresh ? '<div class="loy-ring"></div>' : "");
+    }
+    slots += '<div class="loy-slot' + (i === total ? " last" : "") + '">' + i + stamp + '</div>';
+  }
+  return '<div class="loy-head"><span class="loy-title">' + escapeHtml(m.title || "Tarjeta de fidelidad") + '</span>' +
+      (week ? '<span class="loy-week">Semana del ' + week + '</span>' : "") + '</div>' +
+    '<div class="loy-who"><div class="loy-pic">' +
+      (avatarUrl ? '<img src="' + escapeHtml(avatarUrl) + '">' : escapeHtml(String(m.user || "?").charAt(0).toUpperCase())) +
+    '</div><div class="loy-name">' + escapeHtml(m.user || "?") + '</div></div>' +
+    '<div class="loy-grid cols-' + cols + '" style="grid-template-columns:repeat(' + cols + ',auto)">' + slots + '</div>' +
+    '<div class="loy-foot"><span class="loy-count"><b>' + filled + '</b> / ' + total + ' sellos</span>' +
+      '<span class="loy-prize">Premio: <b>' + reward + ' pts</b></span></div>' +
+    (m.completed ? '<div class="loy-done">COMPLETA<small>+' + reward + ' puntos</small></div>' : "");
+}
+
+function nextLoyaltyCard() {
+  var m = loyaltyQueue.shift();
+  if (!m) { loyaltyBusy = false; return; }
+  loyaltyBusy = true;
+  var layer = document.getElementById("loyalty-layer");
+  if (!layer) {
+    layer = document.createElement("div");
+    layer.id = "loyalty-layer";
+    document.body.appendChild(layer);
+  }
+  var position = /^(bottom|top)-(left|right)$|^center$/.test(m.position || "") ? m.position : "bottom-right";
+  layer.className = "pos-" + position;
+
+  var total = Math.round(finiteNumber(m.total, 10, 2, 14));
+  var filled = Math.round(finiteNumber(m.filled, 0, 0, total));
+  var fresh = Math.round(finiteNumber(m.justStamped, 0, 0, total));
+  var card = document.createElement("div");
+  card.className = "loy-card theme-" + (m.theme === "pastel" ? "pastel" : "noche");
+  card.innerHTML = loyaltyCardHtml(m, total, filled, fresh);
+  layer.innerHTML = "";
+  layer.appendChild(card);
+
+  var duration = finiteNumber(m.duration, 7000, 3000, 30000);
+  if (loyaltyQueue.length > 2) duration = Math.min(duration, LOYALTY_FAST_MS);
+  if (m.completed) duration = Math.max(duration, 5000);
+
+  requestAnimationFrame(function() { card.classList.add("show"); });
+  // El sello cae cuando la tarjeta ya entro; el golpe sacude un poco la tarjeta.
+  setTimeout(function() {
+    card.classList.add("impact");
+    var ring = card.querySelector(".loy-ring");
+    if (ring) ring.classList.add("go");
+  }, 760);
+  if (m.completed) {
+    setTimeout(function() {
+      card.classList.add("done");
+      var done = card.querySelector(".loy-done");
+      if (done) done.classList.add("go");
+      launchConfetti(4000);
+    }, 1300);
+  }
+  setTimeout(function() {
+    card.classList.remove("show");
+    card.classList.add("hide");
+    setTimeout(function() { card.remove(); nextLoyaltyCard(); }, 380);
+  }, duration);
+}
+
+// ── Top 3 del chat (directo actual) ───────────────────────────────────────────
+// Cada fila se identifica por el viewer: al cambiar el orden la MISMA fila se
+// desliza a su nuevo puesto, en vez de redibujar la tabla entera.
+var CHAT_TOP_ROW_PX = 58;
+var CHAT_TOP_POSITIONS = ["top-left","top-center","top-right","middle-left","middle-right","bottom-left","bottom-center","bottom-right"];
+var chatTopCfg = { enabled: true, position: "top-right", theme: "noche", title: "Top del chat", show_counts: true };
+var chatTopEntries = [], chatTopRows = {};
+var CHAT_TOP_CROWN = '<svg class="ct-crown" viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5 .5 3z"/></svg>';
+var CHAT_TOP_UP = '<svg class="ct-up" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1l6 7H9v5H5V8H1z"/></svg>';
+
+function chatTopRoot() {
+  var root = document.getElementById("chat-top");
+  if (root) return root;
+  root = document.createElement("div");
+  root.id = "chat-top";
+  root.innerHTML = '<div class="ct-card"><div class="ct-head"><span class="ct-title"></span>' +
+    '<span class="ct-live"><i></i>EN VIVO</span></div><div class="ct-list"></div></div>';
+  document.body.appendChild(root);
+  return root;
+}
+
+function setChatTopConfig(m) {
+  chatTopCfg = {
+    enabled: m.enabled !== false,
+    position: CHAT_TOP_POSITIONS.indexOf(m.position) >= 0 ? m.position : "top-right",
+    theme: m.theme === "pastel" ? "pastel" : "noche",
+    title: String(m.title || "Top del chat").slice(0, 30),
+    show_counts: m.show_counts !== false,
+  };
+  renderChatTop();
+}
+
+function updateChatTop(m) {
+  chatTopEntries = Array.isArray(m.entries) ? m.entries.slice(0, 3) : [];
+  renderChatTop();
+}
+
+function chatTopRowHtml() {
+  return '<div class="ct-inner"><div class="ct-bar"></div><div class="ct-rank"></div>' +
+    '<div class="ct-pic">' + CHAT_TOP_CROWN + '<span class="ct-initial"></span></div>' + CHAT_TOP_UP +
+    '<div class="ct-name"></div><div class="ct-count"><b></b><small>msgs</small></div></div>';
+}
+
+function paintChatTopRow(row, entry, index, leader) {
+  var el = row.el;
+  var rank = index + 1;
+  el.className = "ct-row rank-" + rank + (row.rising ? " rise" : "");
+  el.style.transform = "translateY(" + (index * CHAT_TOP_ROW_PX) + "px)";
+  var badge = el.querySelector(".ct-rank");
+  if (badge.textContent !== String(rank)) {
+    if (badge.textContent) { badge.classList.remove("flip"); void badge.offsetWidth; badge.classList.add("flip"); }
+    badge.textContent = String(rank);
+  }
+  el.querySelector(".ct-name").textContent = String(entry.name || entry.username || "?");
+  var pic = el.querySelector(".ct-pic");
+  var avatarUrl = /^https:\/\//.test(entry.avatar || "") ? entry.avatar : "";
+  var img = pic.querySelector("img");
+  if (avatarUrl) {
+    if (!img) { img = document.createElement("img"); pic.appendChild(img); }
+    if (img.getAttribute("src") !== avatarUrl) img.setAttribute("src", avatarUrl);
+    pic.querySelector(".ct-initial").textContent = "";
+  } else {
+    if (img) img.remove();
+    pic.querySelector(".ct-initial").textContent = String(entry.name || entry.username || "?").charAt(0).toUpperCase();
+  }
+  var messages = Math.max(0, Math.round(finiteNumber(entry.messages, 0, 0, 1e9)));
+  var count = el.querySelector(".ct-count");
+  count.style.display = chatTopCfg.show_counts ? "" : "none";
+  count.querySelector("b").textContent = messages.toLocaleString("es");
+  if (row.messages && messages > row.messages) {
+    count.classList.remove("bump"); void count.offsetWidth; count.classList.add("bump");
+    var plus = document.createElement("span");
+    plus.className = "ct-plus";
+    plus.textContent = "+" + (messages - row.messages);
+    el.querySelector(".ct-inner").appendChild(plus);
+    setTimeout(function() { plus.remove(); }, 1000);
+  }
+  row.messages = messages;
+  el.querySelector(".ct-bar").style.transform = "scaleX(" + Math.max(0.06, Math.min(1, messages / leader)) + ")";
+}
+
+function renderChatTop() {
+  var root = chatTopRoot();
+  var visible = chatTopCfg.enabled && chatTopEntries.length > 0;
+  root.className = "pos-" + chatTopCfg.position + " theme-" + chatTopCfg.theme + (visible ? " show" : "");
+  root.querySelector(".ct-title").textContent = chatTopCfg.title;
+
+  var list = root.querySelector(".ct-list");
+  var leader = Math.max(1, finiteNumber(chatTopEntries[0] && chatTopEntries[0].messages, 1, 1, 1e9));
+  var seen = {};
+  chatTopEntries.forEach(function(entry, index) {
+    var key = String(entry.key || entry.username || index);
+    seen[key] = true;
+    var row = chatTopRows[key];
+    if (!row) {
+      var el = document.createElement("div");
+      el.innerHTML = chatTopRowHtml();
+      row = chatTopRows[key] = { el: el, rank: null, messages: 0, rising: false };
+      paintChatTopRow(row, entry, index, leader);
+      el.classList.add("enter");
+      list.appendChild(el);
+      requestAnimationFrame(function() { requestAnimationFrame(function() { el.classList.remove("enter"); }); });
+    } else {
+      row.rising = row.rank !== null && index < row.rank;
+      paintChatTopRow(row, entry, index, leader);
+      if (row.rising) {
+        (function(r) { clearTimeout(r.riseTimer); r.riseTimer = setTimeout(function() { r.rising = false; r.el.classList.remove("rise"); }, 950); })(row);
+      }
+    }
+    row.rank = index;
+  });
+
+  Object.keys(chatTopRows).forEach(function(key) {
+    if (seen[key]) return;
+    var gone = chatTopRows[key].el;
+    delete chatTopRows[key];
+    gone.classList.add("leave");
+    setTimeout(function() { gone.remove(); }, 450);
+  });
+}
+
+// ── Subathon: contador extensible y metas neon ────────────────────────────────
+var SA_PALETTES = {
+  "neon-aqua": ["#00f0ff", "#00ffa3"], "toxic-green": ["#a3ff12", "#39ff14"], "purple-haze": ["#b026ff", "#ff4df0"],
+  "sunset": ["#ff8a00", "#ff2e63"], "ocean": ["#0077ff", "#00e0ff"], "hot-pink": ["#ff2d95", "#ff7ad9"]
+};
+var SA_POSITIONS = ["top-left","top-center","top-right","middle-left","middle-right","bottom-left","bottom-center","bottom-right"];
+var SA_DANGER_MS = 60000;
+var saTimer = { status: "idle", remainingMs: 0, endsAt: null, offset: 0, lastShown: "" };
+var saTickHandle = null;
+
+function saHex(value, fallback) { return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : fallback; }
+function saRgba(hex, alpha) {
+  var n = parseInt(hex.slice(1), 16);
+  return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + alpha + ")";
+}
+function saMix(a, b, t) {
+  var x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
+  var ch = function(shift) { return Math.round((x >> shift & 255) + ((y >> shift & 255) - (x >> shift & 255)) * t); };
+  return "rgb(" + ch(16) + "," + ch(8) + "," + ch(0) + ")";
+}
+function saColors(config) {
+  var pair = config && config.palette === "custom" ? (config.customColors || []) : SA_PALETTES[config && config.palette] || SA_PALETTES["purple-haze"];
+  return [saHex(pair[0], "#b026ff"), saHex(pair[1], "#ff4df0")];
+}
+function saApplyColors(el, config) {
+  var c = saColors(config);
+  el.style.setProperty("--sa-a", c[0]); el.style.setProperty("--sa-b", c[1]);
+  [22, 45, 55, 70].forEach(function(p) { el.style.setProperty("--sa-a" + p, saRgba(c[0], p / 100)); });
+  [25, 60].forEach(function(p) { el.style.setProperty("--sa-b" + p, saRgba(c[1], p / 100)); });
+  return c;
+}
+// Contenedor posicionado + capa escalada (el tamano no mueve la esquina elegida).
+function saWrap(id, config, fallbackPos) {
+  var wrap = document.getElementById(id);
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.id = id;
+    wrap.innerHTML = '<div class="sa-scale"></div>';
+    document.body.appendChild(wrap);
+  }
+  var pos = SA_POSITIONS.indexOf(config && config.position) >= 0 ? config.position : fallbackPos;
+  var visible = wrap.classList.contains("show");
+  wrap.className = "sa-wrap pos-" + pos + (visible ? " show" : "");
+  var parts = pos.split("-");
+  var inner = wrap.firstChild;
+  inner.style.transformOrigin = (parts[0] === "middle" ? "center" : parts[0]) + " " + parts[1];
+  inner.style.transform = "scale(" + finiteNumber(config && config.size, 100, 50, 200) / 100 + ")";
+  return wrap;
+}
+function saSetVisible(wrap, visible) { wrap.classList.toggle("show", !!visible); }
+
+function saFormat(ms) {
+  var total = Math.max(0, Math.ceil(ms / 1000));
+  var h = Math.floor(total / 3600), m = Math.floor(total % 3600 / 60), s = total % 60;
+  var pad = function(n) { return (n < 10 ? "0" : "") + n; };
+  return pad(h) + '<span class="sep">:</span>' + pad(m) + '<span class="sep">:</span>' + pad(s);
+}
+function saFormatDelta(ms) {
+  var sign = ms < 0 ? "-" : "+";
+  var total = Math.round(Math.abs(ms) / 1000);
+  var h = Math.floor(total / 3600), m = Math.floor(total % 3600 / 60), s = total % 60;
+  return sign + (h ? h + ":" + (m < 10 ? "0" : "") + m : m) + ":" + (s < 10 ? "0" : "") + s;
+}
+function saRemaining() {
+  if (saTimer.status === "running" && saTimer.endsAt) return Math.max(0, saTimer.endsAt - (Date.now() + saTimer.offset));
+  return saTimer.status === "ended" ? 0 : saTimer.remainingMs;
+}
+function saRenderClock() {
+  var box = document.querySelector("#sa-timer .sa-timer");
+  if (!box) return;
+  var left = saRemaining();
+  var html = saFormat(left);
+  if (html !== saTimer.lastShown) { box.querySelector(".sa-clock").innerHTML = html; saTimer.lastShown = html; }
+  var ended = saTimer.status === "ended" || (saTimer.status === "running" && left <= 0);
+  box.classList.toggle("tick", saTimer.status === "running" && left > 0);
+  box.classList.toggle("danger", saTimer.status === "running" && left > 0 && left <= SA_DANGER_MS);
+  box.classList.toggle("ended", ended);
+  box.querySelector(".sa-state").textContent = ended ? "Terminado" : saTimer.status === "paused" ? "En pausa" : saTimer.status === "idle" ? "Por empezar" : "";
+}
+
+function updateSubathonTimer(m) {
+  var config = m.config || {};
+  var wrap = saWrap("sa-timer", config, "top-center");
+  var inner = wrap.firstChild;
+  if (!inner.querySelector(".sa-timer")) {
+    inner.innerHTML = '<div class="sa-timer"><div class="sa-timer-title"></div><div class="sa-clock"></div><div class="sa-state"></div></div>';
+  }
+  var box = inner.querySelector(".sa-timer");
+  saApplyColors(box, config);
+  box.querySelector(".sa-timer-title").textContent = String(config.title || "Subathon").slice(0, 30);
+  saTimer.status = m.status || "idle";
+  saTimer.remainingMs = finiteNumber(m.remainingMs, 0, 0, 1e12);
+  saTimer.endsAt = Number.isFinite(m.endsAt) ? m.endsAt : null;
+  saTimer.offset = Number.isFinite(m.serverNow) ? m.serverNow - Date.now() : 0;
+  saTimer.lastShown = "";
+  saSetVisible(wrap, saTimer.status !== "idle" || saTimer.remainingMs > 0);
+  saRenderClock();
+  if (!saTickHandle) saTickHandle = setInterval(saRenderClock, 250);
+
+  if (m.added && finiteNumber(m.added.ms, 0, -1e12, 1e12)) {
+    box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash");
+    var chip = document.createElement("div");
+    chip.className = "sa-add" + (m.added.ms < 0 ? " neg" : "") + (/^bottom/.test(config.position || "") ? " up" : "");
+    var who = m.added.user ? String(m.added.user).slice(0, 40) + (m.added.label ? " · " + String(m.added.label).slice(0, 40) : "") : String(m.added.label || "").slice(0, 60);
+    chip.textContent = saFormatDelta(m.added.ms);
+    if (who) { var small = document.createElement("small"); small.textContent = who; chip.appendChild(small); }
+    box.appendChild(chip);
+    setTimeout(function() { chip.remove(); }, 2700);
+  }
+}
+
+// Metas: se pinta un estado; si trae hitos cumplidos, primero se celebra el
+// hito lleno y luego se pasa al siguiente.
+var saGoalState = {};
+
+function saGoalRender(type, m, count, target) {
+  var config = m.config || {};
+  var wrap = saWrap("sa-goal-" + type, config, type === "bits" ? "bottom-right" : "bottom-left");
+  var inner = wrap.firstChild;
+  var n = Math.round(finiteNumber(config.segments, 20, 8, 40));
+  var shape = ["bars", "dots", "wave"].indexOf(config.shape) >= 0 ? config.shape : "bars";
+  var anim = ["steady","pulse","sweep-right","sweep-left","twinkle","flicker"].indexOf(config.animation) >= 0 ? config.animation : "steady";
+  var box = inner.querySelector(".sa-goal");
+  var prev = saGoalState[type] || { n: 0, lit: 0, count: null };
+  if (!box || prev.n !== n || prev.shape !== shape) {
+    inner.innerHTML = '<div class="sa-goal"><div class="sa-goal-head"><span class="sa-goal-title"></span><span class="sa-goal-count"><b></b> / <span class="t"></span></span></div>' +
+      '<div class="sa-segs"></div><div class="sa-goal-foot"><span class="st"></span><span class="rw"></span></div><div class="sa-burst"></div></div>';
+    box = inner.querySelector(".sa-goal");
+    var segs = box.querySelector(".sa-segs");
+    for (var i = 0; i < n; i++) {
+      var seg = document.createElement("i");
+      seg.className = "sa-seg";
+      seg.style.setProperty("--sa-h", Math.round(35 + 65 * Math.abs(Math.sin((i + 1) * 0.55))) + "%");
+      segs.appendChild(seg);
+    }
+    prev = { n: n, shape: shape, lit: 0, count: null };
+  }
+  var colors = saApplyColors(box, config);
+  box.style.setProperty("--sa-glow", finiteNumber(config.glow, 70, 0, 100) / 100);
+  box.style.setProperty("--sa-n", n);
+  box.className = "sa-goal shape-" + shape + " anim-" + anim;
+  box.querySelector(".sa-goal-title").textContent = String(config.title || "").slice(0, 30);
+
+  var countEl = box.querySelector(".sa-goal-count");
+  countEl.querySelector("b").textContent = Math.round(count).toLocaleString("es");
+  countEl.querySelector(".t").textContent = Math.round(target).toLocaleString("es");
+  if (prev.count !== null && count > prev.count) { countEl.classList.remove("bump"); void countEl.offsetWidth; countEl.classList.add("bump"); }
+
+  var progress = target > 0 ? Math.min(1, count / target) : 0;
+  var exact = progress * n;
+  var lit = Math.floor(exact);
+  var all = box.querySelectorAll(".sa-seg");
+  for (var k = 0; k < all.length; k++) {
+    var seg2 = all[k];
+    var on = k < lit || (k === lit && exact - lit > 0.001);
+    seg2.style.setProperty("--sa-c", saMix(colors[0], colors[1], n > 1 ? k / (n - 1) : 0));
+    seg2.style.setProperty("--sa-fill", k < lit ? 1 : Math.max(0.25, exact - lit));
+    var delay = anim === "sweep-left" ? (n - 1 - k) : anim === "sweep-right" ? k : (k * 7919) % n;
+    seg2.style.setProperty("--sa-d", (delay * (anim.indexOf("sweep") === 0 ? 0.07 : 0.23)).toFixed(2) + "s");
+    var wasOn = seg2.classList.contains("on");
+    seg2.classList.toggle("on", on);
+    if (on && !wasOn && prev.count !== null) {
+      seg2.classList.remove("pop"); void seg2.offsetWidth; seg2.classList.add("pop");
+    }
+  }
+  saGoalState[type] = { n: n, shape: shape, lit: lit, count: count };
+  saSetVisible(wrap, config.enabled !== false);
+  return box;
+}
+
+function saGoalFoot(box, m) {
+  var st = box.querySelector(".st"), rw = box.querySelector(".rw");
+  st.textContent = m.allDone ? "Todas las metas cumplidas" : "Meta " + (finiteNumber(m.milestoneIndex, 0, 0, 99) + 1) + " de " + finiteNumber(m.milestoneTotal, 1, 1, 99);
+  rw.textContent = m.reward ? String(m.reward).slice(0, 60) : "";
+}
+
+var saGoalTimers = {};
+function updateSubathonGoal(m) {
+  var type = m.goal === "bits" ? "bits" : m.goal === "subs" ? "subs" : "";
+  if (!type) return;
+  clearTimeout(saGoalTimers[type]);
+  var reached = Array.isArray(m.reached) ? m.reached : [];
+  var count = finiteNumber(m.count, 0, 0, 1e9);
+  if (!reached.length) {
+    saGoalFoot(saGoalRender(type, m, count, finiteNumber(m.target, 1, 1, 1e9)), m);
+    return;
+  }
+  // Celebra el hito mas alto cruzado con la barra llena y luego avanza.
+  var top = reached[reached.length - 1];
+  var hitTarget = finiteNumber(top.target, 1, 1, 1e9);
+  var box = saGoalRender(type, m, Math.max(count, hitTarget), hitTarget);
+  var burst = box.querySelector(".sa-burst");
+  burst.textContent = "META CUMPLIDA";
+  if (top.reward) { var small = document.createElement("small"); small.textContent = String(top.reward).slice(0, 60); burst.appendChild(small); }
+  box.querySelector(".st").textContent = "Meta cumplida";
+  box.querySelector(".rw").textContent = top.reward ? String(top.reward).slice(0, 60) : "";
+  box.classList.remove("reached"); void box.offsetWidth; box.classList.add("reached");
+  launchConfetti(4000);
+  saGoalTimers[type] = setTimeout(function() {
+    box.classList.remove("reached");
+    saGoalFoot(saGoalRender(type, m, count, finiteNumber(m.target, 1, 1, 1e9)), m);
+  }, 4600);
+}
+
 function handleOverlayMessage(e) {
   var m = JSON.parse(e.data);
   if (m.type === "set_channel")   channel = m.channel;
   if (m.type === "alert")         showAlert(m.text, m.duration);
+  if (m.type === "reply_toast")   showReplyToast(m.text, m.duration);
   if (m.type === "ticker")        document.getElementById("ticker-text").textContent = m.text;
   if (m.type === "afk")           setAfk(m.active, m.message);
   if (m.type === "widget_add")    addWidget(m);
@@ -864,15 +1433,17 @@ function handleOverlayMessage(e) {
   if (m.type === "widget_resize") resizeWidget(m.widget_id, m.w, m.h);
   if (m.type === "game_roulette") showRouletteAnimation(m);
   if (m.type === "chest_roulette") showChestRoulette(m);
+  if (m.type === "loyalty_card")  showLoyaltyCard(m);
+  if (m.type === "chat_top")      updateChatTop(m);
+  if (m.type === "chat_top_config") setChatTopConfig(m);
+  if (m.type === "subathon_timer") updateSubathonTimer(m);
+  if (m.type === "subathon_goal")  updateSubathonGoal(m);
   if (m.type === "game_bj")       showBjResult(m);
   if (m.type === "game_slots")    showSlotsResult(m);
   if (m.type === "game_event")     handleGameEvent(m);
-  if (m.type === "king_update")     updateKing(m);
-  if (m.type === "king_toggle")     toggleKing(m.visible);
   if (m.type === "confetti")         launchConfetti(m.duration || 5000);
   if (m.type === "rainbow")          showRainbow(m.duration || 5000);
   if (m.type === "game_coin")       showCoinResult(m);
-  if (m.type === "king_widget")   showKingWidget(m);
   if (m.type === "coin_flip")     showCoinFlip(m);
   if (m.type === "mimic_image")   showMimicImage(m);
   if (m.type === "mimic_video")   showMimicVideo(m);
@@ -1041,20 +1612,6 @@ function showCoinResult(m) {
   gameEl.append(coinIcon, coinLabel, coinText);
   gameEl.classList.add("show")
   gameTimer = setTimeout(function() { gameEl.classList.remove("show") }, 4000)
-}
-
-// ── Rey del Chat ──────────────────────────────────────────────────────────────
-function updateKing(m) {
-  if (!m.username) return
-  document.getElementById("king-name").textContent = m.display || m.username
-  document.getElementById("king-msgs").textContent = m.messages + " mensajes en stream"
-  document.getElementById("king-overlay").classList.add("show")
-}
-
-function toggleKing(visible) {
-  var overlay = document.getElementById("king-overlay")
-  if (visible) overlay.classList.add("show")
-  else overlay.classList.remove("show")
 }
 
 // ── Game events ───────────────────────────────────────────────────────────────
@@ -1292,10 +1849,18 @@ function finiteNumber(value, fallback, min, max) {
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 }
 
+// Los medios guardados apuntan a http://127.0.0.1:<puerto>/assets|audio/...
+// Se reubican en el origen de la página para que sigan cargando si cambió el
+// puerto del overlay o se abre por la IP de red local / un hostname.
 function safeMediaUrl(value) {
   try {
-    var parsed = new URL(String(value || ""), "http://127.0.0.1:7777");
-    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : "";
+    var base = (typeof location !== "undefined" && /^https?:$/.test(location.protocol)) ? location.origin : "http://127.0.0.1:7777";
+    var parsed = new URL(String(value || ""), base);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    if (parsed.hostname === "127.0.0.1" && /^\/(assets|audio)\//.test(parsed.pathname)) {
+      return new URL(parsed.pathname + parsed.search, base).href;
+    }
+    return parsed.href;
   } catch (_) {
     return "";
   }
@@ -1336,6 +1901,15 @@ function showAlert(text,dur) {
   alertTimer=setTimeout(function(){alertEl.classList.remove("show");},dur||4000);
 }
 
+var replyToastEl = document.getElementById("reply-toast"), replyToastTimer;
+function showReplyToast(text,dur) {
+  if (!replyToastEl || !text) return;
+  clearTimeout(replyToastTimer);
+  replyToastEl.textContent=String(text).slice(0,200);
+  replyToastEl.classList.add("show");
+  replyToastTimer=setTimeout(function(){replyToastEl.classList.remove("show");},dur||6000);
+}
+
 function setAfk(active,message) {
   var sc=document.getElementById("afk-screen");
   document.getElementById("afk-msg").textContent=message||"Volvemos pronto";
@@ -1350,32 +1924,8 @@ function setAfk(active,message) {
   } else { sc.classList.remove("show"); }
 }
 
-var tbVisible=true;
-function toggleToolbar(){
-  tbVisible=!tbVisible;
-  document.getElementById("toolbar").style.opacity=tbVisible?"1":"0.1";
-  document.getElementById("hide-btn").textContent=tbVisible?"Ocultar":"Mostrar";
-}
-
 // dibujar rueda inicial
 drawWheel(0);
-
-// ── Rey del Chat ─────────────────────────────────────────────────────────────
-function showKingWidget(m) {
-  var w = document.getElementById("king-widget");
-  document.getElementById("king-name").textContent  = m.display || m.username;
-  document.getElementById("king-stats").textContent = m.messages + " mensajes";
-  document.getElementById("king-bonus").textContent  = "+" + m.bonus + " pts";
-  // reset + show
-  w.classList.remove("show");
-  void w.offsetWidth;
-  w.classList.add("show");
-  clearTimeout(kingTimer);
-  // se mantiene 30 segundos
-  kingTimer = setTimeout(function() { w.classList.remove("show"); }, 30000);
-  // también alerta centrada
-  showAlert("\uD83D\uDC51 \u00a1" + (m.display||m.username) + " es el Rey del Chat!", 7000);
-}
 
 // ── Cara o Cruz ───────────────────────────────────────────────────────────────
 function showCoinFlip(m) {

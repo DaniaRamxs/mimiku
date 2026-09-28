@@ -1,5 +1,19 @@
+// Servidor local del overlay. allowLan=true escucha en 0.0.0.0 (accesible por la
+// IP de red local); false limita el servidor a loopback (127.0.0.1).
+const DEFAULT_OVERLAY_CONFIG = Object.freeze({
+  httpPort: 7777,
+  wsPort: 7778,
+  allowLan: true,
+  customHostname: "",
+})
+
+const MIN_PORT = 1
+const MAX_PORT = 65535
+const HOSTNAME_PATTERN = /^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/
+
 const DEFAULT_APP_CONFIG = Object.freeze({
   version: 2,
+  overlay: { ...DEFAULT_OVERLAY_CONFIG },
   onboarding: { completed: false },
   workspace: {
     id: "",
@@ -41,6 +55,32 @@ function cleanWorkspaceId(value) {
   return cleanText(value, 80).toLowerCase().replace(/[^a-z0-9_:-]/g, "")
 }
 
+function cleanPort(value, fallback, min = MIN_PORT) {
+  const port = Number(value)
+  return Number.isInteger(port) && port >= min && port <= MAX_PORT ? port : fallback
+}
+
+// Acepta lo que un usuario pegaría (con esquema, puerto o ruta) y devuelve solo
+// el hostname en minúsculas; "" si no es un hostname válido.
+function cleanHostname(value) {
+  const host = cleanText(value, 300).toLowerCase()
+    .replace(/^[a-z]+:\/\//, "").replace(/[/?#].*$/, "").replace(/:\d+$/, "").replace(/\.$/, "")
+  return HOSTNAME_PATTERN.test(host) ? host : ""
+}
+
+// wsPort 0 desactiva el puerto WebSocket heredado (el overlay también conecta
+// por el puerto HTTP, ruta /ws).
+function normalizeOverlayConfig(input = {}) {
+  const httpPort = cleanPort(input.httpPort, DEFAULT_OVERLAY_CONFIG.httpPort)
+  const wsPort = Number(input.wsPort) === 0 ? 0 : cleanPort(input.wsPort, DEFAULT_OVERLAY_CONFIG.wsPort)
+  return {
+    httpPort,
+    wsPort: wsPort === httpPort ? 0 : wsPort,
+    allowLan: input.allowLan !== false,
+    customHostname: cleanHostname(input.customHostname),
+  }
+}
+
 function normalizeAppConfig(input = {}) {
   const streamer = input.streamer || {}
   const workspace = input.workspace || {}
@@ -56,6 +96,7 @@ function normalizeAppConfig(input = {}) {
 
   return {
     version: 2,
+    overlay: normalizeOverlayConfig(input.overlay),
     onboarding: { completed },
     workspace: {
       id: cleanWorkspaceId(workspace.id),
@@ -92,6 +133,7 @@ function publicAppConfig(config) {
   const normalized = normalizeAppConfig(config)
   return {
     version: normalized.version,
+    overlay: normalized.overlay,
     onboarding: normalized.onboarding,
     workspace: normalized.workspace,
     streamer: normalized.streamer,
@@ -113,4 +155,7 @@ function publicAppConfig(config) {
   }
 }
 
-module.exports = { DEFAULT_APP_CONFIG, normalizeAppConfig, publicAppConfig }
+module.exports = {
+  DEFAULT_APP_CONFIG, DEFAULT_OVERLAY_CONFIG, MIN_PORT, MAX_PORT,
+  normalizeAppConfig, normalizeOverlayConfig, publicAppConfig, cleanHostname,
+}

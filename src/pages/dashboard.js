@@ -61,7 +61,7 @@ async function refreshServerStatus() {
   if (!serverStatusEl) return
   const status = await ipcRenderer.invoke("overlay:getStatus")
   if (status.running) {
-    serverStatusEl.textContent = "🟢 127.0.0.1:7777"
+    serverStatusEl.textContent = `🟢 ${status.host}:${status.httpPort}`
     serverStatusEl.style.color = "#4ade80"
     serverStatusEl.title = ""
   } else {

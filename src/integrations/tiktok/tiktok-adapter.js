@@ -62,15 +62,31 @@ function avatarOf(user) {
   return truncate(url, LIMITS.url)
 }
 
-function normalizeActor(user) {
-  const username = truncate(user?.uniqueId, LIMITS.name).toLowerCase()
+// tiktok-live-connector 2.x entrega el protobuf v3 tal cual: el texto del chat
+// es `content`, el @usuario es `user.displayId` y el id numerico `user.idStr`.
+// La API legacy (WebcastPushConnection) los aplana como `comment`, `uniqueId` y
+// `userId`. Se aceptan ambas formas; las de v3 tienen prioridad.
+function firstText(...values) {
+  return values.find(value => typeof value === "string" && value.trim() !== "") ?? ""
+}
+
+function userHandle(user) {
+  return firstText(user?.displayId, user?.uniqueId)
+}
+
+function userIdOf(user) {
+  return firstText(user?.idStr, user?.userId, user?.id === undefined ? "" : String(user.id))
+}
+
+function normalizeActor(user, identity) {
+  const username = truncate(userHandle(user), LIMITS.name).toLowerCase()
   return {
-    platformUserId: truncate(String(user?.userId ?? ""), LIMITS.id),
+    platformUserId: truncate(userIdOf(user), LIMITS.id),
     username: username || "anon",
     displayName: truncate(user?.nickname, LIMITS.name) || username || "anon",
     avatarUrl: avatarOf(user),
-    // TikTok no expone el equivalente a "moderador" en estos mensajes.
-    isModerator: false,
+    // `userIdentity` solo viene en chat y regalos; en el resto queda false.
+    isModerator: identity?.isModeratorOfAnchor === true,
   }
 }
 
@@ -84,7 +100,7 @@ function baseEvent(type, data, extra, context = NO_REPLY_CONTEXT) {
     source: SOURCE,
     platform: PLATFORM,
     type,
-    actor: normalizeActor(data?.user),
+    actor: normalizeActor(data?.user, data?.userIdentity),
     metadata: { capabilities: { reply: context.canReply } },
     reply: context.reply,
     ...extra.fields,
@@ -97,7 +113,7 @@ function msgId(data) {
 }
 
 function normalizeChat(data, context) {
-  const text = truncate(data?.comment, LIMITS.text)
+  const text = truncate(firstText(data?.content, data?.comment), LIMITS.text)
   if (!text) return null
   return baseEvent("chat_message", data, {
     id: msgId(data),
@@ -112,24 +128,36 @@ function normalizeFollow(data) {
 function normalizeLike(data) {
   return baseEvent("like", data, {
     id: msgId(data),
-    fields: { payload: { count: toInt(data?.likeCount), total: toInt(data?.totalLikeCount) } },
+    fields: { payload: { count: toInt(data?.count ?? data?.likeCount), total: toInt(data?.total ?? data?.totalLikeCount) } },
   })
 }
 
 // Un regalo se identifica dentro de su combo por (usuario, groupId). Sin
 // groupId se degrada a (usuario, giftId), que basta para un combo a la vez.
 function comboKey(data) {
-  const user = String(data?.user?.userId ?? data?.user?.uniqueId ?? "")
-  return `${user}:${data?.groupId || `gift-${data?.giftId ?? ""}`}`
+  const user = userIdOf(data?.user) || userHandle(data?.user)
+  return `${user}:${data?.groupId || `gift-${giftInfo(data).id ?? ""}`}`
+}
+
+// v3: `gift { id, name, type, diamondCount }`; legacy: `giftDetails { giftName, giftType, diamondCount }`.
+function giftInfo(data) {
+  const gift = data?.gift || data?.giftDetails || {}
+  return {
+    id: gift.id ?? data?.giftId,
+    name: gift.name ?? gift.giftName,
+    type: gift.type ?? gift.giftType,
+    diamondCount: gift.diamondCount,
+  }
 }
 
 function giftSnapshot(data) {
   const count = Math.max(1, toInt(data?.repeatCount, 1))
-  const unitCoins = toInt(data?.giftDetails?.diamondCount)
+  const info = giftInfo(data)
+  const unitCoins = toInt(info.diamondCount)
   return {
     data,
-    giftId: String(data?.giftId ?? ""),
-    giftName: truncate(data?.giftDetails?.giftName, LIMITS.name),
+    giftId: String(data?.giftId || info.id || ""),
+    giftName: truncate(info.name, LIMITS.name),
     unitCoins,
     count,
   }
@@ -179,7 +207,7 @@ function createGiftComboTracker({ emit, setTimer = setTimeout, clearTimer = clea
     forgetOldClosed()
     const key = comboKey(data)
     const snapshot = giftSnapshot(data)
-    const streakable = data?.giftDetails?.giftType === STREAKABLE_GIFT_TYPE
+    const streakable = giftInfo(data).type === STREAKABLE_GIFT_TYPE
 
     if (!streakable) {
       // Regalo sin combo: se procesa de inmediato, con un id único por evento.
@@ -248,13 +276,47 @@ function prepareOutgoing(message) {
   return text.length > CHAT_MAX_LENGTH ? text.slice(0, CHAT_MAX_LENGTH - 3) + "..." : text
 }
 
+// tiktok-live-connector envuelve el fallo real en un Error genérico
+// ("Error while connecting") y deja el original en `exception` (o `cause`).
+// Sin desenvolverlo, "no estás en directo" se mostraba como fallo genérico.
+function unwrapError(error) {
+  return error?.exception || error?.cause || error
+}
+
+// Enviar chat pasa por el servicio de Euler Stream, que lo reserva a claves con
+// plan de pago: responde 401/403 y la libreria lanza "[Premium Feature] ...".
+// Reintentar no lo arregla, asi que se distingue de un fallo transitorio.
+function isPremiumRequiredError(error) {
+  const text = `${unwrapError(error)?.message || ""} ${error?.message || ""}`
+  return /premium feature|paid plan/i.test(text)
+}
+
+const PREMIUM_SEND_NOTE = "Euler Stream rechazó el envío: enviar mensajes al chat exige una clave de API con plan de pago (o la clave/sesión no es válida)."
+
 function friendlyError(error) {
-  const name = error?.name || ""
+  const root = unwrapError(error)
+  const name = root?.name || ""
   if (name === "UserOfflineError") return "El canal de TikTok no está en directo."
   if (error?.code === "ERR_MODULE_NOT_FOUND" || error?.code === "MODULE_NOT_FOUND") {
     return "La librería de TikTok no está instalada en esta copia de Mimiku."
   }
-  return "No se pudo conectar con TikTok. Se reintentará automáticamente."
+  const detail = root?.message ? ` Motivo: ${String(root.message).slice(0, 160)}` : ""
+  return `No se pudo conectar con TikTok. Se reintentará automáticamente.${detail}`
+}
+
+// Diagnostico temporal: con MIMIKU_TIKTOK_RAW=1 se registra cada evento tal y
+// como sale de la libreria, ANTES de normalizarlo. Solo contiene datos de los
+// espectadores; las credenciales del streamer nunca pasan por aqui.
+const RAW_EVENTS = ["chat", "follow", "like", "gift", "member", "roomUser", "share", "streamEnd"]
+const RAW_PREVIEW_CHARS = 1200
+
+function rawPreview(data) {
+  try {
+    const json = JSON.stringify(data, (_key, value) => (typeof value === "bigint" ? value.toString() : value))
+    return typeof json === "string" ? json.slice(0, RAW_PREVIEW_CHARS) : String(json)
+  } catch {
+    return "[no serializable]"
+  }
 }
 
 function createTikTokAdapter(overrides = {}) {
@@ -264,6 +326,8 @@ function createTikTokAdapter(overrides = {}) {
   const clearTimer = overrides.clearTimer || clearTimeout
   const log = overrides.log || console
   const getCredentials = overrides.getCredentials || (() => null)
+  const rawLogging = overrides.rawLogging ?? process.env.MIMIKU_TIKTOK_RAW === "1"
+  let warnedDroppedChat = false
 
   let connection = null
   let username = ""
@@ -297,8 +361,12 @@ function createTikTokAdapter(overrides = {}) {
       .then(() => { activeSender.failures = 0 })
       .catch(error => {
         activeSender.failures++
-        log.warn("[tiktok] no se pudo enviar el mensaje:", error?.message || error)
-        if (activeSender.failures >= SEND_MAX_CONSECUTIVE_FAILURES) {
+        log.warn("[tiktok] no se pudo enviar el mensaje:", unwrapError(error)?.message || error?.message || error)
+        if (isPremiumRequiredError(error)) {
+          activeSender.disabled = true
+          activeSender.queue.length = 0
+          sendNote = PREMIUM_SEND_NOTE
+        } else if (activeSender.failures >= SEND_MAX_CONSECUTIVE_FAILURES) {
           activeSender.disabled = true
           activeSender.queue.length = 0
           sendNote = "Se desactivó el envío tras varios fallos (sesión caducada o clave de API inválida)."
@@ -332,12 +400,28 @@ function createTikTokAdapter(overrides = {}) {
     try { eventEngine.emit(event) } catch (error) { log.error("[tiktok] evento inválido:", error.message) }
   }
 
+  // Un chat que no se puede normalizar casi siempre es un cambio de formato de
+  // la libreria: se avisa una vez con las claves recibidas para no fallar mudo.
+  function emitChat(data) {
+    const event = normalizeChat(data, replyContext())
+    if (!event && !warnedDroppedChat) {
+      warnedDroppedChat = true
+      log.warn("[tiktok] chat descartado sin texto. Claves recibidas:", Object.keys(data || {}).join(","))
+    }
+    safeEmit(event)
+  }
+
   function bind(conn, myGeneration) {
     const guard = handler => data => {
       if (myGeneration !== generation) return
       try { handler(data) } catch (error) { log.error("[tiktok] error procesando evento:", error.message) }
     }
-    conn.on("chat", guard(data => safeEmit(normalizeChat(data, replyContext()))))
+    if (rawLogging) {
+      for (const name of RAW_EVENTS) {
+        conn.on(name, guard(data => log.warn(`[TIKTOK RAW] event: ${name} payload: ${rawPreview(data)}`)))
+      }
+    }
+    conn.on("chat", guard(emitChat))
     conn.on("follow", guard(data => safeEmit(normalizeFollow(data))))
     conn.on("like", guard(data => safeEmit(normalizeLike(data))))
     conn.on("gift", guard(data => combos.handle(data)))
@@ -383,7 +467,7 @@ function createTikTokAdapter(overrides = {}) {
       setStatus("connected")
     } catch (error) {
       if (myGeneration !== generation) return
-      log.warn("[tiktok] conexión fallida:", error?.message || error)
+      log.warn("[tiktok] conexión fallida:", unwrapError(error)?.message || error?.message || error)
       const unavailable = error?.code === "ERR_MODULE_NOT_FOUND" || error?.code === "MODULE_NOT_FOUND"
       if (unavailable) {
         setStatus("unavailable", friendlyError(error))
@@ -446,6 +530,7 @@ module.exports = {
   createTikTokAdapter,
   getDefaultTikTokAdapter,
   createGiftComboTracker,
+  friendlyError,
   normalizeChat,
   normalizeFollow,
   normalizeLike,

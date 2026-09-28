@@ -126,7 +126,7 @@ async function uploadCardImage(file) {
     return
   }
   if (hint) hint.style.display = "none"
-  document.getElementById("card-img").value = `http://127.0.0.1:7777${saved.url}`
+  document.getElementById("card-img").value = `${(await ipcRenderer.invoke("overlay:getStatus")).baseUrl}${saved.url}`
   showToast("Imagen guardada localmente ✦")
 }
 

@@ -93,8 +93,9 @@ async function setupPipeline() {
   let messageCounter = 0
   function chat(text, { userId = "777", uniqueId = "LunaTok", nickname = "Luna" } = {}) {
     emitter.emit("chat", {
-      user: { userId, uniqueId, nickname },
-      comment: text,
+      // Forma real de tiktok-live-connector 2.x (protobuf v3), no la legacy plana.
+      user: { id: userId, idStr: userId, displayId: uniqueId, nickname },
+      content: text,
       common: { msgId: `m-${++messageCounter}` },
     })
   }
@@ -122,12 +123,16 @@ test("el chat de TikTok llega a widgets, niveles, actividad y feed con platform=
 })
 
 test("un comando de TikTok responde por el panel local, ya que TikTok no puede recibir chat", async () => {
-  const { chat, local, adapter } = await setupPipeline()
+  const { chat, local, overlays, adapter } = await setupPipeline()
   chat("hola")
   chat("!puntos")
   assert.equal(local.length, 1)
   assert.equal(local[0].platform, "tiktok")
   assert.match(local[0].text, /puntos/)
+  // Y tambien en el overlay (cartel de respuestas, no la alerta de arriba).
+  const alerts = overlays.filter(item => item.type === "reply_toast")
+  assert.equal(alerts.length, 1)
+  assert.match(alerts[0].text, /puntos/)
   adapter.disconnect()
 })
 
@@ -198,8 +203,8 @@ test("!nivel responde en TikTok aunque el evento no traiga metadata.channel", as
 
 test("los regalos, likes y follows no se cuentan como chat para widgets ni comandos", async () => {
   const { emitter, widgetCalls, local, overlays, adapter } = await setupPipeline()
-  emitter.emit("follow", { user: { userId: "9", uniqueId: "nuevo", nickname: "Nuevo" } })
-  emitter.emit("like", { user: { userId: "9", uniqueId: "nuevo", nickname: "Nuevo" }, likeCount: 3, totalLikeCount: 3 })
+  emitter.emit("follow", { user: { idStr: "9", displayId: "nuevo", nickname: "Nuevo" } })
+  emitter.emit("like", { user: { idStr: "9", displayId: "nuevo", nickname: "Nuevo" }, count: 3, total: "3" })
   assert.equal(widgetCalls.length, 0)
   assert.equal(local.length, 0)
   assert.equal(overlays.length, 0)

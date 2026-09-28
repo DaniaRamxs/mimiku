@@ -87,6 +87,17 @@ function startMiniChallenge(word, seconds, reward) {
   getDefaultChallengeConsumer().start(word, seconds, reward)
 }
 
+// Subathon: suma tiempo al contador y cuenta para la meta de subs.
+function subathonSub(tags, display, label) {
+  try {
+    require("../../services/subathon.js").getDefaultSubathon().recordTwitchSub({
+      id: tags.id || "", user: display, plan: tags["msg-param-sub-plan"] || "1000", label,
+    })
+  } catch (error) {
+    console.warn("[subathon] no se pudo sumar el sub:", error.message)
+  }
+}
+
 // ── Conexión ──────────────────────────────────────────────────────────────────
 function connect(channel, token) {
   if (client) { client.disconnect().catch(() => {}); client = null }
@@ -133,6 +144,7 @@ function connect(channel, token) {
     addPoints(username, 150, "sub", { platform: "twitch", platformUserId: tags["user-id"] || "" })
     send("twitch:event", { type: "sub", text: `🎉 ${display} se suscribió`, username, display })
     sendOverlay({ type: "alert", text: `🎉 ${display} se suscribió!`, duration: 5000 })
+    subathonSub(tags, display, "sub")
   })
 
   client.on("resub", (ch, username, months, msg, tags) => {
@@ -140,6 +152,34 @@ function connect(channel, token) {
     addPoints(username, 80, "resub", { platform: "twitch", platformUserId: tags["user-id"] || "" })
     send("twitch:event", { type: "resub", text: `🔁 ${display} resubscribió (${months} meses)`, username, display, months })
     sendOverlay({ type: "alert", text: `🔁 ${display} resubscribió (${months} meses)!`, duration: 5000 })
+    subathonSub(tags, display, "resub")
+  })
+
+  // Subs regalados: Twitch manda un "subgift" por cada sub, tambien cuando
+  // vienen en lote ("submysterygift"); por eso el subathon cuenta aqui y el
+  // lote solo anuncia. Los regalos de un lote no se anuncian uno a uno.
+  client.on("subgift", (ch, username, streakMonths, recipient, methods, tags) => {
+    const display = tags["display-name"] || username
+    send("twitch:event", { type: "subgift", text: `${display} regaló un sub a ${recipient}`, username, display })
+    if (!tags["msg-param-community-gift-id"]) sendOverlay({ type: "alert", text: `${display} regaló un sub a ${recipient}!`, duration: 5000 })
+    subathonSub(tags, display, `regalo a ${recipient}`)
+  })
+
+  client.on("anonsubgift", (ch, streakMonths, recipient, methods, tags) => {
+    send("twitch:event", { type: "subgift", text: `Un anónimo regaló un sub a ${recipient}`, username: "anon", display: "Anónimo" })
+    if (!tags["msg-param-community-gift-id"]) sendOverlay({ type: "alert", text: `Un anónimo regaló un sub a ${recipient}!`, duration: 5000 })
+    subathonSub(tags, "Anónimo", `regalo a ${recipient}`)
+  })
+
+  client.on("submysterygift", (ch, username, count, methods, tags) => {
+    const display = tags["display-name"] || username
+    send("twitch:event", { type: "submysterygift", text: `${display} regaló ${count} subs`, username, display, count })
+    sendOverlay({ type: "alert", text: `${display} regaló ${count} subs!`, duration: 6000 })
+  })
+
+  client.on("anonsubmysterygift", (ch, count, methods, tags) => {
+    send("twitch:event", { type: "submysterygift", text: `Un anónimo regaló ${count} subs`, username: "anon", display: "Anónimo", count })
+    sendOverlay({ type: "alert", text: `Un anónimo regaló ${count} subs!`, duration: 6000 })
   })
 
   client.on("cheer", (ch, tags, msg) => {
@@ -149,6 +189,11 @@ function connect(channel, token) {
     addPoints(username, Math.floor(bits / 10) * 3, "bits", { platform: "twitch", platformUserId: tags["user-id"] || "" })
     send("twitch:event", { type: "cheer", text: `💎 ${display} donó ${bits} bits`, username, display, bits })
     sendOverlay({ type: "alert", text: `💎 ${display} donó ${bits} bits!`, duration: 5000 })
+    try {
+      require("../../services/subathon.js").getDefaultSubathon().recordTwitchBits({ id: tags.id || "", user: display, bits: Number(bits) })
+    } catch (error) {
+      console.warn("[subathon] no se pudieron sumar los bits:", error.message)
+    }
   })
 
   client.on("raided", (ch, username, viewers) => {

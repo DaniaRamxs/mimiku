@@ -219,7 +219,7 @@ async function saveTikTokSecrets() {
   if (!values.signApiKey && !values.sessionId && !values.ttTargetIdc) { showToast("Escribe al menos un valor"); return }
   try {
     await ipcRenderer.invoke("tiktok:setSecrets", values)
-    showToast("Credenciales guardadas. Pulsa Conectar para aplicarlas.")
+    showToast("Credenciales guardadas. Si las respuestas están activadas, se reconecta para aplicarlas.")
   } catch (error) {
     showToast("No se pudieron guardar las credenciales")
     console.error("[settings] tiktok:setSecrets:", error.message)

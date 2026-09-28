@@ -36,7 +36,7 @@ async function pickAfkReward(kind) {
       const saved = await ipcRenderer.invoke("assets:save", {
         kind: "afk", name: file.name, mimeType: file.type, bytes: new Uint8Array(await file.arrayBuffer()),
       })
-      const localUrl = `http://127.0.0.1:7777${saved.url}`
+      const localUrl = `${(await ipcRenderer.invoke("overlay:getStatus")).baseUrl}${saved.url}`
       if (kind === "sound") { afkSoundUrl = localUrl; document.getElementById("afk-sound-label").textContent = "🎵 " + file.name }
       else { afkVideoUrl = localUrl; document.getElementById("afk-video-label").textContent = "🎬 " + file.name }
       showToast("Archivo listo ✦")

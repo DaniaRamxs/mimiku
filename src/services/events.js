@@ -327,29 +327,6 @@ async function taxEveryone(percent = 10) {
   return { count, totalTaxed }
 }
 
-// 👑 Rey del Chat — el user con más mensajes recibe bonus y aparece en overlay
-async function crownKing(bonusPoints = 500) {
-  const viewers = getRanking(9999)
-  // ordenar por mensajes
-  const byMsgs = [...viewers].sort((a, b) => (b.messages||0) - (a.messages||0))
-  if (!byMsgs.length) { say("⚠ No hay viewers con mensajes aún."); return { error: "Sin viewers" } }
-  const king = byMsgs[0]
-  addPoints(king.username, bonusPoints, "rey-del-chat", { platform: king.platform, platformUserId: king.platform_user_id })
-  const kingDisplay = king.display || king.username
-  say(`👑 ¡REY DEL CHAT! @${kingDisplay} es el más activo con ${king.messages||0} mensajes y recibe ${bonusPoints} pts!`)
-  overlay({ type: "alert", text: `👑 ¡${kingDisplay} es el Rey del Chat!`, duration: 8000 })
-  // widget en esquina inferior izquierda del overlay
-  overlay({
-    type: "king_widget",
-    username: king.username,
-    display: kingDisplay,
-    messages: king.messages || 0,
-    points: (king.points || 0) + bonusPoints,
-    bonus: bonusPoints,
-  })
-  return { ok: true, king: kingDisplay, bonus: bonusPoints }
-}
-
 // 🪙 Cara o Cruz — toggle del comando !coin
 function setCoinActive(active, maxBet = 200) {
   activeEvents.coinActive  = active
@@ -412,6 +389,5 @@ module.exports = {
   muerteSubita, isMuerteSubita,
   taxEveryone,
   collectTax: taxEveryone,
-  crownKing,
   setCoinActive, isCoinActive, getCoinMaxBet, flipCoin,
 }

@@ -210,3 +210,107 @@ test("exige un usuario", () => {
 test("COMBO_IDLE_FLUSH_MS es un valor razonable", () => {
   assert.ok(COMBO_IDLE_FLUSH_MS >= 3000 && COMBO_IDLE_FLUSH_MS <= 30000)
 })
+
+test("friendlyError desenvuelve el error real que la librería deja en exception", () => {
+  const { friendlyError } = require("../src/integrations/tiktok/tiktok-adapter.js")
+  const offline = Object.assign(new Error("Error while connecting"), {
+    exception: Object.assign(new Error("The requested user isn't online :("), { name: "UserOfflineError" }),
+  })
+  assert.equal(friendlyError(offline), "El canal de TikTok no está en directo.")
+  const other = Object.assign(new Error("Error while connecting"), { exception: new Error("403 sign server") })
+  assert.match(friendlyError(other), /Motivo: 403 sign server/)
+  assert.match(friendlyError(new Error("boom")), /Motivo: boom/)
+})
+
+// ── Forma real del conector 2.x (protobuf v3). Antes solo se probaba la forma
+// plana legacy, y por eso el chat real se descartaba sin que ningun test fallara.
+function v3User(overrides = {}) {
+  return { id: "777", idStr: "777", displayId: "LunaTok", nickname: "Luna", ...overrides }
+}
+
+test("v3: normaliza el chat real (content, user.displayId, user.idStr)", () => {
+  const event = normalizeChat({
+    common: { msgId: "m9" }, user: v3User({ avatarThumb: { urlList: ["https://cdn/x.jpg"] } }),
+    content: "hola mimiku", userIdentity: { isModeratorOfAnchor: true },
+  })
+  assert.equal(event.type, "chat_message")
+  assert.equal(event.message.text, "hola mimiku")
+  assert.equal(event.actor.username, "lunatok")
+  assert.equal(event.actor.platformUserId, "777")
+  assert.equal(event.actor.displayName, "Luna")
+  assert.equal(event.actor.avatarUrl, "https://cdn/x.jpg")
+  assert.equal(event.actor.isModerator, true)
+})
+
+test("v3: emojis, unicode y comandos en mayusculas llegan intactos", () => {
+  const text = "!PUNTOS 🎉 ñandú"
+  assert.equal(normalizeChat({ user: v3User(), content: text }).message.text, text)
+})
+
+test("v3: likes usan count y total (string)", () => {
+  const event = normalizeLike({ user: v3User(), count: 4, total: "150" })
+  assert.deepEqual(event.payload, { count: 4, total: 150 })
+})
+
+test("v3: un regalo lee gift.name/type/diamondCount y cierra el combo", () => {
+  const emitted = []
+  const tracker = createGiftComboTracker({ emit: event => emitted.push(event), ...fakeTimers() })
+  const gift = (count, end) => ({
+    user: v3User(), giftId: "5655", groupId: "g1", repeatCount: count, repeatEnd: end ? 1 : 0,
+    gift: { id: "5655", name: "Rosa", type: 1, diamondCount: 1 },
+  })
+  tracker.handle(gift(1, false))
+  tracker.handle(gift(3, true))
+  assert.equal(emitted.length, 1)
+  assert.deepEqual(
+    { name: emitted[0].payload.giftName, count: emitted[0].payload.count, coins: emitted[0].payload.coins },
+    { name: "Rosa", count: 3, coins: 3 },
+  )
+  assert.equal(emitted[0].actor.username, "lunatok")
+})
+
+test("v3: el chat real llega al Event Engine y la conexion vieja no duplica tras reconectar", async () => {
+  const engine = createEventEngine()
+  const seen = []
+  engine.subscribe("chat_message", event => seen.push(event.message.text))
+  const { factory, connections } = fakeConnectionFactory()
+  const adapter = createTikTokAdapter({ eventEngine: engine, connectionFactory: factory, log: silentLog, ...fakeTimers() })
+
+  await adapter.connect("luna")
+  connections[0].emitter.emit("chat", { user: v3User(), content: "hola mimiku", common: { msgId: "1" } })
+  await adapter.connect("luna")
+  connections[0].emitter.emit("chat", { user: v3User(), content: "fantasma" })
+  connections[1].emitter.emit("chat", { user: v3User(), content: "!puntos", common: { msgId: "2" } })
+
+  assert.deepEqual(seen, ["hola mimiku", "!puntos"])
+})
+
+test("un chat sin texto reconocible avisa una sola vez con las claves recibidas", async () => {
+  const warnings = []
+  const { factory, connections } = fakeConnectionFactory()
+  const adapter = createTikTokAdapter({
+    eventEngine: createEventEngine(), connectionFactory: factory, ...fakeTimers(),
+    log: { warn: (...args) => warnings.push(args.join(" ")), error() {} },
+  })
+  await adapter.connect("luna")
+  connections[0].emitter.emit("chat", { user: v3User(), texto: "formato desconocido" })
+  connections[0].emitter.emit("chat", { user: v3User(), texto: "otra vez" })
+  assert.equal(warnings.filter(line => line.includes("chat descartado")).length, 1)
+  assert.match(warnings[0], /user,texto/)
+})
+
+test("RAW: con rawLogging registra el evento y nunca las credenciales", async () => {
+  const lines = []
+  const { factory, connections } = fakeConnectionFactory()
+  const adapter = createTikTokAdapter({
+    eventEngine: createEventEngine(), connectionFactory: factory, rawLogging: true, ...fakeTimers(),
+    getCredentials: () => ({ signApiKey: "SECRET-KEY", sessionId: "SECRET-SESSION", ttTargetIdc: "SECRET-IDC" }),
+    log: { warn: (...args) => lines.push(args.join(" ")), error() {} },
+  })
+  await adapter.connect("luna", { sendReplies: true })
+  connections[0].emitter.emit("chat", { user: v3User(), content: "hola mimiku", big: 10n })
+  const all = lines.join("\n")
+  assert.match(all, /\[TIKTOK RAW\] event: chat/)
+  assert.match(all, /hola mimiku/)
+  assert.doesNotMatch(all, /SECRET/)
+})

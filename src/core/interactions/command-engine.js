@@ -10,6 +10,8 @@
 // se importa shop.js correctamente, usando las mismas funciones que ya
 // exportaba ese archivo.
 
+const { findLiveEffect, EFFECT_GLOBAL_SPACING_MS } = require("./live-effects.js")
+
 function createCommandEngine(overrides = {}) {
   const economy = overrides.economy || require("../../services/economy.js")
   const games = overrides.games || require("../../services/games.js")
@@ -21,11 +23,16 @@ function createCommandEngine(overrides = {}) {
   const overlay = overrides.overlay || (() => {})
   const replyRouter = overrides.replyRouter || require("./reply-router.js").createReplyRouter({
     notifyLocal: payload => notify("chat:response", payload),
+    showOnOverlay: payload => overlay(payload),
   })
   // Perezoso: roulette.js arrastra la base de datos, que solo existe en el proceso principal.
   const rouletteService = () => overrides.roulette || require("../../services/roulette.js").getDefaultRouletteService()
   const boxService = () => overrides.boxes || require("../../services/boxes.js").getDefaultBoxService()
+  const loyaltyService = () => overrides.loyalty || require("../../services/loyalty.js").getDefaultLoyaltyService()
   const commandConfig = overrides.commandConfig || { evaluate: () => ({ allowed: true }), record: () => {} }
+
+  const now = overrides.now || Date.now
+  let lastEffectAt = -Infinity
 
   const { getViewer, getViewerFor, addPoints, getRanking, claimDaily, claimWork, depositar, retirar, verBanco, robar } = economy
 
@@ -53,6 +60,11 @@ function createCommandEngine(overrides = {}) {
       displayName: display,
       avatarUrl: event.actor.avatarUrl,
     }
+    // Efectos de directo: el espaciado global va ANTES de evaluar/registrar, para
+    // que un efecto descartado por saturacion no gaste el cooldown del viewer.
+    const effect = findLiveEffect(cmd)
+    if (effect && now() - lastEffectAt < EFFECT_GLOBAL_SPACING_MS) return
+
     const policy = commandConfig.evaluate ? commandConfig.evaluate(cmd, event) : { allowed: true }
     if (!policy.allowed) {
       if (policy.rankDenied) {
@@ -64,6 +76,13 @@ function createCommandEngine(overrides = {}) {
       return
     }
     if (commandConfig.record) commandConfig.record(cmd, event)
+
+    if (effect) {
+      lastEffectAt = now()
+      for (const payload of effect.overlay) overlay({ ...payload })
+      say(`@${display} activó ${effect.label}`)
+      return
+    }
 
     // Comandos "solo-idle" de AFK (Fase 1.6): no tocan identidad ni economía,
     // solo responden con el estado del contador — multiplataforma desde ya.
@@ -174,6 +193,24 @@ function createCommandEngine(overrides = {}) {
       }
       say(`@${display} giró la ruleta y ganó ${result.chests} ${result.chests === 1 ? "cofre" : "cofres"} (${result.label}).`)
       overlay(result.overlay)
+      return
+    }
+
+    // Tarjeta de fidelidad semanal: un sello por directo.
+    if (cmd === "!claim") {
+      const result = loyaltyService().claim(actorIdentity)
+      if (!result.ok) {
+        if (result.reason === "already") say(`@${display} ya sellaste tu tarjeta en este directo (${result.filled}/${result.total}). Vuelve en el próximo.`)
+        else if (result.reason === "completed") say(`@${display} ya completaste tu tarjeta de esta semana. Se renueva el lunes.`)
+        return
+      }
+      overlay(result.overlay)
+      if (result.completed) {
+        say(`@${display} completó su tarjeta de fidelidad semanal y ganó ${result.rewardPoints.toLocaleString()} puntos.`)
+      } else {
+        say(`@${display} sellaste tu tarjeta de fidelidad: ${result.filled}/${result.total}.`)
+      }
+      notify("loyalty:update", { completed: result.completed })
       return
     }
 

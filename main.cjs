@@ -107,7 +107,32 @@ ipcMain.handle("app:maximize", () => win?.isMaximized() ? win.unmaximize() : win
 ipcMain.handle("app:quit",     () => app.quit())
 ipcMain.handle("app:getVersion", () => app.getVersion())
 ipcMain.handle("overlay:send", (_, payload) => overlay().broadcast(payload))
-ipcMain.handle("overlay:getStatus", () => overlay().getStatus())
+ipcMain.handle("overlay:getStatus", () => ({ ...overlay().getStatus(), baseUrl: overlay().getBaseUrl() }))
+
+// Estado, configuración y URLs utilizables del overlay (panel de diagnóstico de Ajustes).
+function overlayDiagnostics() {
+  const network = require("./src/services/overlay-network.js")
+  const config = appConfig.getAppConfig().overlay
+  return {
+    status: overlay().getStatus(),
+    config,
+    urls: network.buildOverlayUrls(config, network.listLanAddresses()),
+  }
+}
+ipcMain.handle("overlay:getDiagnostics", () => overlayDiagnostics())
+// Reinicia el servidor con el puerto/interfaz nuevos y solo persiste si arrancó;
+// si no, la configuración anterior sigue activa y se devuelve el motivo.
+ipcMain.handle("overlay:saveConfig", async (_, input) => {
+  const config = validate.overlayConfig(input)
+  const result = await overlay().reconfigure(config)
+  if (!result.ok) return { ok: false, error: result.error, ...overlayDiagnostics() }
+  appConfig.saveAppConfig({ overlay: config })
+  return { ok: true, ...overlayDiagnostics() }
+})
+ipcMain.handle("overlay:probeUrls", () => {
+  const network = require("./src/services/overlay-network.js")
+  return network.probeUrls(overlayDiagnostics().urls)
+})
 ipcMain.handle("activity:getActiveViewers", () => require("./src/core/interactions/activity-consumer.js").getDefaultActivityTracker().getActiveViewerIdentities())
 ipcMain.handle("assets:save", async (_, asset) => {
   const bytes = Buffer.from(asset?.bytes || [])
@@ -153,7 +178,7 @@ ipcMain.handle("ssn:getStatus", () => {
   const token = appConfig.getSocialStreamNinjaToken()
   return {
     ...state.getStatus(),
-    postUrl: `http://127.0.0.1:7777${localApi.SSN_PATH_PREFIX}${token}`,
+    postUrl: `${overlay().getBaseUrl()}${localApi.SSN_PATH_PREFIX}${token}`,
   }
 })
 
@@ -207,11 +232,22 @@ ipcMain.handle("tiktok:connect", (_, input = {}) => {
 // Credenciales para responder en el chat de TikTok. Nunca se devuelven al
 // renderer: solo el estado (configurado / protegido / que falta).
 ipcMain.handle("tiktok:secretsStatus", () => secrets().getTikTokStatus())
-ipcMain.handle("tiktok:setSecrets", (_, input = {}) => secrets().setTikTokCredentials({
-  signApiKey: validate.text(input.signApiKey, { max: 4096 }),
-  sessionId: validate.text(input.sessionId, { max: 4096 }),
-  ttTargetIdc: validate.text(input.ttTargetIdc, { max: 200 }),
-}))
+ipcMain.handle("tiktok:setSecrets", (_, input = {}) => {
+  const status = secrets().setTikTokCredentials({
+    signApiKey: validate.text(input.signApiKey, { max: 4096 }),
+    sessionId: validate.text(input.sessionId, { max: 4096 }),
+    ttTargetIdc: validate.text(input.ttTargetIdc, { max: 200 }),
+  })
+  // Las credenciales se leen al conectar: si ya hay conexion activa con las
+  // respuestas habilitadas, se reconecta para que surtan efecto (el boton
+  // Conectar esta oculto mientras se esta conectado).
+  const saved = appConfig.getAppConfig().integrations.tiktok
+  const active = ["connecting", "connected", "reconnecting"].includes(tiktokAdapter().getStatus().state)
+  if (status.configured && saved.enabled && saved.username && saved.sendReplies && active) {
+    tiktokAdapter().connect(saved.username, { autoReconnect: saved.autoReconnect, sendReplies: true }).catch(() => {})
+  }
+  return status
+})
 ipcMain.handle("tiktok:clearSecrets", () => secrets().clearTikTokCredentials())
 ipcMain.handle("tiktok:disconnect", () => {
   appConfig.saveAppConfig({ integrations: { tiktok: { enabled: false } } })
@@ -266,6 +302,78 @@ ipcMain.handle("roulette:preview", () => {
   const payload = roulette().preview()
   overlay().broadcast(payload)
   return payload
+})
+
+// ── IPC: tarjeta de fidelidad (!claim) ───────────────────────────────────────
+function loyalty() { return require("./src/services/loyalty.js").getDefaultLoyaltyService() }
+ipcMain.handle("loyalty:getConfig", () => loyalty().getConfig())
+ipcMain.handle("loyalty:setConfig", (_, input = {}) => loyalty().setConfig(validate.plainObject(input, "configuración de la tarjeta")))
+ipcMain.handle("loyalty:status", () => loyalty().status())
+ipcMain.handle("loyalty:newStream", () => { loyalty().startNewStream(); return loyalty().status() })
+ipcMain.handle("loyalty:setDelivered", (_, id, delivered) => loyalty().setDelivered(validate.text(id, { max: 100, required: true }), delivered === true))
+// Vista previa: muestra una tarjeta de ejemplo sin sellar nada.
+ipcMain.handle("loyalty:preview", (_, completed) => {
+  const payload = loyalty().preview({ completed: completed === true })
+  overlay().broadcast(payload)
+  return payload
+})
+
+// ── IPC: Top 3 del chat ──────────────────────────────────────────────────────
+function chatTop() { return require("./src/services/chat-top.js").getDefaultChatTopService() }
+const CHAT_TOP_PREVIEW_STEP_MS = 2500
+ipcMain.handle("chatTop:snapshot", () => chatTop().snapshot())
+// Vista previa: tres cambios de orden seguidos y vuelta al top real del directo.
+ipcMain.handle("chatTop:preview", () => {
+  const frames = [0, 1, 2]
+  frames.forEach((step, index) => setTimeout(() => overlay().broadcast({ type: "chat_top", ...chatTop().preview(step) }), index * CHAT_TOP_PREVIEW_STEP_MS))
+  setTimeout(() => overlay().broadcast({ type: "chat_top", ...chatTop().snapshot() }), frames.length * CHAT_TOP_PREVIEW_STEP_MS + 1500)
+  return { ok: true }
+})
+
+// ── IPC: Subathon (contador extensible + metas de subs y bits) ───────────────
+function subathon() { return require("./src/services/subathon.js").getDefaultSubathon() }
+const SUBATHON_MAX_MS = 30 * 24 * 3600 * 1000
+function subathonState() {
+  const s = subathon()
+  return { timer: s.timer.snapshot(), goals: Object.fromEntries(s.goals.types.map(type => [type, s.goals.snapshot(type)])) }
+}
+function goalType(value) {
+  const type = validate.text(value, { max: 10, required: true })
+  if (!subathon().goals.types.includes(type)) throw new Error("Meta desconocida")
+  return type
+}
+ipcMain.handle("subathon:state", () => subathonState())
+ipcMain.handle("subathon:timerConfig", (_, input = {}) => { subathon().timer.setConfig(validate.plainObject(input, "configuración del contador")); return subathonState() })
+ipcMain.handle("subathon:setRemaining", (_, ms) => { subathon().timer.setRemaining(validate.integer(ms, { name: "tiempo", min: 0, max: SUBATHON_MAX_MS })); return subathonState() })
+ipcMain.handle("subathon:start", () => { subathon().timer.start(); return subathonState() })
+ipcMain.handle("subathon:pause", () => { subathon().timer.pause(); return subathonState() })
+ipcMain.handle("subathon:reset", () => { subathon().timer.reset(); return subathonState() })
+// Tiempo manual (donaciones de StreamElements, Yape...). ms negativo = quitar tiempo.
+ipcMain.handle("subathon:addTime", (_, ms, label) => {
+  subathon().timer.add(validate.integer(ms, { name: "tiempo", min: -SUBATHON_MAX_MS, max: SUBATHON_MAX_MS }), {
+    source: "manual", label: validate.text(label, { max: 80 }),
+  })
+  return subathonState()
+})
+ipcMain.handle("subathon:goalConfig", (_, type, input = {}) => { subathon().goals.setConfig(goalType(type), validate.plainObject(input, "configuración de la meta")); return subathonState() })
+ipcMain.handle("subathon:goalAdd", (_, type, delta) => { subathon().goals.add(goalType(type), validate.integer(delta, { name: "cantidad", min: -1e8, max: 1e8 })); return subathonState() })
+ipcMain.handle("subathon:goalSet", (_, type, value) => { subathon().goals.setCount(goalType(type), validate.integer(value, { name: "cantidad", min: 0, max: 1e8 })); return subathonState() })
+// Vistas previas: animaciones en el overlay sin tocar el estado real.
+ipcMain.handle("subathon:previewTime", () => {
+  const snap = subathon().timer.snapshot()
+  const base = snap.status === "idle" ? { ...snap, status: "paused", remainingMs: snap.remainingMs || 3 * 3600 * 1000 } : snap
+  overlay().broadcast({ type: "subathon_timer", ...base, preview: true, added: { ms: 10 * 60 * 1000, source: "sub", user: "ViewerDemo", label: "sub" } })
+  setTimeout(() => overlay().broadcast({ type: "subathon_timer", ...subathon().timer.snapshot() }), 6000)
+  return { ok: true }
+})
+ipcMain.handle("subathon:previewGoal", (_, type, reached) => {
+  const snap = subathon().goals.snapshot(goalType(type))
+  const fake = reached
+    ? { ...snap, count: snap.target, delta: 1, reached: [{ target: snap.target, reward: snap.reward }] }
+    : { ...snap, count: Math.max(1, Math.round(snap.target * 0.6)), delta: 1, reached: [] }
+  overlay().broadcast({ type: "subathon_goal", ...fake, preview: true })
+  setTimeout(() => overlay().broadcast({ type: "subathon_goal", ...subathon().goals.snapshot(type) }), reached ? 7000 : 5000)
+  return { ok: true }
 })
 
 // ── IPC: cofres sin abrir de los viewers ─────────────────────────────────────
@@ -351,10 +459,6 @@ ipcMain.handle("events:spawnBoss",    (_, hp)              => {
 ipcMain.handle("events:startLottery", (_, price)           => { events().startLottery(price); return events().getStatus() })
 ipcMain.handle("events:drawLottery",  ()                   => events().drawLottery())
 ipcMain.handle("events:random",       ()                   => events().randomEvent())
-ipcMain.handle("king:toggle", (_, visible) => {
-  overlay().broadcast({ type: "king_toggle", visible })
-  return { ok: true }
-})
 
 ipcMain.handle("events:tax",        async (_, percent)   => {
   try {
@@ -371,7 +475,6 @@ ipcMain.handle("events:chaos",        ()                   => events().chaosMode
 ipcMain.handle("events:happyHour",    (_, mins)            => { events().happyHour(mins); return events().getStatus() })
 ipcMain.handle("events:muerteSubita", (_, mins)            => { events().muerteSubita(mins); return events().getStatus() })
 ipcMain.handle("events:taxEveryone",  (_, pct)             => events().taxEveryone(pct))
-ipcMain.handle("events:crownKing",    (_, bonus)           => events().crownKing(bonus))
 ipcMain.handle("events:setCoin",      (_, { active, max }) => { events().setCoinActive(active, max); return events().getStatus() })
 
 ipcMain.handle("games:bj:open",   () => { games().bjOpen();  return { open: true } })

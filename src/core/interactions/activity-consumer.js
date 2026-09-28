@@ -6,16 +6,15 @@
 // Reemplaza el `sessionMsgs` que vivía dentro de twitch-adapter.js. La
 // identidad de cada viewer activo es completa (platform + platformUserId),
 // nunca solo username, para que Twitch:luna y YouTube:luna nunca se
-// mezclen en el mismo contador de actividad ni en el "rey del chat".
+// mezclen en el mismo contador de actividad.
 const ACTIVE_TTL_MS = 10 * 60 * 1000 // viewer "activo" = escribió en los últimos 10 min
 
 function viewerKey(actor, platform) {
   return `${platform}:${actor.platformUserId || "legacy:" + actor.username}`
 }
 
-function createActivityTracker({ onKingUpdate, ttlMs = ACTIVE_TTL_MS } = {}) {
+function createActivityTracker({ ttlMs = ACTIVE_TTL_MS } = {}) {
   const viewers = new Map() // key -> { platform, platformUserId, username, displayName, lastSeenAt, messages }
-  let kingTimer = null
 
   function sweep(now = Date.now()) {
     for (const [key, v] of viewers) if (now - v.lastSeenAt > ttlMs) viewers.delete(key)
@@ -36,10 +35,6 @@ function createActivityTracker({ onKingUpdate, ttlMs = ACTIVE_TTL_MS } = {}) {
       lastSeenAt: Date.now(),
       messages: (previous?.messages || 0) + 1,
     })
-    if (onKingUpdate) {
-      clearTimeout(kingTimer)
-      kingTimer = setTimeout(() => onKingUpdate(getKing()), 500)
-    }
   }
 
   function getActiveViewerIdentities() {
@@ -53,16 +48,9 @@ function createActivityTracker({ onKingUpdate, ttlMs = ACTIVE_TTL_MS } = {}) {
     return getActiveViewerIdentities().map(v => v.username)
   }
 
-  function getKing() {
-    sweep()
-    const entries = [...viewers.values()]
-    if (!entries.length) return null
-    return entries.sort((a, b) => b.messages - a.messages)[0]
-  }
-
   function reset() { viewers.clear() }
 
-  return { recordMessage, getActiveViewerIdentities, getActiveUsernames, getKing, reset }
+  return { recordMessage, getActiveViewerIdentities, getActiveUsernames, reset }
 }
 
 function registerActivityConsumer(eventEngine, tracker) {

@@ -14,6 +14,33 @@ const DEFAULT_CONFIG = {
     show_level: true,
     max_stack: 5,
   },
+  // Top 3 de mensajes del directo actual (se reinicia en cada directo).
+  chatTop: {
+    enabled: true,
+    position: "top-right",
+    theme: "noche",
+    title: "Top del chat",
+    show_counts: true,
+  },
+}
+
+const CHAT_TOP_POSITIONS = [
+  "top-left", "top-center", "top-right",
+  "middle-left", "middle-right",
+  "bottom-left", "bottom-center", "bottom-right",
+]
+const CHAT_TOP_THEMES = ["noche", "pastel"]
+
+function normalizeChatTop(input = {}) {
+  const base = DEFAULT_CONFIG.chatTop
+  const title = typeof input.title === "string" ? input.title.trim().slice(0, 30) : ""
+  return {
+    enabled: input.enabled === undefined ? base.enabled : input.enabled === true,
+    position: CHAT_TOP_POSITIONS.includes(input.position) ? input.position : base.position,
+    theme: CHAT_TOP_THEMES.includes(input.theme) ? input.theme : base.theme,
+    title: title || base.title,
+    show_counts: input.show_counts === undefined ? base.show_counts : input.show_counts === true,
+  }
 }
 
 let _config    = null
@@ -30,7 +57,10 @@ function load() {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"))
-      _config = { avatars: { ...DEFAULT_CONFIG.avatars, ...(data.avatars || {}) } }
+      _config = {
+        avatars: { ...DEFAULT_CONFIG.avatars, ...(data.avatars || {}) },
+        chatTop: normalizeChatTop(data.chatTop || {}),
+      }
     }
   } catch (e) {}
   if (!_config) _config = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
@@ -48,7 +78,11 @@ function init(channel, broadcastFn) {
   _broadcast = broadcastFn
   load()
   if (_broadcast) _broadcast({ type: "avatars_config", ...publicAvatarsConfig(_config.avatars) })
+  if (_broadcast) _broadcast(chatTopConfigMessage())
 }
+
+function chatTopConfigMessage() { return { type: "chat_top_config", ...load().chatTop } }
+function getChatTopConfig() { return load().chatTop }
 
 function setBroadcast(fn) { _broadcast = fn }
 
@@ -57,8 +91,10 @@ function getConfig() { return load() }
 function setConfig(updates) {
   load()
   if (updates.avatars) _config.avatars = { ..._config.avatars, ...updates.avatars }
+  if (updates.chatTop) _config.chatTop = normalizeChatTop({ ..._config.chatTop, ...updates.chatTop })
   save()
   if (_broadcast) _broadcast({ type: "avatars_config", ...publicAvatarsConfig(_config.avatars) })
+  if (_broadcast && updates.chatTop) _broadcast(chatTopConfigMessage())
   return _config
 }
 
@@ -117,5 +153,6 @@ function testAvatar() {
 
 module.exports = {
   init, setBroadcast, getConfig, setConfig,
+  getChatTopConfig, chatTopConfigMessage, normalizeChatTop,
   onChatMessage, testAvatar,
 }

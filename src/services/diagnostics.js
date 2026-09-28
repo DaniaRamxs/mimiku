@@ -18,7 +18,7 @@ function createDiagnosticsService(dependencies) {
     }))
     checks.push(check("overlay", "Servidor local", () => {
       const status = dependencies.overlay.getStatus()
-      return { ok: status.running, detail: status.running ? "127.0.0.1:7777 y WebSocket local" : (status.error || "No iniciado") }
+      return { ok: status.running, detail: status.running ? `${status.host || "127.0.0.1"}:${status.httpPort || 7777} y WebSocket local` : (status.error || "No iniciado") }
     }))
     checks.push(check("workspace", "Comunidad local", () => {
       const workspace = dependencies.workspace()

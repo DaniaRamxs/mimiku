@@ -189,3 +189,22 @@ test("de punta a punta sin envio: la respuesta va al panel local como antes", as
   assert.equal(sent.length, 0)
   assert.equal(local.length, 1)
 })
+
+test("un rechazo por plan de pago de Euler desactiva el envio al instante y lo explica", async () => {
+  const { adapter, chat, chats, sent, timers } = setup({
+    sendImpl: () => { throw new Error("[Premium Feature] Sending chats requires an API key & a paid plan") },
+  })
+  await adapter.connect("streamer", { sendReplies: true })
+  chat("hola")
+  assert.equal(chats[0].reply("respuesta uno"), true)
+  await flush()
+
+  const status = adapter.getStatus()
+  assert.equal(sent.length, 1) // un solo intento: reintentar no sirve
+  assert.equal(status.canSend, false)
+  assert.match(status.sendNote, /plan de pago/)
+  assert.equal(adapter.say("otra"), false)
+  timers.fireAll()
+  chat("de nuevo", "2")
+  assert.equal(chats[1].metadata.capabilities.reply, false) // vuelve al panel local
+})

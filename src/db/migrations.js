@@ -488,6 +488,68 @@ const MIGRATIONS = [
         ON roulette_spins(channel_id, viewer_id, created_at DESC);
     `,
   },
+  {
+    version: 6,
+    name: "loyalty_card",
+    up: `
+      -- Directos detectados por la tarjeta de fidelidad (!claim). Un directo
+      -- nuevo empieza tras un hueco sin actividad de chat o a mano desde el panel.
+      CREATE TABLE IF NOT EXISTS loyalty_streams (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        last_activity_at TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'auto'
+      );
+      CREATE INDEX IF NOT EXISTS idx_loyalty_streams_channel
+        ON loyalty_streams(channel_id, started_at DESC);
+      -- Un sello por viewer y directo: el UNIQUE es la garantia final.
+      CREATE TABLE IF NOT EXISTS loyalty_claims (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL REFERENCES viewer_identities(id) ON DELETE CASCADE,
+        stream_id TEXT NOT NULL REFERENCES loyalty_streams(id) ON DELETE CASCADE,
+        week_key TEXT NOT NULL,
+        stamp_number INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(channel_id, viewer_id, stream_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_loyalty_claims_week
+        ON loyalty_claims(channel_id, viewer_id, week_key);
+      -- Una tarjeta completa por viewer y semana.
+      CREATE TABLE IF NOT EXISTS loyalty_completions (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL REFERENCES viewer_identities(id) ON DELETE CASCADE,
+        week_key TEXT NOT NULL,
+        reward_points INTEGER NOT NULL,
+        delivered_at TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(channel_id, viewer_id, week_key)
+      );
+    `,
+  },
+  {
+    version: 7,
+    name: "chat_top_counts",
+    up: `
+      -- Mensajes por viewer en cada directo, para el widget Top 3 del chat.
+      -- Va por directo (loyalty_streams), asi se reinicia solo en cada stream.
+      CREATE TABLE IF NOT EXISTS chat_top_counts (
+        stream_id TEXT NOT NULL REFERENCES loyalty_streams(id) ON DELETE CASCADE,
+        viewer_key TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        username TEXT NOT NULL,
+        display TEXT NOT NULL DEFAULT '',
+        avatar_url TEXT NOT NULL DEFAULT '',
+        messages INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(stream_id, viewer_key)
+      );
+      CREATE INDEX IF NOT EXISTS idx_chat_top_counts_rank
+        ON chat_top_counts(stream_id, messages DESC, updated_at ASC);
+    `,
+  },
 ]
 
 function applyMigrations(db) {

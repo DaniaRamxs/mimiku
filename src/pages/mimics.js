@@ -136,7 +136,7 @@ async function uploadBlockFile(index, file) {
       kind: "mimic", name: file.name, mimeType: file.type, bytes: new Uint8Array(await file.arrayBuffer()),
     })
   } catch (error) { showToast("Error al guardar: " + error.message); return }
-  currentSequence[index].url = `http://127.0.0.1:7777${saved.url}`
+  currentSequence[index].url = `${(await ipcRenderer.invoke("overlay:getStatus")).baseUrl}${saved.url}`
   renderSequence()
   showToast("Archivo guardado localmente ✦")
 }

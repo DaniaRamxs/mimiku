@@ -77,14 +77,3 @@ test("registerActivityConsumer se suscribe al Event Engine y responde a chat_mes
   engine.emit(chatEvent("youtube", { platformUserId: "yt-9", username: "ana" }, "hola"))
   assert.equal(tracker.getActiveViewerIdentities().length, 1)
 })
-
-test("el rey del chat (onKingUpdate) se calcula por mensajes, no confunde plataformas", () => {
-  let kingCalls = []
-  const tracker = createActivityTracker({ onKingUpdate: king => kingCalls.push(king) })
-  tracker.recordMessage(chatEvent("twitch", { platformUserId: "tw-1", username: "luna" }, "hola"))
-  tracker.recordMessage(chatEvent("youtube", { platformUserId: "yt-1", username: "luna" }, "hola"))
-  tracker.recordMessage(chatEvent("youtube", { platformUserId: "yt-1", username: "luna" }, "hola de nuevo"))
-  const king = tracker.getKing()
-  assert.equal(king.platform, "youtube") // youtube-luna mandó 2 mensajes, twitch-luna solo 1
-  assert.equal(king.messages, 2)
-})

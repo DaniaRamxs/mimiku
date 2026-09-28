@@ -154,3 +154,28 @@ test("unloading cancels retries and closes an active socket without reconnecting
   assert.equal(connected.context.ws, null)
   assert.equal(connected.timers.size, 0)
 })
+
+test("overlay servido por HTTP conecta el WebSocket al mismo host y puerto (ruta /ws)", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../src/services/overlay.html"), "utf8")
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)[1]
+  const start = script.indexOf("function overlaySocketUrl")
+  const end = script.indexOf("function connectOverlay")
+  const overlaySocketUrl = vm.runInNewContext(`(${script.slice(start, end).trim().replace(/^function overlaySocketUrl/, "function")})`, {
+    location: { protocol: "http:", host: "overlay.mimiku.dev" },
+  })
+  assert.equal(overlaySocketUrl(), "ws://overlay.mimiku.dev/ws")
+})
+
+test("safeMediaUrl reubica audio y assets locales en el origen de la página", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../src/services/overlay.html"), "utf8")
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)[1]
+  const start = script.indexOf("function safeMediaUrl")
+  const end = script.indexOf("function showChatAvatar")
+  const safeMediaUrl = vm.runInNewContext(`(${script.slice(start, end).trim().replace(/^function safeMediaUrl/, "function")})`, {
+    location: { protocol: "http:", origin: "http://192.168.1.20:80" }, URL,
+  })
+  assert.equal(safeMediaUrl("http://127.0.0.1:7777/audio/hola.mp3"), "http://192.168.1.20/audio/hola.mp3")
+  assert.equal(safeMediaUrl("http://127.0.0.1:9999/assets/a.png"), "http://192.168.1.20/assets/a.png")
+  assert.equal(safeMediaUrl("https://cdn.example.com/x.png"), "https://cdn.example.com/x.png")
+  assert.equal(safeMediaUrl("javascript:alert(1)"), "")
+})

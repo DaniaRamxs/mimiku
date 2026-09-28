@@ -10,11 +10,59 @@ instalación nueva no contiene ni necesita IDs, canales, tokens, rutas o servici
 3. Conecta Twitch desde Ajustes si lo usas, o conecta Social Stream Ninja Desktop para recibir
    Twitch, YouTube, TikTok y otras plataformas compatibles.
 4. Configura comandos, Sound Triggers, Mimics, niveles y el overlay desde la interfaz.
-5. Añade `http://127.0.0.1:7777/overlay` como Browser Source en OBS.
+5. Añade `http://127.0.0.1:7777/overlay` como Browser Source en OBS. Para TikTok LIVE Studio consulta
+   [Overlay en TikTok LIVE Studio](#overlay-en-tiktok-live-studio).
 
 Economía, Mimics, niveles, perfiles, moderación, Arena, tienda, inventario, comandos y overlays usan
 SQLite/archivos locales como fuente de verdad. El botón **Doctor de Stream** comprueba el estado del
 sistema y **Copias de seguridad SQLite** conserva hasta cinco snapshots restaurables.
+
+## Overlay en TikTok LIVE Studio
+
+El overlay es una página web local (`/overlay`). OBS la acepta tal cual, pero el validador de la fuente
+de navegador de TikTok LIVE Studio puede rechazar URLs con IP o con puerto ("necesita una URL
+válida"). Mimiku ofrece varias formas de llegar a una URL que sí acepte. Todas se gestionan en
+**Ajustes > Overlay y red local**, donde ves el estado real del servidor (puerto e interfaz), todas
+las URLs utilizables con botón **Copiar** y un botón **Probar todas las URLs** que marca cuáles
+responden.
+
+1. **Prueba primero las URLs de la lista.** `http://localhost:7777/overlay`,
+   `http://127.0.0.1:7777/overlay` o la IP de red local (`http://192.168.x.x:7777/overlay`). Una
+   suele pasar el validador aunque otra no.
+2. **Usa el puerto 80.** En Ajustes cambia **Puerto del overlay** a `80` y pulsa **Guardar y
+   reiniciar servidor** (no hace falta cerrar Mimiku). La URL queda sin puerto:
+   `http://localhost/overlay`. Si el 80 está ocupado (IIS, Skype, otro servidor web) Mimiku te lo
+   indica y mantiene la configuración anterior; en Windows puedes ver quién lo usa con
+   `netstat -ano | findstr :80`. Si Windows niega el permiso, elige otro puerto o ejecuta Mimiku
+   como administrador.
+3. **Usa un hostname propio (truco del archivo hosts).** Algunos validadores prefieren un dominio con
+   aspecto real:
+   1. Abre el Bloc de notas **como administrador** y edita
+      `C:WindowsSystem32driversetchosts`.
+   2. Añade una línea, por ejemplo: `127.0.0.1    overlay.mimiku.dev`.
+   3. En Ajustes escribe `overlay.mimiku.dev` en **Hostname personalizado** y guarda. Aparecerá en la
+      lista de URLs: `http://overlay.mimiku.dev/overlay` (con el puerto 80) o
+      `http://overlay.mimiku.dev:7777/overlay`.
+   4. Pega esa URL en la fuente de navegador de LIVE Studio.
+
+   Mimiku solo **muestra** el hostname: nunca modifica el archivo hosts. Usa un dominio que no
+   pertenezca a otra persona, o uno reservado como `.test`/`.localhost`.
+4. **Alternativa: OBS + RTMP.** Si LIVE Studio sigue sin aceptar ninguna URL, compón la escena en OBS
+   (fuente de navegador con el overlay, que OBS sí acepta) y emite a TikTok por RTMP con el servidor y la
+   clave de retransmisión (stream key) que TikTok te entrega al preparar una emisión. En OBS:
+   **Ajustes > Emisión > Servicio: Personalizado**, pega el servidor y la clave, e inicia la
+   transmisión. La disponibilidad de la clave de retransmisión depende de tu cuenta y de las
+   condiciones vigentes de TikTok; compruébalo en su documentación oficial.
+
+### Red local y seguridad
+
+Por defecto el servidor escucha en `0.0.0.0` para responder por la IP de red local. Desde otros
+equipos solo se sirven `/overlay`, `/assets/` y `/audio/` (y el WebSocket `/ws`); el panel de
+mods, la API local y la ruta de Social Stream Ninja solo responden desde este mismo equipo. Si no
+necesitas acceso por red, desmarca **Permitir acceso desde la red local** y el servidor queda limitado
+a `127.0.0.1`. Las URLs que ya usas en OBS (`http://127.0.0.1:7777/overlay`) siguen funcionando: el
+puerto WebSocket 7778 se mantiene por compatibilidad y el overlay conecta además por `/ws` en el
+mismo puerto que el HTTP.
 
 ## Integraciones
 
@@ -69,7 +117,8 @@ npm run dist
 - Identidad externa canónica: `platform + platformUserId`; el fallback legacy siempre conserva el
   namespace de plataforma.
 - Renderer aislado con `contextIsolation`; las mutaciones cruzan IPC/API local validada.
-- APIs, overlay y relay usan loopback (`127.0.0.1`), no LAN.
+- El overlay se sirve en la red local si el streamer lo permite (Ajustes); la API local, el panel de
+  mods y el relay de Social Stream Ninja solo aceptan conexiones desde el propio equipo.
 - Los payloads externos se validan y el contenido dinámico se escapa antes de renderizarse.
 - Supabase y Social Stream Ninja son opcionales y no bloquean el arranque.
 

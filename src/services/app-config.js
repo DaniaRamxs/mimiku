@@ -35,6 +35,7 @@ function createAppConfigStore(getDatabase, options = {}) {
     const merged = {
       ...current,
       ...updates,
+      overlay: { ...current.overlay, ...(updates?.overlay || {}) },
       onboarding: { ...current.onboarding, ...(updates?.onboarding || {}) },
       workspace: { ...current.workspace, ...(updates?.workspace || {}) },
       streamer: { ...current.streamer, ...(updates?.streamer || {}) },

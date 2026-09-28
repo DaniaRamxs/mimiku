@@ -1,3 +1,5 @@
+const { MIN_PORT, MAX_PORT, cleanHostname } = require("./config-schema.js")
+
 function plainObject(value, name = "datos") {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name} inválidos`)
   const prototype = Object.getPrototypeOf(value)
@@ -64,4 +66,17 @@ function configUpdates(value) {
   return output
 }
 
-module.exports = { plainObject, text, integer, twitchChannel, configUpdates }
+// Estricto a propósito: la UI debe recibir un error claro en vez de un valor
+// corregido en silencio (a diferencia de normalizeOverlayConfig al leer de disco).
+function overlayConfig(value) {
+  const input = plainObject(value, "configuración del overlay")
+  const httpPort = integer(input.httpPort, { name: "Puerto del overlay", min: MIN_PORT, max: MAX_PORT })
+  const wsPort = integer(input.wsPort ?? 0, { name: "Puerto WebSocket", min: 0, max: MAX_PORT })
+  if (wsPort === httpPort) throw new Error("El puerto WebSocket debe ser distinto del puerto del overlay")
+  const rawHostname = text(input.customHostname, { max: 300 })
+  const customHostname = cleanHostname(rawHostname)
+  if (rawHostname && !customHostname) throw new Error("Hostname personalizado inválido (ejemplo: overlay.mimiku.dev)")
+  return { httpPort, wsPort, allowLan: input.allowLan !== false, customHostname }
+}
+
+module.exports = { plainObject, text, integer, twitchChannel, configUpdates, overlayConfig }

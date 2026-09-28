@@ -8,8 +8,9 @@ Práctica, para seguir en vivo durante la prueba. Referencia de arquitectura:
 
 - [ ] Abrir Mimiku. Debe abrir sin diálogos de error. Si aparece "Mimiku no pudo abrir su base de
       datos local", **detenerse aquí** — no es seguro continuar sin resolver eso primero.
-- [ ] Dashboard → "Servidor local" debe mostrar `🟢 127.0.0.1:7777`. Si muestra `🔴 Error`, revisar
-      si otra instancia de Mimiku (u otra app) está usando el puerto 7777/7778.
+- [ ] Dashboard → "Servidor local" debe mostrar `🟢 0.0.0.0:7777` (o `127.0.0.1:7777` si
+      se desactivó el acceso por red). Si muestra `🔴 Error`, revisar si otra instancia de Mimiku (u otra
+      app) usa el puerto; Ajustes → "Overlay y red local" muestra el motivo y permite cambiar el puerto.
 - [ ] Ajustes → completar/confirmar el nombre. El canal solo es necesario si se probará Twitch Native.
 - [ ] Twitch: pegar token OAuth, "Guardar y conectar". Dashboard → "Canal" debe pasar a
       `🟢 tu_canal`. Si queda en rojo, leer el mensaje de error mostrado (ya no es un error mudo).
@@ -79,3 +80,14 @@ Observar durante toda la prueba:
 - [ ] Revisar la consola/logs de Mimiku por errores no vistos en vivo.
 - [ ] Anotar cualquier cosa que se sintió inestable, lenta o confusa — es información real para
       priorizar la siguiente fase, no para esta.
+
+## TikTok LIVE nativo: comprobar que llegan mensajes
+
+"Conectado" solo significa que el WebSocket abrió; no prueba que lleguen chats.
+
+- [ ] Arrancar Mimiku con `MIMIKU_TIKTOK_RAW=1` (registra cada evento tal como sale de la librería, sin credenciales).
+- [ ] Conectar TikTok y, desde OTRA cuenta, escribir `hola mimiku` en el LIVE.
+- [ ] En la consola debe verse `[TIKTOK RAW] event: chat payload: {...}` con `content` y `user.displayId`.
+- [ ] Debe aparecer `[TikTok] usuario: hola mimiku` en el feed, y `!puntos` debe ejecutar el comando.
+- [ ] Si ves `[tiktok] chat descartado sin texto. Claves recibidas: ...`, la librería cambió el formato: revisar `normalizeChat`.
+- [ ] Desconectar, reconectar y repetir: cada mensaje debe salir una sola vez.
