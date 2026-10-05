@@ -96,8 +96,41 @@ async function discoverItems() {
   return getClient().refreshItemsFromVTS()
 }
 
+// ── Reacciones VTuber ───────────────────────────────────────────────────────
+async function connectedClient() {
+  if (!await ensureConnected()) throw new Error("VTube Studio no está conectado")
+  return getClient()
+}
+
+async function listHotkeys() { return (await connectedClient()).getHotkeys() }
+async function triggerHotkey(hotkeyID) { return (await connectedClient()).triggerHotkey(hotkeyID) }
+async function tintModel(color) { return (await connectedClient()).tintModel(color) }
+async function moveModel(step) { return (await connectedClient()).moveModel(step) }
+
+// La boca se inyecta ~12 veces por segundo: sin reconectar en cada llamada.
+function injectParameters(values) {
+  if (!isConnected()) return Promise.resolve(null)
+  return getClient().injectParameters(values)
+}
+
+async function listExpressions() { return (await connectedClient()).getExpressions() }
+async function createParameter(parameter) { return (await connectedClient()).createParameter(parameter) }
+async function setExpression(file, active) { return (await connectedClient()).setExpression(file, active) }
+async function getArtMeshes() { return (await connectedClient()).getArtMeshes() }
+async function loadCustomItem(item) { return (await connectedClient()).loadCustomItem(item) }
+async function pinItem(pin) { return (await connectedClient()).pinItem(pin) }
+async function setPhysics(physics) { return (await connectedClient()).setPhysics(physics) }
+
+// Al quitar accesorios no se reconecta: si VTS se cerro, ya no estan.
+function unloadItems(instanceIDs) {
+  if (!isConnected()) return Promise.resolve(null)
+  return getClient().unloadItems(instanceIDs)
+}
+
 module.exports = {
   init, connect, isConnected,
   spinItem, spinAvatar,
   getConfig, saveConfig, discoverModels, discoverItems,
+  listHotkeys, triggerHotkey, tintModel, moveModel, injectParameters,
+  listExpressions, setExpression, createParameter, getArtMeshes, loadCustomItem, pinItem, unloadItems, setPhysics,
 }

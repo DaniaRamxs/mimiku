@@ -112,6 +112,7 @@ function createSecretStore(getDatabase, safeStorage) {
   }
 
   return {
+    getSecret, setSecret,
     setTwitchToken, getTwitchToken, getTwitchStatus,
     setTikTokCredentials, clearTikTokCredentials, getTikTokCredentials, getTikTokStatus,
   }

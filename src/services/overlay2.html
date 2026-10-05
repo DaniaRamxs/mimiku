@@ -37,6 +37,60 @@ body{font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif}
 .fa-corner{position:absolute;left:50%;top:-34px;transform:translateX(-50%);font-size:18px;font-weight:900;letter-spacing:.2em;color:#fff;
   text-shadow:0 0 10px var(--fa-c),0 0 24px var(--fa-c);white-space:nowrap;animation:faCorner 1.6s ease-out forwards}
 @keyframes faCorner{0%{opacity:0;transform:translate(-50%,10px) scale(.5)}20%{opacity:1;transform:translate(-50%,0) scale(1.2)}100%{opacity:0;transform:translate(-50%,-30px) scale(1)}}
+/* ── Carcel (!carcel) ── */
+#jail-layer{position:fixed;z-index:20;display:flex;gap:14px;padding:18px;pointer-events:none;--jc-size:96px}
+#jail-layer.corner-top-left{top:0;left:0;flex-direction:column}
+#jail-layer.corner-top-right{top:0;right:0;flex-direction:column;align-items:flex-end}
+#jail-layer.corner-bottom-left{bottom:0;left:0;flex-direction:column-reverse}
+#jail-layer.corner-bottom-right{bottom:0;right:0;flex-direction:column-reverse;align-items:flex-end}
+.jc{--jc-frame:#3b3350;--jc-frame2:#1c1728;--jc-wall:#231d33;--jc-text:#f5f3ff;--jc-accent:#ff5a7a;
+  width:calc(var(--jc-size) + 40px);border-radius:14px;padding:8px;background:linear-gradient(160deg,var(--jc-frame),var(--jc-frame2));
+  box-shadow:0 14px 34px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12);animation:jcIn .5s cubic-bezier(.3,1.5,.5,1) both}
+#jail-layer.theme-pastel .jc{--jc-frame:#e9dce6;--jc-frame2:#cdb8c7;--jc-wall:#f7eef4;--jc-text:#5b3a48;--jc-accent:#e2487c}
+@keyframes jcIn{0%{opacity:0;transform:translateY(-30px) scale(.8)}100%{opacity:1;transform:none}}
+.jc.shake{animation:jcShake .45s ease-out}
+@keyframes jcShake{20%{transform:translateX(-6px) rotate(-2deg)}40%{transform:translateX(6px) rotate(2deg)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.jc.out{animation:jcOut .5s ease-in forwards}
+@keyframes jcOut{to{opacity:0;transform:translateY(20px) scale(.85)}}
+.jc-room{position:relative;height:calc(var(--jc-size) + 24px);border-radius:8px;overflow:hidden;
+  background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.08),transparent 60%),
+    repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 18px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.14) 0 1px,transparent 1px 30px),var(--jc-wall);
+  display:flex;align-items:center;justify-content:center}
+.jc-pic{width:var(--jc-size);height:var(--jc-size);border-radius:50%;background:var(--jc-accent);color:#fff;font-weight:900;
+  font-size:calc(var(--jc-size) * .42);display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:0 6px 16px rgba(0,0,0,.45);animation:jcSad 2.4s ease-in-out infinite}
+.jc-pic img{width:100%;height:100%;object-fit:cover}
+@keyframes jcSad{50%{transform:translateY(3px) rotate(-3deg)}}
+.jc.free .jc-pic{animation:jcJump .6s ease-out forwards}
+@keyframes jcJump{40%{transform:translateY(-22px) scale(1.08)}100%{transform:translateY(-60px) scale(.6);opacity:0}}
+/* Barrotes: caen de golpe al encerrar y suben al soltar */
+.jc-bars{position:absolute;inset:0;transform:translateY(-110%);
+  background:linear-gradient(180deg,transparent 0 14%,#6b6480 14% 18%,transparent 18% 82%,#6b6480 82% 86%,transparent 86%),
+    repeating-linear-gradient(90deg,transparent 0 12px,#8d86a3 12px 14px,#4b445d 14px 19px,#2d2838 19px 21px,transparent 21px 30px);
+  animation:jcBars .55s cubic-bezier(.5,0,.6,1.6) .25s forwards}
+@keyframes jcBars{to{transform:translateY(0)}}
+.jc.free .jc-bars{animation:jcBarsUp .45s ease-in forwards}
+@keyframes jcBarsUp{from{transform:translateY(0)}to{transform:translateY(-110%)}}
+.jc-plate{margin-top:7px;text-align:center;color:var(--jc-text)}
+.jc-name{font-size:13px;font-weight:900;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jc-time{font-size:12px;font-weight:800;color:var(--jc-accent);font-variant-numeric:tabular-nums}
+.jc-bar{height:4px;margin-top:4px;border-radius:4px;background:rgba(0,0,0,.25);overflow:hidden}
+.jc-bar i{display:block;height:100%;background:var(--jc-accent);transform-origin:left center}
+
+/* Cartel central */
+#jail-banner{position:fixed;left:50%;top:14%;z-index:30;transform:translateX(-50%);pointer-events:none}
+.jb{display:flex;align-items:center;gap:14px;max-width:80vw;padding:14px 26px;border-radius:18px;color:#fff;
+  background:linear-gradient(135deg,rgba(40,14,28,.94),rgba(22,12,36,.94));border:2px solid #ff5a7a;
+  box-shadow:0 0 30px rgba(255,90,122,.45),0 18px 40px rgba(0,0,0,.5);
+  font-size:26px;font-weight:900;line-height:1.2;text-align:left;animation:jbIn .55s cubic-bezier(.3,1.6,.5,1) both}
+.jb b{color:#ff8fa6}
+.jb svg{flex:none;width:40px;height:40px;fill:#ff8fa6}
+.jb.free{border-color:#4ade80;box-shadow:0 0 26px rgba(74,222,128,.45),0 18px 40px rgba(0,0,0,.5);font-size:22px}
+.jb.free b{color:#86efac}.jb.free svg{fill:#86efac}
+.jb.out{animation:jbOut .4s ease-in forwards}
+@keyframes jbIn{0%{opacity:0;transform:scale(1.7) rotate(-4deg)}60%{opacity:1;transform:scale(.95) rotate(1deg)}100%{transform:none}}
+@keyframes jbOut{to{opacity:0;transform:translateY(-16px) scale(.95)}}
 </style>
 </head>
 <body>
@@ -229,6 +283,124 @@ function faStep(now) {
   if (faItems.length) requestAnimationFrame(faStep); else faRunning = false;
 }
 
+// ── Carcel (!carcel) ──────────────────────────────────────────────────────────
+// El servidor decide quien entra y quien sale; el overlay solo cuenta hacia
+// atras para mostrarlo y, si pierde la conexion, suelta por su cuenta al acabar.
+var JAIL_BANNER_MS = 4500, JAIL_FREE_BANNER_MS = 2600;
+var JAIL_LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 1 1 6 0v3H9zm3 4a2 2 0 0 1 1 3.7V19h-2v-1.3A2 2 0 0 1 12 14z"/></svg>';
+var JAIL_OPEN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-4V7a3 3 0 1 1 6 0v1h2V7a5 5 0 0 0-5-5zm-5 12a2 2 0 0 1 1 3.7V19h-2v-1.3A2 2 0 0 1 12 14z"/></svg>';
+var jailCfg = { corner: "bottom-left", size: 96, theme: "noche", enabled: true };
+var jailCells = {}, jailOffset = 0, jailTicker = null;
+var jailBanners = [], jailBannerBusy = false;
+
+function jailLayer() {
+  var layer = document.getElementById("jail-layer");
+  if (!layer) { layer = document.createElement("div"); layer.id = "jail-layer"; document.body.appendChild(layer); }
+  var corner = ["top-left","top-right","bottom-left","bottom-right"].indexOf(jailCfg.corner) >= 0 ? jailCfg.corner : "bottom-left";
+  layer.className = "corner-" + corner + " theme-" + (jailCfg.theme === "pastel" ? "pastel" : "noche");
+  layer.style.setProperty("--jc-size", finiteNumber(jailCfg.size, 96, 56, 200) + "px");
+  return layer;
+}
+
+function setJailConfig(m) {
+  jailCfg = { corner: m.corner, size: m.size, theme: m.theme, enabled: m.enabled !== false };
+  jailLayer();
+}
+
+function jailFormat(ms) {
+  var s = Math.max(0, Math.ceil(ms / 1000));
+  return Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + s % 60;
+}
+
+function jailTick() {
+  var now = Date.now() + jailOffset;
+  var keys = Object.keys(jailCells);
+  keys.forEach(function(key) {
+    var cell = jailCells[key];
+    var left = cell.until - now;
+    cell.el.querySelector(".jc-time").textContent = jailFormat(left);
+    cell.el.querySelector(".jc-bar i").style.transform = "scaleX(" + Math.max(0, Math.min(1, left / cell.total)) + ")";
+    // Respaldo: si el aviso del servidor no llega (overlay desconectado), se suelta igual.
+    if (left <= -1500) freeJailCell(key, false);
+  });
+  if (!keys.length) { clearInterval(jailTicker); jailTicker = null; }
+}
+
+function addJailCell(m, withBanner) {
+  var key = String(m.key || "");
+  if (!key || jailCells[key]) return;
+  var el = document.createElement("div");
+  el.className = "jc";
+  el.innerHTML = '<div class="jc-room"><div class="jc-pic"></div><div class="jc-bars"></div></div>' +
+    '<div class="jc-plate"><div class="jc-name"></div><div class="jc-time"></div><div class="jc-bar"><i></i></div></div>';
+  var pic = el.querySelector(".jc-pic");
+  var url = /^https:\/\//.test(m.avatar || "") ? m.avatar : "";
+  if (url) { var img = document.createElement("img"); img.src = url; pic.appendChild(img); }
+  else pic.textContent = String(m.target || "?").charAt(0).toUpperCase();
+  el.querySelector(".jc-name").textContent = String(m.target || "?").slice(0, 30);
+  jailLayer().appendChild(el);
+  // Golpe de los barrotes al cerrar la celda.
+  setTimeout(function() { el.classList.add("shake"); }, 700);
+  var until = finiteNumber(m.until, Date.now() + 60000, 0, 1e15);
+  jailCells[key] = { el: el, until: until, total: Math.max(1000, finiteNumber(m.durationMs, until - (Date.now() + jailOffset), 1000, 36e5)), name: m.target };
+  if (!jailTicker) jailTicker = setInterval(jailTick, 250);
+  jailTick();
+  if (withBanner) {
+    queueJailBanner("", '<b></b> ha encerrado a <b></b> en la celda por ' , [m.jailer, m.target], String(m.durationText || "1 minuto"), JAIL_BANNER_MS);
+  }
+}
+
+function freeJailCell(key, announce) {
+  var cell = jailCells[key];
+  if (!cell) return;
+  delete jailCells[key];
+  cell.el.classList.add("free");
+  setTimeout(function() { cell.el.classList.add("out"); }, 550);
+  setTimeout(function() { cell.el.remove(); }, 1050);
+  if (announce) queueJailBanner("free", "<b></b> quedó libre", [cell.name], "", JAIL_FREE_BANNER_MS);
+}
+
+// Los nombres van por textContent: nunca se meten como HTML.
+function queueJailBanner(kind, template, names, tail, ms) {
+  jailBanners.push({ kind: kind, template: template, names: names, tail: tail, ms: ms });
+  if (!jailBannerBusy) nextJailBanner();
+}
+
+function nextJailBanner() {
+  var item = jailBanners.shift();
+  if (!item) { jailBannerBusy = false; return; }
+  jailBannerBusy = true;
+  var host = document.getElementById("jail-banner");
+  if (!host) { host = document.createElement("div"); host.id = "jail-banner"; document.body.appendChild(host); }
+  var box = document.createElement("div");
+  box.className = "jb" + (item.kind === "free" ? " free" : "");
+  var text = document.createElement("span");
+  text.innerHTML = item.template;
+  text.querySelectorAll("b").forEach(function(b, i) { b.textContent = String(item.names[i] || "?").slice(0, 30); });
+  if (item.tail) text.appendChild(document.createTextNode(item.tail));
+  box.innerHTML = item.kind === "free" ? JAIL_OPEN_SVG : JAIL_LOCK_SVG;
+  box.appendChild(text);
+  host.innerHTML = "";
+  host.appendChild(box);
+  var ms = jailBanners.length > 1 ? Math.min(item.ms, 2200) : item.ms;
+  setTimeout(function() {
+    box.classList.add("out");
+    setTimeout(function() { box.remove(); nextJailBanner(); }, 400);
+  }, ms);
+}
+
+function handleJailAdd(m) {
+  if (Number.isFinite(m.serverNow)) jailOffset = m.serverNow - Date.now();
+  addJailCell(m, true);
+}
+
+function handleJailState(m) {
+  if (Number.isFinite(m.serverNow)) jailOffset = m.serverNow - Date.now();
+  var alive = {};
+  (Array.isArray(m.prisoners) ? m.prisoners : []).forEach(function(p) { alive[p.key] = true; addJailCell(p, false); });
+  Object.keys(jailCells).forEach(function(key) { if (!alive[key]) freeJailCell(key, false); });
+}
+
 // ── Conexion con Mimiku ───────────────────────────────────────────────────────
 var ws = null, reconnectTimer = null, reconnectDelay = 1000, overlayClosing = false;
 
@@ -238,6 +410,10 @@ function handleOverlayMessage(e) {
   if (m.type === "float_avatar")         showFloatAvatar(m);
   if (m.type === "float_avatar_remove")  removeFloatAvatar(m);
   if (m.type === "float_avatars_config") setFloatAvatarsConfig(m);
+  if (m.type === "jail_add")             handleJailAdd(m);
+  if (m.type === "jail_release")         freeJailCell(String(m.key || ""), m.announce !== false);
+  if (m.type === "jail_state")           handleJailState(m);
+  if (m.type === "jail_config")          setJailConfig(m);
 }
 
 function overlaySocketUrl() {

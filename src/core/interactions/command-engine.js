@@ -30,12 +30,15 @@ function createCommandEngine(overrides = {}) {
   const boxService = () => overrides.boxes || require("../../services/boxes.js").getDefaultBoxService()
   const loyaltyService = () => overrides.loyalty || require("../../services/loyalty.js").getDefaultLoyaltyService()
   const floatAvatars = () => overrides.floatAvatars || require("../../services/float-avatars.js").getDefaultFloatAvatars()
+  const jail = () => overrides.jail || require("../../services/jail.js").getDefaultJail()
+  const gachapon = () => overrides.gachapon || require("../../services/gachapon.js").getDefaultGachapon()
+  const plinko = () => overrides.plinko || require("../../services/plinko.js").getDefaultPlinko()
   const commandConfig = overrides.commandConfig || { evaluate: () => ({ allowed: true }), record: () => {} }
 
   const now = overrides.now || Date.now
   let lastEffectAt = -Infinity
 
-  const { getViewer, getViewerFor, addPoints, getRanking, claimDaily, claimWork, depositar, retirar, verBanco, robar } = economy
+  const { getViewer, getViewerFor, addPoints, getRanking, claimDaily, claimWork, depositar, retirar, verBanco, robar, regalar } = economy
 
   function handle(event) {
     const text = event.message && event.message.text
@@ -210,6 +213,121 @@ function createCommandEngine(overrides = {}) {
       return
     }
 
+    // Carcel del Overlay 2 (solo subs por defecto, ver command-config).
+    if (cmd === "!carcel" || cmd === "!jail") {
+      if (!parts[1]) { say(`Uso: !carcel @usuario`); return }
+      Promise.resolve(jail().jail(actorIdentity, parts[1])).then(result => {
+        if (result.ok) { say(`@${display} encerró a @${result.target} en la celda por ${result.durationText}.`); return }
+        const reasons = {
+          "no-target": `Uso: !carcel @usuario`,
+          streamer: `@${display} no se puede encerrar a quien hace el directo.`,
+          already: `@${display} esa persona ya está en la celda.`,
+          full: `@${display} la cárcel está llena, espera a que salga alguien.`,
+        }
+        if (reasons[result.reason]) say(reasons[result.reason])
+      }).catch(error => console.error("[jail]", error.message))
+      return
+    }
+
+    // Gachapon: paga puntos y sale un personaje al azar; se muestra en el Overlay 3.
+    if (cmd === "!gachapon") {
+      let result
+      try {
+        result = gachapon().pull(actorIdentity, `gachapon:${event.platform}:${event.id || `${username}:${now()}`}`)
+      } catch (error) {
+        console.error("[gachapon]", error.message)
+        say(`@${display} el gachapon falló, inténtalo de nuevo.`)
+        return
+      }
+      if (!result.ok) {
+        say(result.reason === "funds"
+          ? `@${display} necesitas ${result.price} puntos y tienes ${result.balance}.`
+          : `@${display} el gachapon todavía no tiene personajes.`)
+        return
+      }
+      const cost = result.free ? " (tirada gratis)" : result.price > 0 ? ` (-${result.price} pts)` : ""
+      const stealHint = result.shielded ? " Tiene inmunidad a robos: nadie se lo puede quitar."
+        : result.stealSeconds ? ` VIP, mods y subs tienen ${result.stealSeconds} s para robarlo con !robarpj` : ""
+      say(`@${display} giró el gachapon${cost} y le salió: ${result.prize.name} [${result.prize.rarityLabel}].${stealHint}`)
+      Promise.resolve(gachapon().show(actorIdentity, result)).catch(error => console.error("[gachapon]", error.message))
+      return
+    }
+
+    // Plinko: una bola con el precio y los premios de la pagina de canje (solo VIP/mod/sub por defecto).
+    if (cmd === "!plinko") {
+      let result
+      try {
+        result = plinko().playAs(actorIdentity, `plinko-chat:${event.platform}:${event.id || `${username}:${now()}`}`)
+      } catch (error) {
+        console.error("[plinko]", error.message)
+        say(`@${display} el Plinko falló, inténtalo de nuevo.`)
+        return
+      }
+      if (!result.ok) {
+        say(`@${display} el Plinko cuesta ${result.price} puntos y tienes ${result.balance}.`)
+        return
+      }
+      const { TIER_LABELS } = require("../../services/plinko.js")
+      const prize = result.prize
+        ? `ganó ${result.prize.row.name} [${TIER_LABELS[result.tier]}, ${result.prize.kind === "card" ? "gachapon" : "Mimic"}]`
+        : "no ganó nada"
+      say(`@${display} soltó la bola en el Plinko (${result.free ? "bola gratis" : `-${result.price} pts`}): cayó en ${TIER_LABELS[result.tier]} y ${prize}.`)
+      return
+    }
+
+    // Robar el ultimo personaje del gachapon (solo VIP/mod/sub por defecto, ver command-config).
+    if (cmd === "!robarpj") {
+      let result
+      try {
+        result = gachapon().steal(actorIdentity)
+      } catch (error) {
+        console.error("[gachapon] robarpj:", error.message)
+        say(`@${display} el robo falló, inténtalo de nuevo.`)
+        return
+      }
+      if (result.ok) {
+        say(`@${display} le robó ${result.prize.name} [${result.prize.rarityLabel}] a @${result.owner}.`)
+        return
+      }
+      const reasons = {
+        none: `@${display} no hay ningún personaje para robar ahora mismo.`,
+        own: `@${display} no te puedes robar a ti mismo.`,
+        gone: `@${display} llegaste tarde, ese personaje ya no está.`,
+        shielded: `@${display} @${result.owner} tiene inmunidad a robos, no le puedes quitar nada.`,
+      }
+      if (reasons[result.reason]) say(reasons[result.reason])
+      return
+    }
+
+    // Regalar un personaje propio del gachapon a otro viewer de la misma plataforma.
+    if (cmd === "!regalarpj" || cmd === "!regalarpersonaje") {
+      let result
+      try {
+        result = gachapon().gift(actorIdentity, parts[1], parts.slice(2).join(" "))
+      } catch (error) {
+        console.error("[gachapon] regalarpj:", error.message)
+        say(`@${display} el regalo falló, inténtalo de nuevo.`)
+        return
+      }
+      if (result.ok) {
+        say(`@${display} le regaló ${result.prize.name} [${result.prize.rarityLabel}] a @${result.to}.`)
+        return
+      }
+      const list = result.owned && result.owned.length ? ` Tienes: ${result.owned.join(", ")}` : ""
+      const reasons = {
+        usage: `Uso: !regalarpj @usuario <personaje>.${list}`,
+        empty: `@${display} no tienes personajes del gachapon para regalar.`,
+        unknown: `@${display} no conozco a @${result.target}, tiene que haber escrito en el chat antes.`,
+        self: `@${display} no te puedes regalar un personaje a ti mismo.`,
+        "not-owned": `@${display} no tienes ese personaje.${list}`,
+        ambiguous: `@${display} hay varios que coinciden, escribe el nombre completo.${list}`,
+        stealable: `@${display} ese personaje todavía se puede robar, espera ${result.seconds} s para regalarlo.`,
+        "special-only": `@${display} de ese personaje solo tienes copias con rango subido o funda. Esas se regalan con un tradeo en la página de canje.`,
+      }
+      if (reasons[result.reason]) say(reasons[result.reason])
+      return
+    }
+
     // Tarjeta de fidelidad semanal: un sello por directo.
     if (cmd === "!claim") {
       const result = loyaltyService().claim(actorIdentity)
@@ -323,6 +441,16 @@ function createCommandEngine(overrides = {}) {
       return
     }
 
+    if (cmd === "!regalar" || cmd === "!regalarpuntos") {
+      const target = parts[1]?.replace("@", "").toLowerCase()
+      const amount = parseInt(parts[2])
+      if (!target || isNaN(amount)) { say(`Uso: !regalar @usuario cantidad`); return }
+      const result = regalar(username, display, target, amount, platform, event.actor.platformUserId)
+      if (result.error) { say(`@${display} ${result.error}`); return }
+      say(result.msg)
+      return
+    }
+
     if (cmd === "!moneda" || cmd === "!coin" || cmd === "!caracruz") {
       const amount = parseInt(parts[1])
       if (isNaN(amount) || amount <= 0) { say(`Uso: !moneda [apuesta]`); return }
@@ -343,7 +471,8 @@ function createCommandEngine(overrides = {}) {
     }
 
     if (cmd === "!daily") {
-      const result = claimDaily(username, display, platform, event.actor.platformUserId)
+      // Los subs de Twitch (insignia en el mensaje) reciben el daily grande.
+      const result = claimDaily(username, display, platform, event.actor.platformUserId, { sub: platform === "twitch" && event.actor.isSubscriber === true })
       say(result.msg)
       if (result.ok) notify("twitch:event", { type: "daily", text: result.msg, username })
       return

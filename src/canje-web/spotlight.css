@@ -1,0 +1,116 @@
+/* Tienda: carrusel "Decora tu perfil". La diapositiva activa va al centro y
+   las vecinas asoman giradas a los lados; en movil solo se ve la activa. */
+
+.spot { --spot-ms: 6s; margin-bottom: 30px; }
+.spot-more { align-self: center; }
+.spot-carousel { position: relative; outline: none; padding-bottom: 34px; touch-action: pan-y; overflow-x: clip; }
+.spot-carousel:focus-visible .spot-slide.is-active { outline: 3px solid var(--accent); outline-offset: 3px; }
+.spot-stage { position: relative; height: 300px; perspective: 1400px; }
+
+.spot-slide {
+  --rc: var(--r-comun); --w: min(760px, 74%);
+  position: absolute; top: 0; left: 50%; width: var(--w); height: 100%; margin-left: calc(var(--w) / -2);
+  border-radius: 26px; overflow: hidden; background: var(--surface); border: 1px solid var(--line);
+  opacity: 0; pointer-events: none; transform: scale(.7); user-select: none;
+  transition: transform .75s cubic-bezier(.22, .9, .25, 1), opacity .6s, filter .6s, box-shadow .6s;
+}
+.spot-slide.r-raro { --rc: var(--r-raro); }
+.spot-slide.r-epico { --rc: var(--r-epico); }
+.spot-slide.r-legendario { --rc: var(--r-legendario); }
+.spot-slide.is-active {
+  z-index: 3; opacity: 1; transform: none; pointer-events: auto; border-color: color-mix(in srgb, var(--rc) 60%, transparent);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, .55), 0 0 40px color-mix(in srgb, var(--rc) 30%, transparent);
+}
+.spot-slide.is-prev, .spot-slide.is-next { z-index: 2; opacity: .45; pointer-events: auto; cursor: pointer; filter: brightness(.5) saturate(.8); }
+.spot-slide.is-prev { transform: translateX(-60%) scale(.74) rotateY(-16deg); }
+.spot-slide.is-next { transform: translateX(60%) scale(.74) rotateY(16deg); }
+.spot-slide:not(.is-active) .spot-body { opacity: 0; }
+.spot-body { transition: opacity .4s; }
+.spot-slide.is-prev:hover, .spot-slide.is-next:hover { opacity: .75; filter: brightness(.75); }
+/* Las que no se ven no gastan en animar sus particulas. */
+.spot-slide:not(.is-active):not(.is-prev):not(.is-next) * { animation-play-state: paused !important; }
+
+/* Banner de fondo con un zoom lento en la activa */
+.spot-slide > .pf-banner { position: absolute; inset: 0; height: 100%; transition: transform 6s linear; }
+.spot-slide.is-active > .pf-banner { transform: scale(1.06); }
+
+/* Legendarios: un brillo cruza la diapositiva activa */
+.spot-slide.r-legendario.is-active::after {
+  content: ""; position: absolute; z-index: 4; inset: -10% -70%; pointer-events: none;
+  background: linear-gradient(100deg, transparent 42%, rgba(255, 255, 255, .28) 50%, transparent 58%);
+  animation: spot-shine 3.8s ease-in-out infinite;
+}
+
+.spot-body {
+  position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; gap: 22px; padding: 70px 26px 22px;
+  background: linear-gradient(transparent, rgba(12, 8, 24, .55) 35%, rgba(12, 8, 24, .92));
+}
+.spot-body .pf-avatar { margin-bottom: 4px; }
+.spot-info { flex: 1; min-width: 0; }
+.spot-kind {
+  display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+  color: #120d20; background: var(--rc);
+}
+.spot-slide.r-legendario .spot-kind { background: linear-gradient(90deg, #f59e0b, #fde68a, #f472b6, #f59e0b); background-size: 300% 100%; animation: spot-chip 4s linear infinite; }
+.spot-name { margin: 6px 0 2px; font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 38px); line-height: 1; text-shadow: 0 3px 12px rgba(0, 0, 0, .6); }
+.spot-desc { margin: 0; font-size: 14px; color: #ddd6fe; max-width: 46ch; }
+.spot-row { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+.spot-price { font-family: var(--font-display); font-size: 22px; color: var(--r-legendario); }
+.spot-price.is-owned { color: var(--ok); font-size: 18px; }
+
+/* Entrada escalonada del texto cada vez que una diapositiva pasa a activa */
+.spot-slide.is-active .spot-info > *, .spot-slide.is-active .spot-body .pf-avatar { animation: spot-in .6s cubic-bezier(.2, .9, .3, 1.15) backwards; }
+.spot-slide.is-active .spot-body .pf-avatar { animation-name: spot-pop; }
+.spot-slide.is-active .spot-info > :nth-child(2) { animation-delay: .08s; }
+.spot-slide.is-active .spot-info > :nth-child(3) { animation-delay: .16s; }
+.spot-slide.is-active .spot-info > :nth-child(4) { animation-delay: .24s; }
+
+/* Flechas */
+.spot-arrow {
+  position: absolute; z-index: 5; top: 150px; width: 46px; height: 46px; margin-top: -23px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--line); background: rgba(27, 20, 48, .85); color: var(--text); font: 700 30px/1 var(--font-body); cursor: pointer;
+  backdrop-filter: blur(6px); transition: transform .2s var(--ease), background .2s, border-color .2s;
+}
+.spot-arrow.is-prev { left: 8px; }
+.spot-arrow.is-next { right: 8px; }
+.spot-arrow:hover { transform: scale(1.1); border-color: var(--accent); background: var(--surface-2); }
+.spot-arrow:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Puntos con barra de tiempo: al llenarse pasa a la siguiente */
+.spot-dots { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: center; gap: 8px; }
+.spot-dot { position: relative; width: 10px; height: 10px; padding: 0; border: 0; border-radius: 999px; overflow: hidden; background: var(--line); cursor: pointer; transition: width .35s var(--ease), background .2s; }
+.spot-dot:hover { background: var(--muted); }
+.spot-dot:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.spot-dot.is-active { width: 44px; background: rgba(190, 170, 255, .25); }
+.spot-fill { position: absolute; inset: 0; transform-origin: left; transform: scaleX(0); background: var(--accent); border-radius: inherit; }
+.spot-dot.is-active .spot-fill { animation: spot-progress var(--spot-ms) linear forwards; }
+.spot-carousel.is-paused .spot-fill, .spot-carousel.is-hidden-tab .spot-fill { animation-play-state: paused; }
+
+/* Cosmetico señalado al llegar desde la Tienda */
+.pf-shop-item.is-spotlight { animation: spot-flag 1.2s ease-out 2; }
+
+@keyframes spot-shine { 0%, 45% { transform: translateX(-60%); } 85%, 100% { transform: translateX(60%); } }
+@keyframes spot-chip { to { background-position: 300% 0; } }
+@keyframes spot-in { from { opacity: 0; transform: translateY(14px); } }
+@keyframes spot-pop { from { opacity: 0; transform: scale(.6) rotate(-8deg); } }
+@keyframes spot-progress { to { transform: scaleX(1); } }
+@keyframes spot-flag { 0% { box-shadow: 0 0 0 0 var(--accent); transform: translateY(-4px); } 100% { box-shadow: 0 0 0 16px transparent; transform: none; } }
+
+@media (max-width: 720px) {
+  .spot-stage { height: 380px; }
+  .spot-slide { --w: 100%; border-radius: 20px; }
+  .spot-slide.is-prev { transform: translateX(-104%) scale(.9); opacity: 0; }
+  .spot-slide.is-next { transform: translateX(104%) scale(.9); opacity: 0; }
+  .spot-body { flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 40px 16px 18px; }
+  .spot-row { justify-content: center; }
+  .spot-arrow { top: 120px; width: 38px; height: 38px; margin-top: -19px; font-size: 24px; }
+  .spot-desc { font-size: 13px; }
+}
+
+/* Sin movimiento: no hay avance automatico ni transiciones (se cambia a mano). */
+@media (prefers-reduced-motion: reduce) {
+  .spot-slide, .spot-slide > .pf-banner, .spot-dot { transition: none; }
+  .spot-slide.is-active > .pf-banner { transform: none; }
+  .spot-dot.is-active .spot-fill { animation: none; transform: scaleX(1); }
+  .spot-slide.is-active .spot-info > *, .spot-slide.is-active .spot-body .pf-avatar, .spot-slide::after, .spot-kind, .pf-shop-item.is-spotlight { animation: none !important; }
+}

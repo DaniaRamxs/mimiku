@@ -160,6 +160,7 @@ ipcMain.handle("twitch:connect", (_, input = {}) => {
 })
 
 ipcMain.handle("twitch:disconnect", () => twitch().disconnect())
+ipcMain.handle("twitch:redemptionsStatus", () => twitch().getRedemptionsStatus())
 
 ipcMain.handle("legacy:import", async () => {
   if (!appConfig.isLegacySupabaseConfigured()) {
@@ -325,6 +326,115 @@ ipcMain.handle("floatAvatars:test", () => {
   for (const [key, name, status, color] of demo) overlay().broadcast({ type: "float_avatar", key, name, status, color, avatar: null })
   return { ok: true }
 })
+
+// ── IPC: carcel (!carcel, Overlay 2) ─────────────────────────────────────────
+// Prueba: encierra a un preso de ejemplo sin pasar por el chat ni gastar celdas reales.
+ipcMain.handle("jail:test", () => {
+  const config = widgets().getJailConfig()
+  overlay().broadcast({
+    type: "jail_add", key: `jail:demo:${Date.now()}`, target: "ViewerDemo", avatar: null, jailer: "SubDemo",
+    durationMs: 15000, serverNow: Date.now(), until: Date.now() + 15000,
+    durationText: require("./src/services/jail.js").formatDuration(config.duration_s),
+  })
+  return { ok: true }
+})
+ipcMain.handle("jail:releaseAll", () => { require("./src/services/jail.js").getDefaultJail().releaseAll(); return { ok: true } })
+
+// ── IPC: gachapon (!gachapon, Overlay 3) ─────────────────────────────────────
+const gachapon = () => require("./src/services/gachapon.js").getDefaultGachapon()
+ipcMain.handle("gachapon:test", () => gachapon().demo())
+ipcMain.handle("gachapon:getConfig", () => gachapon().getConfig())
+ipcMain.handle("gachapon:setConfig", (_, input) => gachapon().setConfig(input))
+// Comision del mercado del gachapon (pagina de canje)
+const gachaMarket = () => require("./src/services/gacha-market.js").createGachaMarket({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("gachaMarket:getConfig", () => gachaMarket().getConfig())
+ipcMain.handle("gachaMarket:setConfig", (_, input) => gachaMarket().setConfig(input))
+// Precio del Plinko (minijuego de la pagina de canje)
+const plinko = () => require("./src/services/plinko.js").createPlinko({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("plinko:getConfig", () => plinko().getConfig())
+ipcMain.handle("plinko:setConfig", (_, input) => plinko().setConfig(input))
+// Precios de los demas minijuegos de la pagina de canje
+const minigamesConfig = () => require("./src/services/minigames.js").createMinigames({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("minigames:getConfig", () => minigamesConfig().getConfig())
+ipcMain.handle("minigames:setConfig", (_, input) => minigamesConfig().setConfig(input))
+// Tienda de efectos de la pagina de canje (precio y duracion de cada efecto)
+const effectsShop = () => require("./src/services/effects-shop.js").createEffectsShop({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("effectsShop:getConfig", () => effectsShop().getConfig())
+ipcMain.handle("effectsShop:setConfig", (_, input) => effectsShop().setConfig(input))
+// Copias necesarias para subir de rango una carta (pagina de canje)
+const cardRanks = () => require("./src/services/card-ranks.js").createCardRanks({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("cardRanks:getConfig", () => cardRanks().getConfig())
+ipcMain.handle("cardRanks:setConfig", (_, input) => cardRanks().setConfig(input))
+// Pase de batalla (pestana Pase de la pagina de canje)
+const battlePass = () => require("./src/services/battle-pass.js").getDefaultBattlePass()
+ipcMain.handle("battlePass:summary", () => battlePass().summary())
+ipcMain.handle("battlePass:setConfig", (_, input) => battlePass().setConfig(input))
+ipcMain.handle("battlePass:startSeason", (_, input) => battlePass().startSeason(input))
+ipcMain.handle("battlePass:endSeason", () => battlePass().endSeason())
+ipcMain.handle("battlePass:markDelivered", (_, input) => battlePass().markDelivered(input))
+// Pase Sub: que cofre regala
+const subPass = () => require("./src/services/sub-pass.js").createSubPass({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("subPass:getConfig", () => {
+  const platform = require("./src/services/local-runtime.js").getLocalPlatform()
+  const channel = require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel
+  return { ...subPass().getConfig(), boxes: platform.mimics.listBoxes(String(channel || "").toLowerCase()).map(box => ({ id: box.id, name: box.name })) }
+})
+ipcMain.handle("subPass:setConfig", (_, input) => subPass().setConfig(input))
+
+// Apoyo al proyecto: enlace de propinas y aportes apuntados a mano (pestana Top)
+const support = () => require("./src/services/support.js").getDefaultSupport()
+ipcMain.handle("support:getConfig", () => support().getConfig())
+ipcMain.handle("support:setConfig", (_, input = {}) => support().setConfig(input))
+ipcMain.handle("support:listDonations", () => support().listDonations())
+ipcMain.handle("support:register", (_, input = {}) => support().registerDonation({
+  username: validate.text(input.username, { name: "Usuario", max: 80, required: true }),
+  platform: validate.text(input.platform, { name: "Plataforma", max: 20 }) || "twitch",
+  amount: Number(input.amount),
+  note: validate.text(input.note, { name: "Nota", max: 120 }),
+}))
+ipcMain.handle("support:undo", (_, id) => support().undoDonation(validate.text(id, { name: "Aporte", max: 80, required: true })))
+
+// StreamElements: las propinas se apuntan solas (token JWT cifrado en el almacen de secretos)
+const streamElements = () => require("./src/services/streamelements.js").getDefaultStreamElements()
+ipcMain.handle("se:status", () => streamElements().status())
+ipcMain.handle("se:setToken", (_, token) => streamElements().setToken(validate.text(token, { name: "Token", max: 4096 })))
+ipcMain.handle("se:pending", () => streamElements().listPending())
+ipcMain.handle("se:assign", (_, input = {}) => streamElements().assign(validate.text(input.id, { name: "Propina", max: 80, required: true }), {
+  username: validate.text(input.username, { name: "Usuario", max: 80, required: true }),
+  platform: validate.text(input.platform, { name: "Plataforma", max: 20 }) || "twitch",
+  amountUsd: input.amountUsd === undefined || input.amountUsd === null || input.amountUsd === "" ? null : Number(input.amountUsd),
+}))
+ipcMain.handle("se:dismiss", (_, id) => streamElements().dismiss(validate.text(id, { name: "Propina", max: 80, required: true })))
+
+// ── IPC: página de canje para viewers (servidor propio + ngrok) ──────────────
+const canje = () => require("./src/services/canje.js").getDefaultCanje()
+ipcMain.handle("canje:getSettings", () => canje().getSettings())
+ipcMain.handle("canje:saveSettings", (_, input = {}) => canje().saveSettings({
+  enabled: input.enabled === true,
+  port: validate.integer(input.port, { name: "Puerto de la página de canje", min: 1024, max: 65535 }),
+  clientId: validate.text(input.clientId || "", { max: 64 }),
+  publicUrl: validate.text(input.publicUrl || "", { max: 300 }),
+}))
+// Abre la página en el navegador del streamer; la URL la arma main, no el renderer.
+ipcMain.handle("canje:openLocal", () => require("electron").shell.openExternal(`http://127.0.0.1:${canje().getSettings().port}/`))
 
 // ── IPC: Top 3 del chat ──────────────────────────────────────────────────────
 function chatTop() { return require("./src/services/chat-top.js").getDefaultChatTopService() }
@@ -567,6 +677,21 @@ ipcMain.handle("vts:discoverItems",  () => vtsService.discoverItems())
 ipcMain.handle("vts:testItem",       () => vtsService.spinItem())
 ipcMain.handle("vts:testAvatar",     () => vtsService.spinAvatar())
 
+// Reacciones VTuber (flujos de nodos: evento del directo -> objetos, voz, VTS)
+function vtuberReactions() { return require("./src/services/vtuber-reactions.js").getDefaultVtuberReactions() }
+ipcMain.handle("reactions:get",     () => vtuberReactions().getConfig())
+ipcMain.handle("reactions:save",    (_, cfg) => vtuberReactions().saveConfig(validate.plainObject(cfg, "reacciones")))
+ipcMain.handle("reactions:test",    (_, flowId, nodeId) => vtuberReactions().test(
+  validate.text(flowId, { name: "flujo", max: 40, required: true }),
+  nodeId ? validate.text(nodeId, { name: "nodo", max: 40 }) : undefined,
+))
+ipcMain.handle("reactions:hotkeys", () => vtsService.listHotkeys())
+ipcMain.handle("reactions:expressions", () => vtsService.listExpressions())
+ipcMain.handle("reactions:hits",        () => vtuberReactions().hits())
+ipcMain.handle("reactions:resetHits",   () => vtuberReactions().resetHits())
+ipcMain.handle("reactions:clearItems",  () => vtuberReactions().clearItems())
+ipcMain.on("reactions:speech",      (_, state) => vtuberReactions().speechState(state?.speaking === true, state?.lipSync === true))
+
 
 // ── IPC: Widgets (avatares de chat, etc.) ────────────────────────────────────
 ipcMain.handle("widgets:getConfig", () => widgets().getConfig())
@@ -580,8 +705,26 @@ ipcMain.handle("widgets:test", () => {
 function profiles() { return require("./src/services/profiles.js") }
 
 ipcMain.handle("profiles:getCards",      (_, ch)                    => profiles().getCards(ch))
-ipcMain.handle("profiles:createCard",    (_, { ch, name, desc, img, rarity }) => profiles().createCard(ch, name, desc, img, rarity))
+ipcMain.handle("profiles:createCard",    (_, { ch, name, desc, img, rarity, exclusive }) => profiles().createCard(ch, name, desc, img, rarity, exclusive))
+ipcMain.handle("profiles:setCardExclusive", (_, { id, exclusive }) => require("./src/services/local-runtime.js").getLocalPlatform().profiles.setCardExclusive(id, exclusive))
 ipcMain.handle("profiles:deleteCard",    (_, id)                    => profiles().deleteCard(id))
+ipcMain.handle("profiles:updateCard", (_, input = {}) => {
+  const id = validate.text(input.id, { name: "Personaje", max: 100, required: true })
+  const optional = (value, max) => (value === undefined ? undefined : validate.text(value, { max }))
+  const updated = require("./src/services/local-runtime.js").getLocalPlatform().profiles.updateCard(id, {
+    name: optional(input.name, 120), description: optional(input.description, 1000), imagePath: optional(input.img, 1000),
+    rarity: input.rarity === undefined ? undefined : validate.text(input.rarity, { max: 20 }),
+    exclusive: input.exclusive === undefined ? undefined : input.exclusive === "sub" ? "sub" : "",
+  })
+  if (!updated) throw new Error("Ese personaje ya no existe")
+  return updated
+})
+
+// Buscar GIFs de personajes (GIPHY, con la clave del streamer cifrada en el almacen de secretos)
+const gifSearch = () => require("./src/services/gif-search.js").getDefaultGifSearch()
+ipcMain.handle("gif:status", () => gifSearch().status())
+ipcMain.handle("gif:setKey", (_, key) => gifSearch().setKey(validate.text(key, { name: "Clave", max: 200 })))
+ipcMain.handle("gif:search", (_, input = {}) => gifSearch().search(validate.text(input.query, { name: "Búsqueda", max: 120, required: true }), Number(input.limit) || 8))
 ipcMain.handle("profiles:getPacks",      (_, ch)                    => profiles().getPacks(ch))
 ipcMain.handle("profiles:createPack",    (_, { ch, name, desc, price, tier }) => profiles().createPack(ch, name, desc, price, tier))
 ipcMain.handle("profiles:getCosmetics",  (_, ch)                    => profiles().getCosmetics(ch))
@@ -606,6 +749,10 @@ app.whenReady().then(() => {
   ch().set(workspace.id)
   overlay().start()
   initializeLocalRuntime(workspace.id)
+  // Página de canje: solo arranca si está activada (servidor aparte, puerto 7780).
+  canje().start().catch(error => console.error("[canje] arranque:", error.message))
+  // StreamElements: si hay token guardado, conecta y apunta las propinas solas.
+  try { streamElements().start() } catch (error) { console.error("[streamelements] arranque:", error.message) }
 
   // Los sonidos son multiplataforma y deben cargar aunque el streamer use
   // únicamente Social Stream Ninja, sin configurar ni conectar Twitch.
@@ -647,5 +794,6 @@ app.on("before-quit", () => {
   try { ssnTransport().disconnect() } catch {}
   try { twitch().disconnect() } catch {}
   try { overlay().stop() } catch {}
+  try { canje().stop() } catch {}
   try { db().closeDb() } catch {}
 })

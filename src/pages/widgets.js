@@ -11,6 +11,7 @@ async function initWidgets() {
   renderAvatarsForm()
   initChatTop()
   initFloatAvatars()
+  initJail()
   await initLoyalty()
 }
 
@@ -158,6 +159,53 @@ async function testFloatAvatars() {
   showToast("Avatares de prueba enviados al Overlay 2")
 }
 
+// ── Carcel (!carcel, Overlay 2) ──────────────────────────────────────────────
+function initJail() {
+  const j = cfg.jail || {}
+  setField("wg-jail-enabled",  j.enabled !== false)
+  setField("wg-jail-duration", j.duration_s ?? 60)
+  setField("wg-jail-cells",    j.max_cells ?? 4)
+  setField("wg-jail-corner",   j.corner || "bottom-left")
+  setField("wg-jail-size",     j.size ?? 96)
+  setField("wg-jail-theme",    j.theme || "noche")
+  setField("wg-jail-protect",  j.protect_streamer !== false)
+  const size = document.getElementById("wg-jail-size")
+  const label = document.getElementById("wg-jail-size-v")
+  if (size && label) {
+    label.textContent = `${size.value}px`
+    size.oninput = () => { label.textContent = `${size.value}px` }
+  }
+}
+
+async function saveJailConfig() {
+  const number = id => parseInt(document.getElementById(id).value, 10)
+  try {
+    cfg = await ipcRenderer.invoke("widgets:setConfig", { jail: {
+      enabled:          document.getElementById("wg-jail-enabled").checked,
+      duration_s:       number("wg-jail-duration"),
+      max_cells:        number("wg-jail-cells"),
+      corner:           document.getElementById("wg-jail-corner").value,
+      size:             number("wg-jail-size"),
+      theme:            document.getElementById("wg-jail-theme").value,
+      protect_streamer: document.getElementById("wg-jail-protect").checked,
+    } })
+    initJail()
+    showToast("Cárcel guardada")
+  } catch (error) {
+    showToast(`No se pudo guardar: ${error.message}`)
+  }
+}
+
+async function testJail() {
+  await ipcRenderer.invoke("jail:test")
+  showToast("Preso de prueba enviado al Overlay 2")
+}
+
+async function releaseJail() {
+  await ipcRenderer.invoke("jail:releaseAll")
+  showToast("Celdas vaciadas")
+}
+
 // ── Tarjeta de fidelidad (!claim) ─────────────────────────────────────────────
 async function initLoyalty() {
   try {
@@ -269,4 +317,5 @@ module.exports = {
   saveLoyaltyConfig, previewLoyalty, newLoyaltyStream,
   saveChatTopConfig, previewChatTop,
   saveFloatAvatarsConfig, testFloatAvatars,
+  saveJailConfig, testJail, releaseJail,
 }

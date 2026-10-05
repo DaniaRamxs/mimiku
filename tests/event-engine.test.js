@@ -24,6 +24,13 @@ test("normalizeEvent rellena defaults y valida campos mínimos", () => {
   assert.throws(() => normalizeEvent({ platform: "twitch" }), /type/)
 })
 
+test("normalizeEvent conserva la marca de suscriptor del adaptador", () => {
+  const sub = normalizeEvent({ ...chatEvent(), actor: { username: "luna", isSubscriber: true } })
+  assert.equal(sub.actor.isSubscriber, true)
+  const viewer = normalizeEvent(chatEvent())
+  assert.equal("isSubscriber" in viewer.actor, false)
+})
+
 test("Event Engine distribuye un evento a los suscriptores de su tipo", () => {
   const engine = createEventEngine()
   const received = []

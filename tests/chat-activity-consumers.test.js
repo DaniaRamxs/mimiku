@@ -39,6 +39,16 @@ test("9: XP de YouTube no llama a economía con plataforma Twitch (no modifica e
   assert.notEqual(calls[0][4], "twitch")
 })
 
+test("los bots de chat conocidos no ganan puntos por chatear", () => {
+  const calls = []
+  const economy = { onMessage: (...args) => calls.push(args) }
+  const xp = createXpConsumer({ economy, events: fakeEvents() })
+  for (const username of ["Nightbot", "moobot", "StreamlootsBot"]) xp.handle(chatEvent("twitch", { platformUserId: username, username }, "hola"))
+  assert.equal(calls.length, 0)
+  xp.handle(chatEvent("twitch", { platformUserId: "tw-1", username: "luna" }, "hola"))
+  assert.equal(calls.length, 1)
+})
+
 test("XP no se otorga si la economía está congelada, ni en comandos", () => {
   const calls = []
   const economy = { onMessage: (...args) => calls.push(args) }

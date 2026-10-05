@@ -21,7 +21,7 @@ function copyProject(source, destination) {
 }
 
 function run(command, args) {
-  const result = spawnSync(command, args, { cwd: workspace, stdio: "inherit", shell: false })
+  const result = spawnSync(command, args, { cwd: workspace, stdio: "inherit", shell: process.platform === "win32" })
   if (result.error) throw result.error
   if (result.status !== 0) process.exitCode = result.status || 1
   return result.status === 0

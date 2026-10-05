@@ -1,0 +1,256 @@
+/* Pestanas de la pagina, pestana Gachapon, mercado y tradeos. */
+
+/* ── Pestanas principales ── */
+.tabs {
+  position: sticky; top: 10px; z-index: 20; display: flex; gap: 4px; width: fit-content; max-width: 100%; overflow-x: auto; scrollbar-width: none;
+  margin-top: 16px; padding: 5px;
+  border-radius: 16px; background: rgba(18, 13, 32, .88); border: 1px solid var(--line);
+  backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}
+.tab {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 12px;
+  font: inherit; font-family: var(--font-display); font-size: 18px; font-weight: 800; cursor: pointer;
+  color: var(--muted); background: transparent; border: 1px solid transparent;
+  transition: color .15s, background .15s, border-color .15s, transform .15s var(--ease);
+}
+.tab:hover { color: var(--text); background: var(--surface); }
+.tab:focus-visible, .subtab:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tab[aria-selected="true"] {
+  color: #fff; background: linear-gradient(150deg, #3b2a6e, var(--surface-2)); border-color: rgba(182, 156, 255, .35);
+  box-shadow: 0 6px 18px rgba(145, 70, 255, .25);
+}
+.tab-badge {
+  min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center;
+  font-family: var(--font-body); font-size: 12px; font-weight: 800; color: #120d20; background: var(--r-legendario);
+  box-shadow: 0 0 12px rgba(245, 158, 11, .6); animation: badge-pulse 2s ease-in-out infinite;
+}
+@keyframes badge-pulse { 50% { box-shadow: 0 0 20px rgba(245, 158, 11, .9); } }
+#panel-home > section:first-child { margin-top: 20px; }
+
+/* ── Cabecera de la pestana Gachapon ── */
+.gacha-hero {
+  position: relative; overflow: hidden; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin-top: 20px; padding: 22px 22px 20px; border-radius: 22px; border: 1px solid rgba(182, 156, 255, .3);
+  background:
+    radial-gradient(400px 200px at 90% 0%, rgba(245, 158, 11, .25), transparent 70%),
+    radial-gradient(500px 240px at 0% 100%, rgba(168, 85, 247, .35), transparent 70%),
+    linear-gradient(150deg, #2b1d52, var(--bg-2));
+}
+.gacha-hero::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .25; mix-blend-mode: color-dodge;
+  background: repeating-linear-gradient(110deg, #ff3fa4 0%, #ffd54a 5%, #4dffb8 10%, #3fc6ff 15%, #b25cff 20%, #ff3fa4 25%);
+  background-size: 400% 400%; animation: holo-drift 9s ease-in-out infinite;
+}
+.gacha-hero h2 { font-size: clamp(26px, 5vw, 36px); margin-top: 2px; }
+.gacha-hero .hint { margin-top: 6px; }
+.wallet-chip {
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; padding: 10px 16px; border-radius: 16px;
+  background: rgba(18, 13, 32, .6); border: 1px solid var(--line);
+}
+.wallet-chip span { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.wallet-chip strong { font-family: var(--font-display); font-size: 28px; line-height: 1.05; color: #fff; }
+
+/* ── Subpestanas ── */
+.subtabs { display: flex; gap: 4px; margin-top: 16px; padding: 4px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); width: fit-content; max-width: 100%; }
+.subtab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; border: 0; cursor: pointer;
+  font: inherit; font-weight: 800; font-size: 15px; color: var(--muted); background: transparent; transition: color .15s, background .15s;
+}
+.subtab:hover { color: var(--text); }
+.subtab[aria-selected="true"] { color: #120d20; background: var(--accent); }
+.subtab .tab-badge { width: 20px; min-width: 20px; height: 20px; font-size: 11px; }
+#sub-collection, #sub-market, #sub-trades { margin-top: 22px; }
+
+.mini-title { margin: 26px 0 10px; font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+.empty-row { color: var(--muted); font-size: 14px; padding: 14px 16px; border-radius: 12px; border: 1px dashed var(--line); }
+
+/* ── Miniaturas y fichas de carta ── */
+.thumb {
+  --c: var(--r-comun); flex: none; width: 36px; height: 36px; border-radius: 9px; overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 35%, #2b2148), #140f24 80%);
+  box-shadow: inset 0 0 0 2px var(--c);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-initial { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--c); }
+.card-chip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 10px 4px 4px; border-radius: 12px; background: color-mix(in srgb, var(--c) 12%, var(--surface-2)); }
+.card-chip-name { font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-chip-name b { color: var(--c); }
+.points-chip { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 12px; font-weight: 800; font-size: 14px; color: var(--r-legendario); background: rgba(245, 158, 11, .12); }
+
+/* ── Mercado ── */
+.market-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.market-bar .gacha-filters { margin-bottom: 0; }
+.select-wrap { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; font-weight: 700; }
+.select-wrap select {
+  font: inherit; font-weight: 800; color: var(--text); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 7px 10px; cursor: pointer;
+}
+.market-grid { align-items: start; }
+.listing { display: flex; flex-direction: column; gap: 10px; animation: tcard-in .5s var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.listing .tcard { animation: none; cursor: default; }
+.listing-foot { display: flex; flex-direction: column; gap: 6px; }
+.listing-price { font-weight: 700; color: var(--muted); }
+.listing-price strong { font-family: var(--font-display); font-size: 24px; color: var(--r-legendario); }
+.listing-seller { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.listing .btn { width: 100%; }
+.btn.is-confirm { background: #fff; color: #120d20; box-shadow: 0 0 0 3px var(--accent); }
+.market-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+.rows { display: grid; gap: 8px; }
+.row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line);
+}
+.row .card-chip { background: transparent; padding: 0; }
+.row-price { font-weight: 800; color: var(--r-legendario); white-space: nowrap; }
+.row-who { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.row-who b { color: var(--text); }
+.row .btn { padding: 7px 12px; }
+
+/* ── Tradeos ── */
+#sub-trades .section-head { align-items: center; }
+.trade-hint { margin-top: -6px; }
+.trade-list { display: grid; gap: 12px; }
+.trade {
+  padding: 14px 16px; border-radius: 18px; background: linear-gradient(160deg, var(--surface-2), var(--surface) 70%);
+  border: 1px solid var(--line);
+}
+.trade-in { border-color: rgba(245, 158, 11, .45); box-shadow: 0 0 22px rgba(245, 158, 11, .12); }
+.trade-history { opacity: .8; }
+.trade-history.s-accepted { border-left: 4px solid var(--ok); }
+.trade-history.s-rejected, .trade-history.s-failed { border-left: 4px solid var(--bad); }
+.trade-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.trade-who { font-size: 16px; }
+.trade-who b { font-family: var(--font-display); font-size: 19px; }
+.trade-when { font-size: 13px; font-weight: 700; color: var(--muted); }
+.trade-body { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; margin-top: 12px; }
+.trade-part { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px; border-radius: 14px; background: rgba(18, 13, 32, .45); }
+.trade-part-title { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.trade-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.trade-arrow { font-size: 12px; font-weight: 800; color: var(--muted); text-align: center; }
+.trade-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* ── Dialogo de nueva oferta ── */
+.panel-dialog {
+  margin: auto; width: min(760px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 22px;
+  border-radius: 22px; color: var(--text); background: linear-gradient(165deg, var(--surface-2), var(--bg-2) 70%);
+  border: 1px solid rgba(182, 156, 255, .3); box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+}
+.panel-dialog::backdrop { background: rgba(8, 5, 16, .78); backdrop-filter: blur(3px); }
+.panel-dialog h2 { margin: 2px 0 14px; }
+.trade-find label { display: block; font-weight: 800; margin-bottom: 6px; }
+.trade-find-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.trade-find input, .points-field input, .sell-form input {
+  flex: 1; min-width: 0; font: inherit; font-weight: 700; color: var(--text); background: rgba(18, 13, 32, .7);
+  border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+}
+.trade-find input:focus, .points-field input:focus, .sell-form input:focus { outline: 3px solid var(--accent); outline-offset: 1px; }
+.trade-builder { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.trade-side { min-width: 0; }
+.trade-side .mini-title { margin-top: 18px; }
+.pick-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; padding-right: 2px; }
+.pick {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 12px; background: rgba(18, 13, 32, .45); border: 1px solid transparent;
+}
+.pick.is-picked { border-color: var(--accent); background: rgba(182, 156, 255, .12); }
+.pick .card-chip { background: transparent; padding: 0; }
+.pick-have { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.stepper { display: inline-flex; align-items: center; gap: 2px; }
+.step {
+  width: 28px; height: 28px; border-radius: 8px; border: 0; cursor: pointer; font: inherit; font-weight: 800; font-size: 16px;
+  color: var(--text); background: var(--surface-2);
+}
+.step:hover:not(:disabled) { background: var(--accent); color: #120d20; }
+.step:disabled { opacity: .35; cursor: not-allowed; }
+.step-count { min-width: 22px; text-align: center; font-weight: 800; }
+.points-field { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 14px; font-weight: 700; color: var(--muted); }
+.trade-summary { margin-top: 16px; padding: 10px 12px; border-radius: 12px; background: rgba(18, 13, 32, .45); color: var(--muted); font-weight: 700; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ── Vender desde la carta en grande ── */
+.card-view-actions { width: min(340px, 78vw); }
+.view-buttons { display: flex; gap: 8px; }
+.view-buttons .btn { flex: 1; }
+.sell-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.sell-label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 700; color: var(--muted); }
+.sell-form .btn { white-space: nowrap; }
+.sell-note { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+
+/* ── Forja: fundir copias en un personaje de rango superior ── */
+.forge-box { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(18, 13, 32, .45); border: 1px solid var(--line); }
+.forge-text { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.forge-text strong { color: var(--text); font-size: 14px; }
+.forge-meter { display: block; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.forge-fill { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
+.forge-meter.is-ready .forge-fill { background: var(--r-legendario); }
+.forge-count { font-weight: 800; font-size: 12px; }
+.forge-box .btn { white-space: nowrap; }
+.tcard.is-forged { animation: forge-in .6s cubic-bezier(.16, 1, .3, 1); }
+@keyframes forge-in { from { opacity: 0; transform: scale(.7) rotate(-6deg); filter: brightness(2.2); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .tcard.is-forged { animation: none; } }
+
+/* ── Disposicion horizontal de la pestana Gachapon ── */
+.gacha-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px 22px; padding: 16px 20px; }
+.gacha-hero h2 { font-size: clamp(22px, 2.6vw, 28px); }
+.gacha-hero-title { position: relative; z-index: 1; min-width: 0; }
+.gacha-hero .subtabs { position: relative; z-index: 1; margin-top: 0; background: rgba(18, 13, 32, .6); }
+
+.collection-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 26px; align-items: start; margin-top: 20px; }
+.collection-side { position: sticky; top: 88px; display: flex; flex-direction: column; gap: 14px; }
+.collection-side .section-head { flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 0; }
+.collection-side .gacha-progress { margin-bottom: 0; }
+.collection-side .gp-rarities { flex-direction: column; }
+.collection-side .gp-rarities li { justify-content: space-between; }
+.collection-side .gp-rarities li > span:nth-child(2) { flex: 1; }
+.collection-side .gacha-filters { flex-direction: column; margin-bottom: 0; }
+.collection-side .gf-chip { display: flex; justify-content: space-between; text-align: left; }
+.collection-layout .gacha { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+
+.trade-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-items: start; }
+
+/* Carta en grande: carta a la izquierda, datos y acciones a la derecha. */
+.card-view[open] { display: grid; grid-template-columns: auto minmax(300px, 380px); align-items: center; gap: 36px; }
+.card-view-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card-view-title { font-size: clamp(26px, 3vw, 36px); line-height: 1.05; overflow-wrap: anywhere; }
+.card-view-side .card-view-actions { width: 100%; margin-top: 6px; }
+.card-view-actions.is-busy { opacity: .5; pointer-events: none; }
+.card-view-close { align-self: flex-start; margin-top: 6px; }
+
+@media (max-width: 900px) {
+  .gacha-hero { grid-template-columns: minmax(0, 1fr) auto; }
+  .gacha-hero .subtabs { grid-column: 1 / -1; grid-row: 2; }
+  .collection-layout { grid-template-columns: 1fr; gap: 14px; }
+  .collection-side { position: static; }
+  .collection-side .gp-rarities, .collection-side .gacha-filters { flex-direction: row; }
+  .collection-side .gf-chip { display: inline-block; }
+  /* En movil la carta y las acciones no caben: el dialogo hace scroll. */
+  .card-view {
+    width: 100%; max-width: 100%; max-height: 100dvh; margin: 0 auto; padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  .card-view[open] { grid-template-columns: 1fr; justify-items: center; align-content: start; gap: 16px; }
+  /* Deslizar en vertical sobre la carta tambien hace scroll. */
+  .card-view .tcard-lg { touch-action: pan-y; }
+  .card-view-side { align-items: center; text-align: center; width: min(340px, 86vw); }
+  .card-view-close { align-self: center; }
+  .card-view-side .card-view-actions { text-align: left; }
+}
+@media (max-width: 720px) {
+  .trade-columns { grid-template-columns: 1fr; }
+  .collection-layout .gacha { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; }
+
+@media (max-width: 720px) {
+  .tab { font-size: 15px; padding: 8px 11px; }
+  .market-columns { grid-template-columns: 1fr; }
+  .trade-body { grid-template-columns: 1fr; }
+  .trade-arrow { text-align: left; }
+  .trade-builder { grid-template-columns: 1fr; }
+  .row { grid-template-columns: minmax(0, 1fr) auto; }
+  .row-who { grid-column: 1 / -1; order: 3; }
+  .subtabs { width: 100%; }
+  .subtab { flex: 1; justify-content: center; padding: 8px 6px; }
+}

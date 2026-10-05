@@ -1,0 +1,225 @@
+/* Fundas de cartas (rara, epica, prisma).
+   gacha-cards.js pone .has-sleeve .sleeve-<tipo> en la .tcard y un
+   .tcard-sleeve (anillo + pelicula + destello + etiqueta) que sigue la misma
+   inclinacion que la carta (--rx/--ry) y la luz del puntero (--mx/--my). */
+
+@property --sl-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+.tcard.has-sleeve { --sl-pad: 5px; }
+.tcard-sleeve {
+  position: absolute; inset: calc(var(--sl-pad) * -1); z-index: 2; border-radius: 19px; pointer-events: none;
+  transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .55s var(--ease);
+  filter: drop-shadow(0 0 10px var(--sl-glow, transparent));
+}
+.tcard.is-active .tcard-sleeve { transition: transform .08s linear; }
+
+/* Anillo: solo el borde (mascara), con el croma de cada funda. */
+.sl-ring {
+  position: absolute; inset: 0; border-radius: inherit; padding: var(--sl-pad); background: var(--sl-ring);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+/* Pelicula de plastico sobre la carta: brillo que sigue al puntero. */
+.sl-film {
+  position: absolute; inset: var(--sl-pad); border-radius: 14px; mix-blend-mode: screen; opacity: .85;
+  background:
+    radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, .32), transparent 42%),
+    linear-gradient(135deg, rgba(255, 255, 255, .16), transparent 38%, rgba(255, 255, 255, .07) 62%, transparent 80%);
+}
+/* Destello que cruza la funda de vez en cuando. */
+.sl-shine { position: absolute; inset: var(--sl-pad); border-radius: 14px; overflow: hidden; }
+.sl-shine::before {
+  content: ""; position: absolute; inset: -20% -60%; transform: translateX(-100%) rotate(18deg);
+  background: linear-gradient(90deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%);
+  animation: sl-sweep var(--sl-sweep, 4s) ease-in-out infinite;
+}
+@keyframes sl-sweep { 0%, 55% { transform: translateX(-100%) rotate(18deg); } 85%, 100% { transform: translateX(100%) rotate(18deg); } }
+
+/* ── Rara: cromado azul que fluye ── */
+.tcard.sleeve-rara {
+  --sl-glow: rgba(96, 165, 250, .55);
+  --sl-ring: linear-gradient(120deg, #eff6ff, #60a5fa 18%, #1e3a8a 32%, #dbeafe 48%, #2563eb 64%, #bfdbfe 80%, #1d4ed8 92%, #eff6ff);
+}
+.sleeve-rara .sl-ring { background-size: 300% 300%; animation: sl-chrome 5s linear infinite; }
+@keyframes sl-chrome { to { background-position: 300% 0; } }
+
+/* ── Epica: croma violeta que gira, brillo que late y chispas ── */
+.tcard.sleeve-epica {
+  --sl-glow: rgba(217, 70, 239, .6); --sl-sweep: 3.2s;
+  --sl-ring: conic-gradient(from var(--sl-angle), #f0abfc, #a21caf, #22d3ee, #7c3aed, #f472b6, #c026d3, #67e8f9, #f0abfc);
+}
+.sleeve-epica .sl-ring { animation: sl-spin 4s linear infinite; }
+.sleeve-epica .tcard-sleeve { animation: sl-pulse 2.6s ease-in-out infinite; }
+@keyframes sl-spin { to { --sl-angle: 360deg; } }
+@keyframes sl-pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(217, 70, 239, .45)); }
+  50% { filter: drop-shadow(0 0 18px rgba(34, 211, 238, .75)); }
+}
+.sleeve-epica .sl-shine::after {
+  content: ""; position: absolute; inset: 0; mix-blend-mode: screen;
+  background:
+    radial-gradient(2px 2px at 18% 22%, #fff, transparent), radial-gradient(2px 2px at 78% 30%, #f5d0fe, transparent),
+    radial-gradient(1.5px 1.5px at 30% 72%, #a5f3fc, transparent), radial-gradient(2px 2px at 66% 84%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 88% 60%, #fff, transparent), radial-gradient(2px 2px at 10% 50%, #f0abfc, transparent);
+  animation: sl-twinkle 1.8s ease-in-out infinite alternate;
+}
+@keyframes sl-twinkle { from { opacity: .15; transform: scale(1); } to { opacity: 1; transform: scale(1.04); } }
+
+/* ── Prisma: arcoiris holografico que gira y bandas prismaticas ── */
+.tcard.sleeve-prisma {
+  --sl-glow: rgba(255, 255, 255, .6); --sl-sweep: 2.6s; --sl-pad: 6px;
+  --sl-ring: conic-gradient(from var(--sl-angle), #ff3fa4, #ffd54a, #4dffb8, #3fc6ff, #b25cff, #ff3fa4);
+}
+.sleeve-prisma .sl-ring { animation: sl-spin 2.6s linear infinite; }
+.sleeve-prisma .tcard-sleeve { animation: sl-rainbow-glow 4s linear infinite; }
+@keyframes sl-rainbow-glow {
+  0% { filter: drop-shadow(0 0 14px rgba(255, 63, 164, .7)); }
+  25% { filter: drop-shadow(0 0 16px rgba(255, 213, 74, .7)); }
+  50% { filter: drop-shadow(0 0 16px rgba(77, 255, 184, .7)); }
+  75% { filter: drop-shadow(0 0 16px rgba(63, 198, 255, .7)); }
+  100% { filter: drop-shadow(0 0 14px rgba(255, 63, 164, .7)); }
+}
+.sleeve-prisma .sl-film {
+  /* Arcoiris fuerte en los bordes y suave en el centro, para no tapar el dibujo. */
+  mix-blend-mode: color-dodge; opacity: .42;
+  -webkit-mask: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(0, 0, 0, .18) 35%, #000 95%);
+  mask: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(0, 0, 0, .18) 35%, #000 95%);
+  background:
+    radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, .5), transparent 38%),
+    linear-gradient(115deg, #ff3fa4 0%, #ffd54a 8%, #4dffb8 16%, #3fc6ff 24%, #b25cff 32%, #ff3fa4 40%, #ffd54a 48%, #4dffb8 56%, #3fc6ff 64%, #b25cff 72%, #ff3fa4 80%, #ffd54a 88%, #4dffb8 100%);
+  background-size: 100% 100%, 300% 300%; background-repeat: no-repeat;
+  animation: sl-prism-bands 7s ease-in-out infinite alternate;
+}
+@keyframes sl-prism-bands { from { background-position: 0 0, 0% 0%; } to { background-position: 0 0, 100% 100%; } }
+.sleeve-prisma .sl-shine::after {
+  content: ""; position: absolute; inset: 0; mix-blend-mode: overlay; opacity: .7;
+  background: conic-gradient(from var(--sl-angle) at var(--mx) var(--my), transparent, rgba(255, 255, 255, .6), transparent 25%, rgba(255, 255, 255, .35), transparent 60%);
+  animation: sl-spin 5s linear infinite reverse;
+}
+
+/* ── Corona: morada y dorada, con coronas que brillan (solo Pase Sub) ── */
+.tcard.sleeve-corona {
+  --sl-glow: rgba(145, 70, 255, .65); --sl-sweep: 3s; --sl-pad: 6px;
+  --sl-ring: conic-gradient(from var(--sl-angle), #6d28d9, #fbbf24, #9146ff, #fde68a, #4c1d95, #fbbf24, #6d28d9);
+}
+.sleeve-corona .sl-ring { animation: sl-spin 5s linear infinite; }
+.sleeve-corona .tcard-sleeve { animation: sl-corona-glow 3s ease-in-out infinite; }
+@keyframes sl-corona-glow {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(145, 70, 255, .6)); }
+  50% { filter: drop-shadow(0 0 18px rgba(251, 191, 36, .7)); }
+}
+.sleeve-corona .sl-film { background: radial-gradient(circle at var(--mx) var(--my), rgba(253, 230, 138, .35), transparent 42%), linear-gradient(135deg, rgba(145, 70, 255, .25), transparent 45%, rgba(251, 191, 36, .12) 70%, transparent); }
+.sleeve-corona .sl-shine::after {
+  content: ""; position: absolute; inset: 0; mix-blend-mode: screen; opacity: .8;
+  background:
+    radial-gradient(3px 2px at 20% 8%, #fde68a, transparent), radial-gradient(3px 2px at 50% 5%, #fde68a, transparent),
+    radial-gradient(3px 2px at 80% 8%, #fde68a, transparent), radial-gradient(2px 2px at 30% 90%, #c4b5fd, transparent),
+    radial-gradient(2px 2px at 70% 92%, #c4b5fd, transparent);
+  animation: sl-twinkle 2.2s ease-in-out infinite alternate;
+}
+.chip-sleeve.s-corona { color: #fff; background: linear-gradient(90deg, #9146ff, #fbbf24); }
+.card-chip.s-corona { --chip-glow: #9146ff; }
+.card-chip.s-corona .thumb { box-shadow: 0 0 0 2px #fff, 0 0 10px var(--chip-glow); }
+.t-corona .sleeve-stage { --stage-glow: rgba(145, 70, 255, .4); }
+.sleeve-lock.is-sub { background: linear-gradient(90deg, rgba(145, 70, 255, .5), rgba(251, 191, 36, .35), rgba(145, 70, 255, .5)); background-size: 300% 100%; }
+/* Cartas del set Sub que faltan: candado morado */
+.tcard.is-locked.is-sub-only .tcard-lock svg { fill: #a78bfa; filter: drop-shadow(0 0 10px rgba(145, 70, 255, .8)); }
+.tcard.is-locked.is-sub-only .tcard-inner { background: linear-gradient(160deg, #3b2470, #1f1a30 55%, #2c2144); }
+/* Descuento de sub en la tienda */
+.price-before { color: var(--muted); font-weight: 700; }
+.sub-discount { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #fff; background: #9146ff; }
+
+/* Carta grande: la funda un poco mas gruesa. */
+.tcard-lg.has-sleeve { --sl-pad: 8px; }
+.tcard-lg .tcard-sleeve { border-radius: 26px; }
+.tcard-lg .sl-film, .tcard-lg .sl-shine { border-radius: 20px; }
+
+/* Al poner la funda: baja sobre la carta y destella. */
+.tcard.is-sleeving .tcard-sleeve { animation: sl-slide-on .9s cubic-bezier(.2, .9, .3, 1.15) both; }
+@keyframes sl-slide-on {
+  0% { transform: translateY(-65%) scale(1.08); opacity: 0; }
+  60% { opacity: 1; }
+  80% { transform: translateY(2%) scale(1); filter: drop-shadow(0 0 30px #fff) brightness(1.8); }
+  100% { transform: none; }
+}
+
+/* ── Fichas pequenas (tradeos, mercado): borde con el croma de la funda ── */
+.card-chip.s-rara .thumb, .card-chip.s-epica .thumb, .card-chip.s-prisma .thumb { box-shadow: 0 0 0 2px #fff, 0 0 10px var(--chip-glow); }
+.card-chip.s-rara { --chip-glow: #60a5fa; }
+.card-chip.s-epica { --chip-glow: #d946ef; }
+.card-chip.s-prisma { --chip-glow: #4dffb8; }
+.chip-sleeve {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase; color: #120d20; vertical-align: 1px;
+}
+.chip-sleeve.s-rara { background: linear-gradient(90deg, #dbeafe, #60a5fa); }
+.chip-sleeve.s-epica { background: linear-gradient(90deg, #f0abfc, #22d3ee); }
+.chip-sleeve.s-prisma { color: #fff; background: linear-gradient(90deg, #ff3fa4, #ffd54a, #4dffb8, #3fc6ff, #b25cff); text-shadow: 0 1px 2px rgba(0, 0, 0, .5); }
+
+/* ── Vista grande: fundas del viewer y boton para ponerla ── */
+.sleeve-box { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(18, 13, 32, .45); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.sleeve-box strong { font-size: 14px; }
+.sleeve-box p { font-size: 13px; color: var(--muted); }
+.sleeve-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.sleeve-owned { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Cartas que faltan: apagadas y con candado ── */
+.tcard.is-locked { cursor: default; }
+.tcard.is-locked .tcard-inner { background: linear-gradient(160deg, #3f3a52, #1f1a30 55%, #2c2640); box-shadow: 0 8px 18px rgba(0, 0, 0, .35); }
+.tcard.is-locked .tcard-inner::before, .tcard.is-locked .tcard-inner::after, .tcard.is-locked .tcard-holo, .tcard.is-locked .tcard-sparkle { display: none; }
+.tcard.is-locked .tcard-art img, .tcard.is-locked .tcard-initial { filter: grayscale(1) brightness(.35) blur(1.5px); }
+.tcard.is-locked .tcard-name, .tcard.is-locked .tcard-no { color: rgba(255, 255, 255, .55); }
+.tcard.is-locked .tcard-rarity { opacity: .55; }
+.tcard-lock {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: radial-gradient(circle at 50% 45%, rgba(10, 7, 20, .1), rgba(10, 7, 20, .55));
+}
+.tcard-lock svg { width: 40%; max-width: 58px; fill: rgba(255, 255, 255, .85); filter: drop-shadow(0 2px 8px rgba(0, 0, 0, .6)); }
+.tcard.is-locked.r-raro .tcard-lock svg { fill: #93c5fd; }
+.tcard.is-locked.r-epico .tcard-lock svg { fill: #e9a8ff; }
+.tcard.is-locked.r-legendario .tcard-lock svg { fill: #fcd34d; animation: lock-glint 3s ease-in-out infinite; }
+@keyframes lock-glint { 50% { filter: drop-shadow(0 0 12px rgba(252, 211, 77, .8)); } }
+.tcard-lock-text { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
+.gf-chip.gf-missing { border-style: dashed; }
+
+/* ── Vitrinas de la tienda ── */
+.sleeve-shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-top: 16px; }
+.sleeve-tile {
+  position: relative; display: flex; flex-direction: column; border-radius: var(--radius); overflow: hidden;
+  background: linear-gradient(170deg, var(--surface-2), var(--surface)); border: 1px solid var(--line);
+  transition: transform .25s var(--ease), box-shadow .25s, border-color .25s;
+}
+.sleeve-tile:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
+.sleeve-tile.t-rara:hover { border-color: rgba(96, 165, 250, .6); }
+.sleeve-tile.t-epica:hover { border-color: rgba(217, 70, 239, .6); }
+.sleeve-tile.t-prisma { border-color: rgba(255, 255, 255, .25); }
+.sleeve-stage {
+  position: relative; display: grid; place-items: center; padding: 26px 0 30px; perspective: 900px; overflow: hidden;
+  background: radial-gradient(220px 160px at 50% 45%, var(--stage-glow, rgba(182, 156, 255, .25)), transparent 70%), rgba(10, 7, 20, .55);
+}
+.t-rara .sleeve-stage { --stage-glow: rgba(59, 130, 246, .35); }
+.t-epica .sleeve-stage { --stage-glow: rgba(192, 38, 211, .35); }
+.t-prisma .sleeve-stage { --stage-glow: rgba(77, 255, 184, .22); }
+.t-prisma .sleeve-stage::before {
+  content: ""; position: absolute; inset: -40%; opacity: .22; mix-blend-mode: screen; animation: sl-spin 12s linear infinite;
+  background: conic-gradient(from var(--sl-angle), #ff3fa4, #ffd54a, #4dffb8, #3fc6ff, #b25cff, #ff3fa4);
+}
+.sleeve-sample { width: 132px; cursor: default; animation: sample-float 5s ease-in-out infinite; }
+.sleeve-sample .tcard-desc { display: none; }
+.sleeve-sample .tcard-name { font-size: 13px; }
+.sleeve-sample .tcard-initial { font-size: 52px; }
+@keyframes sample-float {
+  0%, 100% { transform: translateY(0) rotateY(-10deg) rotateX(4deg); }
+  50% { transform: translateY(-6px) rotateY(10deg) rotateX(-3deg); }
+}
+.sleeve-tile-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; flex: 1; }
+.sleeve-tile-body .btn { margin-top: auto; }
+.sleeve-lock {
+  margin-top: auto; padding: 8px 12px; border-radius: 12px; text-align: center; font-size: 13px; font-weight: 800; letter-spacing: .04em; color: #fff;
+  background: linear-gradient(90deg, rgba(255, 63, 164, .35), rgba(255, 213, 74, .35), rgba(77, 255, 184, .35), rgba(63, 198, 255, .35), rgba(178, 92, 255, .35));
+  background-size: 300% 100%; animation: sl-chrome 6s linear infinite; border: 1px solid rgba(255, 255, 255, .25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tcard-sleeve, .sl-ring, .sl-film, .sl-shine::before, .sl-shine::after, .sleeve-sample, .sleeve-lock { animation: none !important; }
+}

@@ -1,0 +1,107 @@
+/* Pestana Top: tarjeta de apoyo, top ricos (podio + lista) y top donadores. */
+:root {
+  --gold: #fbbf24;
+  --silver: #d4d4e8;
+  --bronze: #f59e6b;
+  --support-a: #a855f7;
+  --support-b: #ec4899;
+}
+
+/* ── Tarjeta de apoyo (misma idea que el panel de Twitch) ── */
+.support { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px 26px; align-items: center; }
+.support-card {
+  position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 30px 34px; border-radius: 22px; color: #fff; text-decoration: none;
+  background: linear-gradient(135deg, var(--support-a) 0%, #c24fe0 55%, var(--support-b) 100%);
+  box-shadow: 0 18px 40px -14px rgba(236, 72, 153, .55), inset 0 1px 0 rgba(255, 255, 255, .25);
+  transition: transform .25s var(--ease), box-shadow .25s ease;
+}
+.support-card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(420px 160px at 15% 0%, rgba(255, 255, 255, .22), transparent 70%);
+}
+.support-card:hover, .support-card:focus-visible { transform: translateY(-3px) rotate(-.4deg); box-shadow: 0 24px 48px -14px rgba(236, 72, 153, .7), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.support-card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.support-card:active { transform: translateY(0) scale(.99); }
+.support-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.support-title { font-family: var(--font-display); font-size: clamp(42px, 7vw, 60px); font-weight: 800; line-height: .9; letter-spacing: -.01em; }
+.support-sub { font-size: 18px; font-weight: 800; color: rgba(255, 255, 255, .88); overflow-wrap: anywhere; }
+.support-heart { flex: none; width: 58px; height: 58px; fill: #fdf2ff; filter: drop-shadow(0 6px 14px rgba(120, 20, 90, .35)); animation: heart-beat 1.8s ease-in-out infinite; }
+@keyframes heart-beat { 0%, 60%, 100% { transform: scale(1); } 20% { transform: scale(1.14); } 40% { transform: scale(.96); } }
+.support-rate { font-family: var(--font-display); font-size: 24px; font-weight: 800; line-height: 1.15; }
+.support-deal .hint { margin-top: 8px; max-width: 46ch; }
+
+/* ── Tableros ── */
+.top-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 34px; }
+.top-grid > section { margin-top: 0; }
+.top-board { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 20px 16px; }
+.top-donors { background: linear-gradient(180deg, rgba(236, 72, 153, .1), transparent 140px), var(--surface); }
+
+.live-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--ok); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(52, 211, 153, .6); animation: live-pulse 1.6s ease-out infinite; }
+@keyframes live-pulse { to { box-shadow: 0 0 0 9px rgba(52, 211, 153, 0); } }
+
+/* Podio: el 1 en el centro y mas alto */
+.podium { list-style: none; display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 10px; align-items: end; margin: 6px 0 14px; }
+.podium-step {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0;
+  padding: 16px 10px 14px; border-radius: 16px 16px 10px 10px; background: var(--surface-2); border: 1px solid var(--line);
+}
+.podium-step.p1 { order: 2; min-height: 170px; border-color: rgba(251, 191, 36, .5); background: linear-gradient(180deg, rgba(251, 191, 36, .2), var(--surface-2) 70%); }
+.podium-step.p2 { order: 1; min-height: 140px; }
+.podium-step.p3 { order: 3; min-height: 124px; }
+.podium-rank {
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+  font-family: var(--font-display); font-size: 20px; font-weight: 800; color: #1b1430;
+}
+.p1 .podium-rank { background: var(--gold); width: 46px; height: 46px; font-size: 24px; box-shadow: 0 0 22px rgba(251, 191, 36, .55); }
+.p2 .podium-rank { background: var(--silver); }
+.p3 .podium-rank { background: var(--bronze); }
+.podium-step .top-name { flex-direction: column; align-items: center; }
+.podium-points { font-weight: 800; }
+.p1 .podium-points { font-family: var(--font-display); font-size: 22px; color: var(--gold); }
+.podium .empty { grid-column: 1 / -1; }
+
+/* Filas */
+.top-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.top-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; }
+.top-row:nth-child(odd) { background: rgba(255, 255, 255, .025); }
+.top-rank { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--muted); text-align: center; }
+.top-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.top-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.top-points { font-variant-numeric: tabular-nums; font-weight: 800; border-radius: 6px; padding: 0 4px; }
+.pts { color: var(--muted); font-size: 13px; }
+.me-tag, .platform-tag { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; }
+.me-tag { background: var(--accent); color: #1b1430; }
+.platform-tag { border: 1px solid var(--line); color: var(--muted); }
+.is-me { outline: 2px solid rgba(182, 156, 255, .55); outline-offset: -2px; }
+
+.is-up { animation: flash-up 1.4s ease-out; }
+.is-down { animation: flash-down 1.4s ease-out; }
+@keyframes flash-up { from { background: rgba(52, 211, 153, .45); color: #fff; } }
+@keyframes flash-down { from { background: rgba(251, 113, 133, .45); color: #fff; } }
+
+.top-me { margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); font-weight: 800; text-align: center; }
+
+.donor-row.d1 .top-rank { color: var(--gold); }
+.donor-row.d2 .top-rank { color: var(--silver); }
+.donor-row.d3 .top-rank { color: var(--bronze); }
+.donor-amount { color: #f9a8d4; }
+.top-list .empty, .podium .empty { color: var(--muted); font-size: 14px; list-style: none; padding: 8px 2px; }
+
+@media (max-width: 860px) {
+  .support, .top-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .support-card { padding: 22px 20px; }
+  .support-sub { font-size: 15px; }
+  .support-heart { width: 44px; height: 44px; }
+  .podium { gap: 6px; }
+  .podium-step { padding: 12px 6px 10px; }
+  .podium-step.p1 { min-height: 150px; }
+  .p1 .podium-points { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .support-heart, .live-dot, .is-up, .is-down { animation: none; }
+  .support-card { transition: none; }
+}

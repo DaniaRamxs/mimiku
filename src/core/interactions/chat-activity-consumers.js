@@ -8,6 +8,8 @@
 // los mensajes que empiezan con "!" son comandos y NO disparan estos
 // consumidores (los procesa Command Engine, no esto) — se preserva la
 // exclusión mutua que ya existía.
+const { isKnownBot } = require("../known-bots.js")
+
 function isCommandText(event) {
   const text = event.message && event.message.text
   return !text || text.trim().startsWith("!")
@@ -18,8 +20,9 @@ function isCommandText(event) {
 // "unknown"), no se otorga economía/XP — no hay una identidad "segura" en
 // qué apoyarse, solo una etiqueta de reserva. Activity y Widgets sí pueden
 // seguir procesando el evento (no mueven dinero, solo reflejan presencia).
+// Los bots conocidos (Nightbot, Moobot...) tampoco: no son viewers.
 function hasEconomicIdentity(event) {
-  return event.platform && event.platform !== "unknown"
+  return event.platform && event.platform !== "unknown" && !isKnownBot(event.actor && event.actor.username)
 }
 
 // ── XP de economía por mensaje ──────────────────────────────────────────────
@@ -195,6 +198,9 @@ function registerChatActivityConsumers(eventEngine, overrides = {}) {
   eventEngine.subscribe("chat_message", afk.handle)
   eventEngine.subscribe("chat_message", challenge.handle)
   eventEngine.subscribe("chat_message", chatFeed.handle)
+  // Insignias de Twitch (VIP/mod/sub) para los permisos de la pagina de canje.
+  const badges = overrides.seenBadges || require("../../services/seen-badges.js").getDefaultSeenBadges()
+  eventEngine.subscribe("chat_message", event => { try { badges.remember(event) } catch (e) {} })
 
   return { xp, levels, widgets, afk, challenge, chatFeed }
 }

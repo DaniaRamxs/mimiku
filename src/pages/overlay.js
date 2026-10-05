@@ -6,6 +6,8 @@ async function initOverlay() {
   if (label) label.textContent = await overlayUrl()
   const label2 = document.getElementById("overlay2-url-label")
   if (label2) label2.textContent = `${await overlayUrl()}2`
+  const label3 = document.getElementById("overlay3-url-label")
+  if (label3) label3.textContent = `${await overlayUrl()}3`
 }
 
 async function overlayUrl() {
@@ -21,6 +23,11 @@ async function copyUrl() {
 async function copyUrl2() {
   navigator.clipboard.writeText(`${await overlayUrl()}2`)
   showToast("URL del Overlay 2 copiada")
+}
+
+async function copyUrl3() {
+  navigator.clipboard.writeText(`${await overlayUrl()}3`)
+  showToast("URL del Overlay 3 copiada")
 }
 
 async function sendTestAlert() {
@@ -47,4 +54,4 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500)
 }
 
-module.exports = { initOverlay, copyUrl, copyUrl2, sendTestAlert, updateTicker }
+module.exports = { initOverlay, copyUrl, copyUrl2, copyUrl3, sendTestAlert, updateTicker }

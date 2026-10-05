@@ -153,3 +153,57 @@ test("guarda el avatar cuando llega y no lo borra si un mensaje posterior no lo 
   service.recordMessage(chat("ana"))
   assert.equal(service.snapshot().entries[0].avatar, "https://example.com/a.png")
 })
+
+// ── Fotos de perfil ──────────────────────────────────────────────────────────
+function setupWithAvatars(photos) {
+  const db = new Database(":memory:")
+  applyMigrations(db)
+  const clock = { current: new Date(2026, 8, 28, 18, 0, 0) }
+  const sessions = createStreamSessions({ db, getChannel: () => "canal", now: () => clock.current, getGapHours: () => 3 })
+  const lookups = []
+  const changes = []
+  const service = createChatTopService({
+    db, sessions, now: () => clock.current, debounceMs: 0, onChange: snap => changes.push(snap),
+    getAvatar: async (platform, username) => { lookups.push(`${platform}:${username}`); return photos[username] || null },
+  })
+  const advance = ms => { clock.current = new Date(clock.current.getTime() + ms) }
+  return { service, lookups, changes, advance }
+}
+
+test("el top 3 busca la foto de Twitch de quien entra y la manda al overlay", async () => {
+  const { service, lookups, changes, advance } = setupWithAvatars({ ana: "https://cdn.example/ana.png" })
+  send(service, advance, "ana", 2)
+  await flush()
+  await flush()
+  assert.deepEqual(lookups, ["twitch:ana"])
+  assert.equal(service.snapshot().entries[0].avatar, "https://cdn.example/ana.png")
+  assert.equal(changes.at(-1).entries[0].avatar, "https://cdn.example/ana.png")
+})
+
+test("la foto se busca una sola vez por viewer", async () => {
+  const { service, lookups, advance } = setupWithAvatars({})
+  send(service, advance, "ana", 1)
+  await flush()
+  send(service, advance, "ana", 3)
+  await flush()
+  await flush()
+  assert.deepEqual(lookups, ["twitch:ana"])
+})
+
+test("no se buscan fotos de quien no esta en el top 3", async () => {
+  const { service, lookups, advance } = setupWithAvatars({})
+  send(service, advance, "ana", 5)
+  send(service, advance, "bea", 4)
+  send(service, advance, "cai", 3)
+  send(service, advance, "dan", 1)
+  await flush()
+  assert.equal(lookups.includes("twitch:dan"), false)
+})
+
+test("si el evento ya trae la foto (TikTok) no se consulta nada", async () => {
+  const { service, lookups } = setupWithAvatars({})
+  service.recordMessage({ ...chat("mimi", "hola", { avatarUrl: "https://tiktok.example/m.jpg" }), platform: "tiktok" })
+  await flush()
+  assert.deepEqual(lookups, [])
+  assert.equal(service.snapshot().entries[0].avatar, "https://tiktok.example/m.jpg")
+})

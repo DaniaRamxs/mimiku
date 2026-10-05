@@ -210,6 +210,20 @@ function executeBlock(block, use) {
         setTimeout(resolve, 200)
         break
 
+      case "subathon_time":
+        try {
+          const { applySubathonBlock } = require("./subathon-mimic.js")
+          const timer = require("./subathon.js").getDefaultSubathon().timer
+          const result = applySubathonBlock(timer, block, { user })
+          if (result.ok) {
+            const minutes = Math.round(Math.abs(result.appliedMs) / 60000)
+            const verb = result.appliedMs < 0 ? "quito" : "sumo"
+            _broadcast({ type: "mimic_message", text: `${user} ${verb} ${minutes} min al subathon`, duration: 5000 })
+          }
+        } catch (e) { console.error("[mimics] subathon_time:", e.message) }
+        setTimeout(resolve, 200)
+        break
+
       case "xp":
         try { require("./levels.js").addXp(use.username, block.amount || 50, "mimic", use.platform_user_id || "", use.platform || "twitch") } catch (e) {}
         setTimeout(resolve, 100)
@@ -304,6 +318,13 @@ async function checkNewGifts() {
 function testBlock(block) {
   if (!_broadcast) return
   const fakeUse = { username: "tu_prueba", display: "TÚ" }
+  // Probar no debe tocar el contador real del subathon: solo muestra el aviso.
+  if (block?.type === "subathon_time") {
+    const minutes = require("./subathon-mimic.js").rollMinutes(block.min, block.max)
+    const verb = block.mode === "add" ? "sumo" : "quito"
+    _broadcast({ type: "mimic_message", text: `(prueba) ${fakeUse.display} ${verb} ${minutes} min al subathon`, duration: 5000 })
+    return
+  }
   executeBlock(block, fakeUse)
 }
 

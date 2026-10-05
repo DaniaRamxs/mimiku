@@ -131,6 +131,28 @@ function createLocalPlatform(db) {
       .run(randomUUID(), ch, viewerId || null, action, itemId, quantity, key)
   }
 
+  // Registro de actividad de los viewers (misiones semanales del pase).
+  const ACTIVITY_KEEP_MS = 35 * 24 * 60 * 60 * 1000
+  const ACTIVITY_PRUNE_EVERY = 500
+  let activityWrites = 0
+  const activity = {
+    record(channelId, viewerId, action, amount = 1, at = new Date().toISOString()) {
+      const qty = Math.trunc(Number(amount))
+      if (!viewerId || !(qty > 0)) return
+      db.prepare("INSERT INTO activity_log(channel_id, viewer_id, action, amount, created_at) VALUES(?,?,?,?,?)")
+        .run(channel(channelId), viewerId, text(action, 40), qty, at)
+      activityWrites += 1
+      if (activityWrites % ACTIVITY_PRUNE_EVERY === 0) {
+        db.prepare("DELETE FROM activity_log WHERE created_at < ?").run(new Date(Date.parse(at) - ACTIVITY_KEEP_MS).toISOString())
+      }
+    },
+    // Suma de `action` entre fromIso (incluido) y toIso (excluido).
+    total(channelId, viewerId, action, fromIso, toIso) {
+      return db.prepare(`SELECT COALESCE(SUM(amount),0) AS n FROM activity_log
+        WHERE channel_id=? AND viewer_id=? AND action=? AND created_at>=? AND created_at<?`).get(channel(channelId), viewerId, action, fromIso, toIso).n
+    },
+  }
+
   const mimics = {
     create(channelId, input) {
       const id = text(input?.id, 100) || randomUUID()
@@ -162,7 +184,14 @@ function createLocalPlatform(db) {
           text(updates?.assetPath ?? updates?.asset_path ?? current.asset_path, 1000), id)
       return this.get(id)
     },
-    remove(id) { return db.prepare("DELETE FROM mimics_local WHERE id = ?").run(id).changes > 0 },
+    // El historial de usos apunta al Mimic sin ON DELETE CASCADE: se borra
+    // con el (los usos pendientes de un Mimic borrado ya se descartaban).
+    remove(id) {
+      return db.transaction(() => {
+        db.prepare("DELETE FROM mimic_uses_local WHERE mimic_id = ?").run(id)
+        return db.prepare("DELETE FROM mimics_local WHERE id = ?").run(id).changes > 0
+      })()
+    },
     createBox(channelId, input) {
       const id = text(input?.id, 100) || randomUUID()
       db.prepare(`INSERT INTO mimic_boxes_local
@@ -202,9 +231,13 @@ function createLocalPlatform(db) {
           WHERE channel_id=? AND viewer_id=? AND mimic_id=? AND quantity>0`).run(ch, viewerId, mimicId)
         if (!owned.changes) throw new Error("Mimic no disponible")
         const id = randomUUID()
-        db.prepare(`INSERT INTO mimic_uses_local(id, request_key, channel_id, viewer_id, mimic_id) VALUES (?, ?, ?, ?, ?)`)
-          .run(id, key, ch, viewerId, mimicId)
+        // ISO 8601, igual que trigger(): la cola de mimics.js compara used_at como
+        // texto contra un ISO; con el formato de datetime('now') ("fecha hora", con
+        // espacio) el canje quedaba "antes del arranque" y nunca se lanzaba.
+        db.prepare(`INSERT INTO mimic_uses_local(id, request_key, channel_id, viewer_id, mimic_id, used_at) VALUES (?, ?, ?, ?, ?, ?)`)
+          .run(id, key, ch, viewerId, mimicId, new Date().toISOString())
         insertHistory(ch, viewerId, "use", mimicId, -1, `history:${key}`)
+        activity.record(ch, viewerId, "mimic", 1)
         return db.prepare("SELECT * FROM mimic_uses_local WHERE id = ?").get(id)
       })()
     },
@@ -311,6 +344,8 @@ function createLocalPlatform(db) {
       const row = db.prepare("SELECT * FROM viewer_levels_local WHERE channel_id=? AND viewer_id=?").get(ch, viewerId)
       const level = levelFromXp(row.xp)
       db.prepare("UPDATE viewer_levels_local SET level=? WHERE channel_id=? AND viewer_id=?").run(level, ch, viewerId)
+      // Niveles subidos (Destacados de la semana en la Comunidad).
+      if (level > (row.level || 1)) activity.record(ch, viewerId, "levelup", level - (row.level || 1))
       return { ...row, level, reason }
     },
     getViewer(channelId, viewerId) {
@@ -357,13 +392,35 @@ function createLocalPlatform(db) {
           channel(channelId), viewerId)
       return this.getOrCreate(channelId, { platform: viewer.platform, platformUserId: viewer.platform_user_id, username: viewer.username, display: viewer.display })
     },
+    // `exclusive`: '' (normal) o 'sub' (solo sale en el Pase Sub).
     createCard(channelId, input) {
       const id = text(input?.id, 100) || randomUUID()
-      db.prepare("INSERT INTO cards_local(id,channel_id,name,description,image_path,rarity) VALUES(?,?,?,?,?,?)")
-        .run(id, channel(channelId), text(input?.name, 120) || "Carta", text(input?.description, 1000), text(input?.imagePath ?? input?.image_url, 1000), text(input?.rarity, 30) || "common")
+      db.prepare("INSERT INTO cards_local(id,channel_id,name,description,image_path,rarity,exclusive) VALUES(?,?,?,?,?,?,?)")
+        .run(id, channel(channelId), text(input?.name, 120) || "Carta", text(input?.description, 1000), text(input?.imagePath ?? input?.image_url, 1000), text(input?.rarity, 30) || "common", input?.exclusive === "sub" ? "sub" : "")
       return db.prepare("SELECT * FROM cards_local WHERE id=?").get(id)
     },
+    // Editar un personaje: solo cambia lo que llega (las copias de los viewers no se tocan).
+    updateCard(id, input = {}) {
+      const current = db.prepare("SELECT * FROM cards_local WHERE id=?").get(String(id))
+      if (!current) return null
+      const rarities = ["comun", "raro", "epico", "legendario"]
+      const next = {
+        name: input.name === undefined ? current.name : text(input.name, 120) || current.name,
+        description: input.description === undefined ? current.description : text(input.description, 1000),
+        image_path: input.imagePath === undefined ? current.image_path : text(input.imagePath, 1000),
+        rarity: input.rarity !== undefined && rarities.includes(input.rarity) ? input.rarity : current.rarity,
+        exclusive: input.exclusive === undefined ? current.exclusive : input.exclusive === "sub" ? "sub" : "",
+      }
+      db.prepare("UPDATE cards_local SET name=?, description=?, image_path=?, rarity=?, exclusive=? WHERE id=?")
+        .run(next.name, next.description, next.image_path, next.rarity, next.exclusive, current.id)
+      return db.prepare("SELECT * FROM cards_local WHERE id=?").get(current.id)
+    },
+    setCardExclusive(id, exclusive) {
+      return db.prepare("UPDATE cards_local SET exclusive=? WHERE id=?").run(exclusive === "sub" ? "sub" : "", String(id)).changes > 0
+    },
     listCards(channelId) { return db.prepare("SELECT * FROM cards_local WHERE channel_id=? ORDER BY rarity,name").all(channel(channelId)) },
+    // Los que pueden salir por azar (gachapon, Plinko, forja, pase normal): sin los exclusivos.
+    droppableCards(channelId) { return db.prepare("SELECT * FROM cards_local WHERE channel_id=? AND exclusive='' ORDER BY rarity,name").all(channel(channelId)) },
     removeCard(id) { return db.prepare("DELETE FROM cards_local WHERE id=?").run(id).changes > 0 },
     createPack(channelId, input) {
       const id = text(input?.id, 100) || randomUUID()
@@ -375,11 +432,55 @@ function createLocalPlatform(db) {
       return db.prepare("SELECT * FROM card_packs_local WHERE id=?").get(id)
     },
     listPacks(channelId) { return db.prepare("SELECT * FROM card_packs_local WHERE channel_id=? ORDER BY price,name").all(channel(channelId)) },
-    grantCard(channelId, viewerId, cardId, quantity = 1, key) {
+    // Una copia puede venir con rango subido (`rank`: "raro"..."mitico") y/o con
+    // funda (`sleeve`: "rara", "epica", "prisma"). Sin nada, es una copia normal.
+    grantCard(channelId, viewerId, cardId, quantity = 1, key, { sleeve = null, rank = null } = {}) {
       const qty = positiveInteger(quantity)
-      const result = db.prepare(`INSERT INTO viewer_cards_local(channel_id,viewer_id,card_id,quantity) VALUES(?,?,?,?)
-        ON CONFLICT(channel_id,viewer_id,card_id) DO UPDATE SET quantity=quantity+excluded.quantity`).run(channel(channelId), viewerId, cardId, qty)
+      const ch = channel(channelId)
+      const result = db.transaction(() => {
+        const inserted = db.prepare(`INSERT INTO viewer_cards_local(channel_id,viewer_id,card_id,quantity) VALUES(?,?,?,?)
+          ON CONFLICT(channel_id,viewer_id,card_id) DO UPDATE SET quantity=quantity+excluded.quantity`).run(ch, viewerId, cardId, qty)
+        if (sleeve || rank) {
+          db.prepare(`INSERT INTO viewer_card_variants(channel_id,viewer_id,card_id,rank,sleeve,quantity) VALUES(?,?,?,?,?,?)
+            ON CONFLICT(channel_id,viewer_id,card_id,rank,sleeve) DO UPDATE SET quantity=quantity+excluded.quantity`)
+            .run(ch, viewerId, cardId, String(rank || ""), String(sleeve || ""), qty)
+        }
+        return inserted
+      })()
       return { changes: result.changes, idempotencyKey: key }
+    },
+    // Quita `quantity` copias de un personaje; false (sin quitar nada) si no tiene tantas.
+    // Sin `sleeve` ni `rank` solo cuenta las copias normales; con ellos, solo las de esa variante.
+    takeCard(channelId, viewerId, cardId, quantity = 1, { sleeve = null, rank = null } = {}) {
+      const qty = positiveInteger(quantity)
+      const ch = channel(channelId)
+      return db.transaction(() => {
+        if (sleeve || rank) {
+          const taken = db.prepare(`UPDATE viewer_card_variants SET quantity=quantity-?
+            WHERE channel_id=? AND viewer_id=? AND card_id=? AND rank=? AND sleeve=? AND quantity>=?`)
+            .run(qty, ch, viewerId, cardId, String(rank || ""), String(sleeve || ""), qty).changes
+          if (!taken) return false
+          return db.prepare(`UPDATE viewer_cards_local SET quantity=quantity-?
+            WHERE channel_id=? AND viewer_id=? AND card_id=? AND quantity>=?`).run(qty, ch, viewerId, cardId, qty).changes > 0
+        }
+        return db.prepare(`UPDATE viewer_cards_local SET quantity=quantity-?
+          WHERE channel_id=? AND viewer_id=? AND card_id=?
+            AND quantity - (SELECT COALESCE(SUM(v.quantity),0) FROM viewer_card_variants v
+              WHERE v.channel_id=viewer_cards_local.channel_id AND v.viewer_id=viewer_cards_local.viewer_id AND v.card_id=viewer_cards_local.card_id) >= ?`)
+          .run(qty, ch, viewerId, cardId, qty).changes > 0
+      })()
+    },
+    // Copias especiales de un viewer: [{ card_id, rank, sleeve, quantity }] ('' = sin rango/funda).
+    getCardVariants(channelId, viewerId) {
+      return db.prepare("SELECT card_id, rank, sleeve, quantity FROM viewer_card_variants WHERE channel_id=? AND viewer_id=? AND quantity>0")
+        .all(channel(channelId), viewerId)
+    },
+    // Copias normales (sin rango subido ni funda) de una carta.
+    plainCopies(channelId, viewerId, cardId) {
+      const row = db.prepare(`SELECT vc.quantity - (SELECT COALESCE(SUM(v.quantity),0) FROM viewer_card_variants v
+          WHERE v.channel_id=vc.channel_id AND v.viewer_id=vc.viewer_id AND v.card_id=vc.card_id) AS n
+        FROM viewer_cards_local vc WHERE vc.channel_id=? AND vc.viewer_id=? AND vc.card_id=?`).get(channel(channelId), viewerId, cardId)
+      return row ? row.n : 0
     },
     getCards(channelId, viewerId) {
       return db.prepare(`SELECT vc.*, c.name,c.description,c.image_path,c.rarity FROM viewer_cards_local vc
@@ -538,7 +639,24 @@ function createLocalPlatform(db) {
     },
   }
 
-  return { db, identities, economy, mimics, levels, profiles, shop, moderation, arena }
+  // Tiradas de gachapon y bolas de Plinko gratis (kind: "gachapon" | "plinko").
+  const tickets = {
+    get(channelId, viewerId) {
+      const rows = db.prepare("SELECT kind, quantity FROM viewer_tickets_local WHERE channel_id=? AND viewer_id=?").all(channel(channelId), viewerId)
+      return Object.fromEntries(["gachapon", "plinko"].map(kind => [kind, (rows.find(row => row.kind === kind) || { quantity: 0 }).quantity]))
+    },
+    grant(channelId, viewerId, kind, quantity = 1) {
+      db.prepare(`INSERT INTO viewer_tickets_local(channel_id, viewer_id, kind, quantity) VALUES(?,?,?,?)
+        ON CONFLICT(channel_id, viewer_id, kind) DO UPDATE SET quantity=quantity+excluded.quantity`).run(channel(channelId), viewerId, text(kind, 20), positiveInteger(quantity))
+    },
+    // Gasta una si la hay; true si se gasto.
+    use(channelId, viewerId, kind) {
+      return db.prepare("UPDATE viewer_tickets_local SET quantity=quantity-1 WHERE channel_id=? AND viewer_id=? AND kind=? AND quantity>0")
+        .run(channel(channelId), viewerId, text(kind, 20)).changes > 0
+    },
+  }
+
+  return { db, identities, economy, mimics, levels, profiles, shop, moderation, arena, activity, tickets }
 }
 
 module.exports = { createLocalPlatform, xpForLevel, levelFromXp, DEFAULT_TITLES }

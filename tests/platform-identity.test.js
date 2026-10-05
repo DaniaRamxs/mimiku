@@ -76,8 +76,9 @@ test("4-7: !puntos por plataforma devuelve la wallet correcta y modificar una no
 
   engine.handle(chatEvent("!puntos", { platform: "twitch", username: "luna", displayName: "Luna" }, { reply: m => repliesTw.push(m) }))
   engine.handle(chatEvent("!puntos", { platform: "youtube", username: "luna", displayName: "Luna" }, { reply: m => repliesYt.push(m) }))
-  assert.match(repliesTw[0], /tenés 500 puntos/)
-  assert.match(repliesYt[0], /tenés 500 puntos/)
+  // !daily da 10.000 (antes 500).
+  assert.match(repliesTw[0], /tenés 10,000 puntos/)
+  assert.match(repliesYt[0], /tenés 10,000 puntos/)
 
   // !dar (mod) modifica el username "luna" — debe resolver dentro de LA MISMA
   // plataforma desde la que se ejecuta el comando, nunca cruzar a la otra.
@@ -88,8 +89,8 @@ test("4-7: !puntos por plataforma devuelve la wallet correcta y modificar una no
   const afterTw = [], afterYt = []
   engine.handle(chatEvent("!puntos", { platform: "twitch", username: "luna", displayName: "Luna" }, { reply: m => afterTw.push(m) }))
   engine.handle(chatEvent("!puntos", { platform: "youtube", username: "luna", displayName: "Luna" }, { reply: m => afterYt.push(m) }))
-  assert.match(afterTw[0], /tenés 600 puntos/) // 500 + 100
-  assert.match(afterYt[0], /tenés 500 puntos/)  // sin cambios
+  assert.match(afterTw[0], /tenés 10,100 puntos/) // 10.000 + 100
+  assert.match(afterYt[0], /tenés 10,000 puntos/)  // sin cambios
 })
 
 test("8: un evento SSN de YouTube resuelve identidad por platform=youtube, no por source", () => {

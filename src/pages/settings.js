@@ -18,6 +18,7 @@ async function initSettings() {
   if (tokenStatus) tokenStatus.textContent = twitchSecret.configured
     ? (twitchSecret.protected ? "Guardado con protección del sistema" : "Disponible solo durante esta sesión")
     : "No configurado"
+  await refreshRedemptionsStatus().catch(() => {})
   document.getElementById("legacy-cloud-enabled").checked = config.integrations.legacySupabase.enabled
   document.getElementById("legacy-cloud-url").value = config.integrations.legacySupabase.url || ""
   document.getElementById("legacy-cloud-status").textContent = config.integrations.legacySupabase.configured
@@ -30,8 +31,17 @@ async function initSettings() {
   await refreshTikTok(config)
   await refreshBackups()
   if (!ssnStatusInterval) ssnStatusInterval = setInterval(() => refreshSsnStatus().catch(() => {}), 4000)
+  if (!redemptionsStatusInterval) redemptionsStatusInterval = setInterval(() => refreshRedemptionsStatus().catch(() => {}), 4000)
   if (!tiktokStatusInterval) tiktokStatusInterval = setInterval(() => refreshTikTokStatus().catch(() => {}), 4000)
   return config
+}
+
+// Canjes de puntos de canal (EventSub), refrescado como SSN y TikTok.
+let redemptionsStatusInterval = null
+async function refreshRedemptionsStatus() {
+  const status = await ipcRenderer.invoke("twitch:redemptionsStatus")
+  const el = document.getElementById("twitch-redemptions-status")
+  if (el && status) el.textContent = status.detail || status.state
 }
 
 // ── Social Stream Ninja (fuente opcional, solo lectura) ─────────────────────

@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: http://127.0.0.1:*; media-src 'self' blob: data: http://127.0.0.1:*; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: http://127.0.0.1:* https:; media-src 'self' blob: data: http://127.0.0.1:*; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Mimiku</title>
   <link rel="stylesheet" href="styles/app.css">
+  <link rel="stylesheet" href="styles/vtuber-reactions.css">
 </head>
 <body>
 
@@ -29,7 +30,7 @@
     <button class="nav-item" data-page="commands">⌘ Comandos</button>
     <button class="nav-item" data-page="overlay">◉ Overlay</button>
     <button class="nav-item" data-page="events">⚡ Eventos</button>
-    <button class="nav-item" data-page="cards">🃏 Cartas</button>
+    <button class="nav-item" data-page="cards">Gachapon</button>
     <button class="nav-item" data-page="mimics">✨ Mimics</button>
     <button class="nav-item" data-page="levels">⭐ Niveles</button>
     <button class="nav-item" data-page="emotes">🔊 Emotes</button>
@@ -434,6 +435,11 @@
           <span id="overlay2-url-label">http://127.0.0.1:7777/overlay2</span>
           <button onclick="window.overlayPage.copyUrl2()">Copiar</button>
         </div>
+        <p class="desc" style="margin-top:12px">Overlay 3 (widgets nuevos). Agrégalo como otra Browser Source a pantalla completa:</p>
+        <div class="url-box">
+          <span id="overlay3-url-label">http://127.0.0.1:7777/overlay3</span>
+          <button onclick="window.overlayPage.copyUrl3()">Copiar</button>
+        </div>
       </div>
       <div class="panel" style="max-width:560px;margin-bottom:1rem">
         <div class="panel-header"><span class="panel-title">Probar alerta</span></div>
@@ -699,26 +705,97 @@
       </div>
     </div>
 
-    <!-- Cartas -->
+    <!-- Gachapon (por dentro: tabla de cartas) -->
     <div id="cards" class="page">
-      <div class="page-header"><h1>Cartas y Sobres</h1></div>
+      <div class="page-header">
+        <h1>Gachapon</h1>
+        <p class="page-sub">Los viewers usan !gachapon para pagar puntos y sacar un personaje al azar. El resultado sale en el Overlay 3.</p>
+      </div>
 
       <div class="two-col" style="align-items:start">
 
-        <!-- Cartas -->
         <div>
-          <div class="panel">
+          <div class="panel bulk-panel">
             <div class="panel-header">
-              <span class="panel-title">🃏 Crear carta</span>
+              <span class="panel-title">Crear muchos a la vez</span>
             </div>
             <div class="form-group">
-              <label>Nombre<input id="card-name" type="text" placeholder="Carta épica del canal"></label>
-              <label>Descripción<input id="card-desc" type="text" placeholder="Una carta muy especial..."></label>
+              <div class="bulk-section">
+                <strong class="bulk-section-title">Packs de personajes</strong>
+                <span class="field-hint">Añade a la tabla los personajes de estos juegos y animes, con una rareza sugerida. Los que ya tengas (mismo nombre) no se repiten y los parecidos se marcan para que los revises.</span>
+                <div id="bulk-packs" class="bulk-packs"></div>
+                <button class="btn-ghost bulk-inline" type="button" onclick="window.cardsPage.bulkAddPacks()">Añadir packs a la tabla</button>
+              </div>
+              <div class="bulk-section">
+                <strong class="bulk-section-title">GIFs animados</strong>
+                <div id="bulk-giphy-setup" hidden>
+                  <span class="field-hint">Para buscar GIFs hace falta una clave gratuita de GIPHY: entra en developers.giphy.com, crea una app de tipo API y copia su API Key. Se guarda cifrada en este equipo. Las claves de prueba admiten unas 100 búsquedas por hora; si se acaban, espera y sigue donde se quedó.</span>
+                  <div class="bulk-tools">
+                    <input id="bulk-giphy-key" type="password" autocomplete="off" spellcheck="false" placeholder="Clave de GIPHY">
+                    <button class="btn-ghost bulk-inline" type="button" onclick="window.cardsPage.bulkSaveGiphyKey()">Guardar clave</button>
+                  </div>
+                </div>
+                <div id="bulk-giphy-ready" hidden>
+                  <span class="field-hint">Pone a cada personaje sin imagen el primer GIF que encuentre que no tenga ya otro personaje. Revisa las miniaturas: si alguno no es, tócalo y elige otro. También puedes arrastrar tus propios GIF con el nombre del personaje (<code>luffy.gif</code>) y se colocan en su fila.</span>
+                  <div class="bulk-tools">
+                    <button id="bulk-gif-all" class="btn-ghost bulk-inline" type="button" onclick="window.cardsPage.bulkSearchGifs()">Buscar GIFs para los que no tienen imagen</button>
+                    <button class="btn-ghost bulk-inline" type="button" onclick="window.cardsPage.bulkChangeGiphyKey()">Cambiar clave</button>
+                  </div>
+                  <span id="bulk-gif-status" class="field-hint"></span>
+                </div>
+              </div>
+              <div id="bulk-drop" class="bulk-drop">
+                <strong>Arrastra aquí imágenes o carpetas enteras</strong>
+                <span class="field-hint">El nombre sale del archivo (<code>hada_del_bosque.png</code> pasa a "Hada del bosque"). La rareza, de la carpeta (<code>comun</code>, <code>raro</code>, <code>epico</code>, <code>legendario</code>) o del principio del nombre (<code>epico_hada.png</code>).</span>
+                <div class="bulk-pick">
+                  <button class="btn-ghost" type="button" onclick="document.getElementById('bulk-files').click()">Elegir imágenes</button>
+                  <button class="btn-ghost" type="button" onclick="document.getElementById('bulk-folder').click()">Elegir carpeta</button>
+                </div>
+                <input id="bulk-files" type="file" accept="image/*" multiple hidden>
+                <input id="bulk-folder" type="file" webkitdirectory multiple hidden>
+              </div>
+              <details class="bulk-list-box">
+                <summary>O pega una lista de nombres (sin imagen)</summary>
+                <textarea id="bulk-list" rows="5" placeholder="Un personaje por línea:&#10;Gatito dorado&#10;Dragón rojo, legendario, Escupe fuego&#10;Hada; épico"></textarea>
+                <p class="field-hint">Nombre, y si quieres rareza y descripción separadas por coma, punto y coma o tabulador (se puede pegar desde una hoja de cálculo).</p>
+                <button class="btn-ghost" type="button" onclick="window.cardsPage.bulkAddList()">Añadir a la tabla</button>
+              </details>
+              <div class="bulk-tools">
+                <label>Rareza si no se indica
+                  <select id="bulk-default">
+                    <option value="comun">Común</option>
+                    <option value="raro">Raro</option>
+                    <option value="epico">Épico</option>
+                    <option value="legendario">Legendario</option>
+                  </select>
+                </label>
+                <button class="btn-ghost" type="button" onclick="window.cardsPage.bulkApplyRarity()">Aplicar a todos</button>
+              </div>
+              <div id="bulk-table" hidden>
+                <div id="bulk-rows" class="bulk-rows"></div>
+                <div class="bulk-foot">
+                  <span id="bulk-summary" class="field-hint"></span>
+                  <button id="bulk-skipdups" class="btn-ghost" type="button" hidden onclick="window.cardsPage.bulkSkipDuplicates()">Quitar repetidos</button>
+                  <button class="btn-ghost" type="button" onclick="window.cardsPage.bulkClear()">Vaciar</button>
+                </div>
+                <div id="bulk-progress" class="bulk-progress" hidden></div>
+                <button id="bulk-create" class="btn-primary" type="button" onclick="window.cardsPage.bulkCreate()">Crear personajes</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:1rem">
+            <div class="panel-header">
+              <span class="panel-title">Crear personaje</span>
+            </div>
+            <div class="form-group">
+              <label>Nombre<input id="card-name" type="text" placeholder="Gatito dorado"></label>
+              <label>Descripción<input id="card-desc" type="text" placeholder="Un personaje muy especial..."></label>
               <label>Imagen
                 <div style="display:flex;gap:6px;align-items:center">
                   <input id="card-img" type="url" placeholder="https://...jpg" style="flex:1">
-                  <button class="btn-ghost" onclick="document.getElementById('card-img-file').click()" style="white-space:nowrap;padding:8px 10px;font-size:12px">📁 Subir</button>
-                  <input id="card-img-file" type="file" accept="image/*" style="display:none" onchange="window.cardsPage.uploadCardImage()">
+                  <button class="btn-ghost" onclick="document.getElementById('card-img-file').click()" style="white-space:nowrap;padding:8px 10px;font-size:12px">Subir</button>
+                  <input id="card-img-file" type="file" accept="image/*" style="display:none" onchange="window.cardsPage.uploadCardImage(this.files[0]); this.value=''">
                 </div>
                 <p id="card-img-uploading" class="field-hint" style="display:none">Subiendo imagen…</p>
               </label>
@@ -730,45 +807,104 @@
                   <option value="legendario">Legendario</option>
                 </select>
               </label>
-              <button class="btn-primary" onclick="window.cardsPage.createCard()">Crear carta</button>
+              <label style="display:flex;gap:8px;align-items:center"><input id="card-sub-only" type="checkbox" style="width:auto"> Exclusivo del Pase Sub (no sale en el gachapon, el Plinko, la forja ni el pase normal)</label>
+              <button class="btn-primary" onclick="window.cardsPage.createCard()">Crear personaje</button>
             </div>
           </div>
 
           <div class="panel" style="margin-top:1rem">
+            <div class="panel-header"><span class="panel-title">Tirada</span></div>
+            <div class="form-group">
+              <label>Precio por tirada (puntos)<input id="gachapon-price" type="number" min="0" step="1" placeholder="100"></label>
+              <p class="field-hint">Probabilidad por rareza: común 60%, raro 25%, épico 12%, legendario 3%. Las rarezas sin personajes no cuentan.</p>
+              <label>Comisión del mercado (%)<input id="gacha-market-fee" type="number" min="0" max="50" step="1" placeholder="5"></label>
+              <p class="field-hint">En el mercado de la página de canje, el canal se queda este porcentaje de cada venta (esos puntos desaparecen). De 0 a 50.</p>
+              <label>Precio del Plinko (puntos)<input id="plinko-price" type="number" min="1" step="1" placeholder="150"></label>
+              <p class="field-hint">Minijuego de la página de canje. Premios: nada 62%, raro 25%, épico 10%, legendario 3% (personaje del gachapon o Mimic de esa rareza, al azar).</p>
+              <label>Rasca y gana: precio (puntos)<input id="mg-scratch" type="number" min="1" step="1" placeholder="500"></label>
+              <label>Ruleta de la fortuna: precio por giro (puntos, 1 giro gratis al día)<input id="mg-wheel" type="number" min="1" step="1" placeholder="1000"></label>
+              <label>Slots de personajes: precio (puntos)<input id="mg-slots" type="number" min="1" step="1" placeholder="300"></label>
+              <label>Alta o baja y Buscaminas: apuesta mínima<input id="mg-risk-min" type="number" min="1" step="1" placeholder="100"></label>
+              <label>Alta o baja y Buscaminas: apuesta máxima<input id="mg-risk-max" type="number" min="1" step="1" placeholder="100000"></label>
+              <p class="field-hint">Minijuegos de la página de canje. Los premios con cofre regalan el cofre elegido para el Pase Sub.</p>
+              <label>Inmunidad a robos: precio (puntos)<input id="shield-price" type="number" min="1" step="1" placeholder="50000"></label>
+              <label>Inmunidad a robos: duración (minutos)<input id="shield-minutes" type="number" min="1" max="1440" step="1" placeholder="15"></label>
+              <p class="field-hint">Se compra en la Tienda de efectos de la página de canje. Mientras dura, nadie puede robarle personajes con !robarpj. Comprarla otra vez suma el tiempo.</p>
+              <label>Funda rara: precio (puntos)<input id="sleeve-rara-price" type="number" min="1" step="1" placeholder="20000"></label>
+              <label>Funda épica: precio (puntos)<input id="sleeve-epica-price" type="number" min="1" step="1" placeholder="75000"></label>
+              <p class="field-hint">Fundas de la tienda de la página de canje: el viewer se la pone a una carta y viaja con ella al venderla o tradearla. La funda prisma no se vende: es el premio del nivel 30 del pase premium.</p>
+              <label>Copias para subir una carta a Raro<input id="rank-cost-raro" type="number" min="1" max="1000" step="1" placeholder="10"></label>
+              <label>Copias para subir a Épico<input id="rank-cost-epico" type="number" min="1" max="1000" step="1" placeholder="15"></label>
+              <label>Copias para subir a Legendario<input id="rank-cost-legendario" type="number" min="1" max="1000" step="1" placeholder="20"></label>
+              <label>Copias para subir a Mítico<input id="rank-cost-mitico" type="number" min="1" max="1000" step="1" placeholder="40"></label>
+              <p class="field-hint">Subir de rango: la misma carta pasa al rango siguiente gastando estas copias normales de esa carta, además de la que sube. Mítico solo se consigue así.</p>
+              <div style="display:flex;gap:8px">
+                <button class="btn-primary" style="width:auto;padding:10px 18px" onclick="window.cardsPage.saveGachaponConfig()">Guardar</button>
+                <button class="btn-ghost" style="width:auto;padding:10px 18px" onclick="window.cardsPage.testGachapon()">Probar en Overlay 3</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
             <div class="panel-header">
-              <span class="panel-title">Cartas del canal</span>
+              <span class="panel-title">Personajes del gachapon</span>
               <button class="btn-ghost" onclick="window.cardsPage.loadCards()">↻</button>
             </div>
             <div id="cards-list"><p class="empty">Cargando…</p></div>
           </div>
         </div>
 
-        <!-- Sobres -->
-        <div>
-          <div class="panel">
-            <div class="panel-header"><span class="panel-title">📦 Crear sobre</span></div>
-            <div class="form-group">
-              <label>Nombre<input id="pack-name" type="text" placeholder="Sobre Básico"></label>
-              <label>Descripción<input id="pack-desc" type="text" placeholder="3 cartas aleatorias"></label>
-              <label>Precio (puntos)<input id="pack-price" type="number" placeholder="200" min="1"></label>
-              <label>Tier
-                <select id="pack-tier" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none">
-                  <option value="basic">Básico (común/raro predomina)</option>
-                  <option value="premium">Premium (épico/legendario predomina)</option>
-                </select>
-              </label>
-              <button class="btn-primary" onclick="window.cardsPage.createPack()">Crear sobre</button>
+        <dialog id="card-edit" class="card-dialog" aria-labelledby="card-edit-title">
+          <form method="dialog" class="form-group" onsubmit="return false">
+            <h3 id="card-edit-title" class="panel-title">Editar personaje</h3>
+            <div class="card-edit-body">
+              <div id="card-edit-preview" class="card-edit-preview"></div>
+              <div class="card-edit-fields">
+                <label>Nombre<input id="card-edit-name" type="text" maxlength="120"></label>
+                <label>Descripción<input id="card-edit-desc" type="text" maxlength="1000"></label>
+                <label>Imagen o GIF
+                  <input id="card-edit-img" type="url" placeholder="https://...gif">
+                </label>
+                <div class="bulk-pick" style="justify-content:flex-start">
+                  <button class="btn-ghost bulk-inline" type="button" onclick="window.cardsPage.editPickGif()">Buscar GIF</button>
+                  <button class="btn-ghost bulk-inline" type="button" onclick="document.getElementById('card-edit-file').click()">Subir archivo</button>
+                  <input id="card-edit-file" type="file" accept="image/*" hidden onchange="window.cardsPage.editUpload(this.files[0]); this.value=''">
+                </div>
+                <label>Rareza
+                  <select id="card-edit-rarity" class="bulk-rarity">
+                    <option value="comun">Común</option>
+                    <option value="raro">Raro</option>
+                    <option value="epico">Épico</option>
+                    <option value="legendario">Legendario</option>
+                  </select>
+                </label>
+                <label style="display:flex;gap:8px;align-items:center"><input id="card-edit-sub" type="checkbox" style="width:auto"> Exclusivo del Pase Sub</label>
+                <p id="card-edit-warn" class="field-hint card-edit-warn"></p>
+              </div>
             </div>
-          </div>
+            <p class="field-hint">Cambiarlo no quita las copias que ya tengan los viewers: verán el personaje con sus datos nuevos.</p>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn-ghost bulk-inline" type="button" onclick="document.getElementById('card-edit').close()">Cancelar</button>
+              <button class="btn-primary bulk-inline" type="button" onclick="window.cardsPage.saveCardEdit()">Guardar cambios</button>
+            </div>
+          </form>
+        </dialog>
 
-          <div class="panel" style="margin-top:1rem">
-            <div class="panel-header">
-              <span class="panel-title">Sobres del canal</span>
-              <button class="btn-ghost" onclick="window.cardsPage.loadPacks()">↻</button>
-            </div>
-            <div id="packs-list"><p class="empty">Cargando…</p></div>
+        <dialog id="gif-picker" class="card-dialog gif-dialog" aria-labelledby="gif-picker-title">
+          <h3 id="gif-picker-title" class="panel-title">Elegir GIF</h3>
+          <div class="bulk-tools">
+            <input id="gif-picker-query" type="search" placeholder="Nombre del personaje y juego">
+            <button id="gif-picker-search" class="btn-ghost bulk-inline" type="button">Buscar</button>
           </div>
-        </div>
+          <p id="gif-picker-note" class="field-hint"></p>
+          <div id="gif-picker-grid" class="gif-grid"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+            <span class="field-hint">Resultados de GIPHY</span>
+            <button id="gif-picker-cancel" class="btn-ghost bulk-inline" type="button">Cancelar</button>
+          </div>
+        </dialog>
 
       </div>
     </div>
@@ -931,9 +1067,92 @@
     <div id="vtuber" class="page">
       <div class="page-header">
         <h1>VTuber <span id="vts-status" class="afk-status-badge">Desconectado</span></h1>
-        <p class="page-sub">Conecta VTube Studio para las ruletas de ítem y avatar en tus Mimics</p>
+        <p class="page-sub">Reacciones en pantalla y en tu modelo cuando pasa algo en el directo</p>
       </div>
 
+      <div class="vt-tabs" role="tablist" aria-label="Secciones de VTuber">
+        <button class="vt-tab-btn" type="button" role="tab" data-tab="reactions" aria-selected="true">Reacciones</button>
+        <button class="vt-tab-btn" type="button" role="tab" data-tab="studio" aria-selected="false">VTube Studio</button>
+      </div>
+
+      <div id="vt-tab-reactions" class="vt-tab" role="tabpanel">
+        <div class="rx-topbar">
+          <div class="card-block rx-obs">
+            <p class="section-label" style="margin:0">FUENTE PARA OBS</p>
+            <div class="url-box"><span id="rx-obs-url">http://127.0.0.1:7777/vtuber</span><button id="rx-copy-url" class="btn-ghost rx-btn-sm" type="button">Copiar</button></div>
+            <p class="rx-muted">Añádela como fuente de navegador (1920x1080) encima de tu modelo. El texto a voz suena por el audio del escritorio.</p>
+          </div>
+          <details id="rx-stage" class="card-block rx-stage">
+            <summary>Escena, contador y cabeza</summary>
+            <p class="rx-muted">Los objetos apuntan aquí y rebotan. Activa la diana para verla en OBS mientras la ajustas.</p>
+            <label class="rx-slider"><span>Horizontal</span><input id="rx-head-x" type="range" min="0" max="100"><output id="rx-head-x-value"></output></label>
+            <label class="rx-slider"><span>Vertical</span><input id="rx-head-y" type="range" min="0" max="100"><output id="rx-head-y-value"></output></label>
+            <label class="rx-slider"><span>Tamaño</span><input id="rx-head-size" type="range" min="4" max="60"><output id="rx-head-size-value"></output></label>
+            <label class="rx-field is-inline"><span class="rx-field-label">Mostrar la diana en OBS</span><input id="rx-show-target" class="rx-toggle" type="checkbox"></label>
+            <p class="rx-stage-sub">Contador de golpes</p>
+            <label class="rx-field is-inline"><span class="rx-field-label">Mostrar el contador en OBS</span><input id="rx-show-counter" class="rx-toggle" type="checkbox"></label>
+            <label class="rx-field is-inline"><span class="rx-field-label">Esquina</span>
+              <select id="rx-counter-corner" class="rx-input rx-input-sm">
+                <option value="tl">Arriba izquierda</option><option value="tr">Arriba derecha</option>
+                <option value="bl">Abajo izquierda</option><option value="br">Abajo derecha</option>
+              </select></label>
+            <label class="rx-field is-inline"><span class="rx-field-label">Top 3 de atacantes</span><input id="rx-show-top" class="rx-toggle" type="checkbox"></label>
+            <p id="rx-hits-summary" class="rx-muted"></p>
+            <p class="rx-stage-sub">VTube Studio</p>
+            <label class="rx-field"><span class="rx-field-label">Partes del modelo que cuentan como cabeza</span>
+              <input id="rx-head-meshes" class="rx-input" type="text" maxlength="200">
+              <span class="rx-field-hint">Separadas por comas. Ahí se pegan accesorios y el chichón; si ninguna coincide, se usa cualquier parte.</span></label>
+            <div class="rx-stage-actions">
+              <button id="rx-reset-hits" class="btn-ghost rx-btn-sm" type="button">Reiniciar contador de hoy</button>
+              <button id="rx-clear-items" class="btn-ghost rx-btn-sm" type="button">Quitar todo lo pegado</button>
+            </div>
+          </details>
+        </div>
+
+        <div class="rx-layout">
+          <aside class="rx-flows card-block" aria-label="Reacciones">
+            <p class="section-label" style="margin:0 0 10px">REACCIONES</p>
+            <div class="rx-flows-actions">
+              <button id="rx-new-wizard" class="btn-primary rx-btn-main" type="button">Nueva con asistente</button>
+              <button id="rx-new-blank" class="btn-ghost rx-btn-sm" type="button">En blanco</button>
+            </div>
+            <button id="rx-templates" class="rx-templates-btn" type="button"><strong>Plantillas de comunidad</strong><span>!atacar, !yunque, !bonk, puntos de canal, modo jefe...</span></button>
+            <div id="rx-flow-list" class="rx-flow-list"></div>
+          </aside>
+
+          <section class="rx-editor" aria-label="Editor de nodos">
+            <div id="rx-editor-tools" class="rx-toolbar">
+              <input id="rx-flow-name" class="rx-input rx-flow-name" type="text" maxlength="60" aria-label="Nombre de la reacción">
+              <button id="rx-add-node" class="btn-primary rx-btn-sm" type="button">Añadir nodo</button>
+              <div class="rx-zoom" role="group" aria-label="Zoom">
+                <button id="rx-zoom-out" class="btn-ghost rx-btn-sm" type="button" aria-label="Alejar">-</button>
+                <button id="rx-zoom-in" class="btn-ghost rx-btn-sm" type="button" aria-label="Acercar">+</button>
+                <button id="rx-fit" class="btn-ghost rx-btn-sm" type="button">Centrar</button>
+                <button id="rx-arrange" class="btn-ghost rx-btn-sm" type="button" title="Separa los nodos para que no se tapen">Ordenar</button>
+              </div>
+              <span class="rx-spacer"></span>
+              <label class="rx-advanced" title="Muestra los cables de datos y los nodos de valores (para usuarios avanzados)"><input id="rx-advanced" class="rx-toggle" type="checkbox"><span>Modo avanzado</span></label>
+              <span id="rx-save-state" class="rx-save-state" aria-live="polite"></span>
+              <button id="rx-test" class="btn-ghost rx-btn-sm" type="button">Probar todo</button>
+            </div>
+            <p id="rx-hint" class="rx-hint">Clic derecho o "Añadir nodo" para crear. Arrastra desde un punto de la derecha hasta otro nodo para conectarlos. Rueda: zoom. Arrastra el fondo para moverte. Supr borra lo seleccionado.</p>
+            <div id="rx-canvas" class="rx-canvas">
+              <div id="rx-empty" class="rx-empty">
+                <strong>Conecta tu directo con tu modelo</strong>
+                <p>Un follow que lanza pelotas a tu cabeza, unos bits que te tiñen de rosa, un comando que lee el chat en voz alta...</p>
+                <div class="rx-empty-actions">
+                  <button id="rx-empty-templates" class="btn-primary rx-btn-main" type="button">Ver plantillas de comunidad</button>
+                  <button id="rx-empty-wizard" class="btn-ghost rx-btn-sm" type="button">Crear con el asistente</button>
+                  <button id="rx-empty-blank" class="btn-ghost rx-btn-sm" type="button">Empezar en blanco</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      <div id="vt-tab-studio" class="vt-tab" role="tabpanel" hidden>
       <div class="card-block">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
           <div>
@@ -983,6 +1202,7 @@
       <div id="vts-discovered"></div>
 
       <button class="btn-primary afk-toggle-btn" onclick="window.vtuberPage.saveVtsConfig()">Guardar configuración</button>
+      </div>
     </div>
 
     <!-- Widgets -->
@@ -1161,6 +1381,67 @@
         </p>
 
         <button class="btn-primary" style="margin-top:12px" onclick="window.widgetsPage.saveFloatAvatarsConfig()">Guardar configuración</button>
+      </div>
+
+      <div class="panel" style="max-width:640px;margin-top:1rem">
+        <div class="panel-header">
+          <span class="panel-title">Cárcel (!carcel) · Overlay 2</span>
+          <span style="display:flex;gap:6px">
+            <button class="btn-ghost" onclick="window.widgetsPage.testJail()">Probar</button>
+            <button class="btn-ghost" onclick="window.widgetsPage.releaseJail()">Soltar a todos</button>
+          </span>
+        </div>
+        <p class="desc">Un sub escribe <strong>!carcel @usuario</strong>: sale un cartel "X ha encerrado a Y en la celda" y la foto de Y queda tras los barrotes en una esquina, con cuenta atrás. Al terminar el tiempo sale libre.</p>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-jail-enabled">
+          Activada
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Tiempo en la celda (seg)</label>
+            <input id="wg-jail-duration" type="number" min="10" max="3600">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Celdas a la vez</label>
+            <input id="wg-jail-cells" type="number" min="1" max="8">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Esquina</label>
+            <select id="wg-jail-corner" class="event-select" style="width:100%">
+              <option value="bottom-left">Abajo izquierda</option>
+              <option value="bottom-right">Abajo derecha</option>
+              <option value="top-left">Arriba izquierda</option>
+              <option value="top-right">Arriba derecha</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div class="lvl-field" style="flex:1">
+            <label>Tamaño de la foto <span id="wg-jail-size-v"></span></label>
+            <input id="wg-jail-size" type="range" min="56" max="200" step="4">
+          </div>
+          <div class="lvl-field" style="flex:1">
+            <label>Estilo</label>
+            <select id="wg-jail-theme" class="event-select" style="width:100%">
+              <option value="noche">Noche (oscuro)</option>
+              <option value="pastel">Pastel (claro)</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="lvl-check">
+          <input type="checkbox" id="wg-jail-protect">
+          Nadie puede encerrar al streamer
+        </label>
+
+        <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-top:.5rem">
+          Solo para subs de Twitch, con 60 s de espera por persona. Se puede cambiar en la sección Comandos (!carcel).
+        </p>
+
+        <button class="btn-primary" style="margin-top:12px" onclick="window.widgetsPage.saveJailConfig()">Guardar configuración</button>
       </div>
 
       <div class="panel" style="max-width:640px;margin-top:1rem">
@@ -1350,8 +1631,9 @@
           <label>Canal de Twitch<input id="channel" type="text" placeholder="tu_canal (opcional)"></label>
           <label>OAuth Token
             <input id="token" type="password" placeholder="oauth:xxxxxxxxxxxxxxxxxxxx">
-            <span class="field-hint">Mimiku lo guarda cifrado con la protección del sistema. Obtén el token en twitchapps.com/tmi.</span>
+            <span class="field-hint">Mimiku lo guarda cifrado con la protección del sistema. Genéralo con la cuenta del canal en twitchtokengenerator.com con los permisos chat:read, chat:edit y channel:read:redemptions (este último es para los puntos de canal).</span>
             <span class="field-hint">Estado: <strong id="twitch-token-status">No configurado</strong></span>
+            <span class="field-hint">Puntos de canal: <strong id="twitch-redemptions-status">Desactivado</strong></span>
           </label>
           <div class="btn-row">
             <button class="btn-primary" onclick="window.settingsPage.saveSettings()">Guardar y conectar</button>
@@ -1495,6 +1777,105 @@
       </div>
 
       <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Página de canje para viewers</span></div>
+        <p class="desc">Tus viewers entran con Twitch a una página y ven sus puntos, cofres, Mimics y personajes del gachapon, y canjean sus Mimics desde ahí. La sirve Mimiku desde esta PC en su propio puerto y ngrok la saca a internet: ningún dato sale de aquí y solo funciona con Mimiku abierto. El panel de mods y la API local nunca quedan detrás del túnel.</p>
+        <div id="canje-status" class="field-hint" style="margin-bottom:10px">Cargando estado…</div>
+        <div class="form-group">
+          <label><input id="canje-enabled" type="checkbox"> Activar la página de canje</label>
+          <label>Client ID de tu app de Twitch
+            <input id="canje-client-id" type="text" autocomplete="off" spellcheck="false" placeholder="abcdefghij0123456789abcdefghij">
+            <span class="field-hint">dev.twitch.tv, Your Console, Applications. Es público: no hace falta el Client Secret.</span>
+          </label>
+          <label>Tu dirección de ngrok
+            <input id="canje-public-url" type="text" spellcheck="false" placeholder="https://tu-dominio.ngrok-free.app">
+            <span class="field-hint">ngrok.com, Domains: el dominio fijo gratis de tu cuenta.</span>
+          </label>
+          <label>Puerto
+            <input id="canje-port" type="number" min="1024" max="65535" placeholder="7780">
+            <span class="field-hint">No uses el del overlay. Si no sabes, deja 7780.</span>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="window.canjePage.saveCanje()">Guardar</button>
+          <button class="btn-ghost" onclick="window.canjePage.openLocal()">Abrir en este equipo</button>
+        </div>
+        <p class="desc" style="margin-top:12px">1. En tu app de Twitch, pon esto en <strong>OAuth Redirect URLs</strong>:</p>
+        <div class="url-box"><span id="canje-redirect">Guarda tu dirección de ngrok</span><button onclick="window.canjePage.copyFrom('canje-redirect')">Copiar</button></div>
+        <p class="desc" style="margin-top:12px">2. Cada vez que hagas directo, abre una terminal y ejecuta:</p>
+        <div class="url-box"><span id="canje-ngrok">ngrok http --url=TU-DOMINIO.ngrok-free.app 7780</span><button onclick="window.canjePage.copyFrom('canje-ngrok')">Copiar</button></div>
+        <p class="desc" style="margin-top:12px">3. Link para tus viewers:</p>
+        <div class="url-box"><span id="canje-link">Guarda tu dirección de ngrok</span><button onclick="window.canjePage.copyFrom('canje-link')">Copiar</button></div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Apoyo al proyecto y top de donadores</span></div>
+        <p class="desc">La pestaña Top de la página de canje muestra a los viewers con más puntos (se actualiza sola), un botón para apoyar con tu enlace de propinas y el top de donadores. Con StreamElements conectado (abajo) las propinas se apuntan solas; si no, apúntalas a mano y el viewer recibe sus puntos al momento.</p>
+        <div class="form-group">
+          <label>Enlace de propinas
+            <input id="support-tip-url" type="text" spellcheck="false" placeholder="https://streamelements.com/tu-canal/tip">
+            <span class="field-hint">Déjalo vacío para ocultar el botón de apoyo.</span>
+          </label>
+          <label>Puntos por cada dólar
+            <input id="support-points" type="number" min="0" step="1" placeholder="500000">
+            <span class="field-hint">500000 por dólar son 1.000.000 de puntos por cada 2 dólares.</span>
+          </label>
+          <button class="btn-primary" style="width:auto;padding:10px 18px" onclick="window.canjePage.saveSupport()">Guardar</button>
+        </div>
+        <h4 style="margin:18px 0 6px">StreamElements: propinas automáticas</h4>
+        <p class="desc">Pega tu token JWT de StreamElements: en streamelements.com abre tu perfil (arriba a la derecha) &gt; Account &gt; Channels &gt; Show secrets &gt; JWT Token. Se guarda cifrado en este equipo. Las propinas en dólares de alguien que haya escrito en el chat se apuntan solas (top y puntos); las demás quedan pendientes aquí abajo para que las asignes.</p>
+        <div class="form-row">
+          <label style="flex:1">Token JWT<input id="se-token" type="password" autocomplete="off" spellcheck="false" placeholder="eyJhbGciOi..."></label>
+          <button class="btn-primary" onclick="window.canjePage.saveSeToken()">Conectar</button>
+          <button class="btn-ghost" style="width:auto" onclick="window.canjePage.clearSeToken()">Quitar</button>
+        </div>
+        <div id="se-status" class="field-hint" style="margin-top:6px">Sin conectar.</div>
+        <div id="se-pending" style="margin-top:8px"></div>
+
+        <h4 style="margin:18px 0 6px">Apuntar un aporte</h4>
+        <div class="form-row">
+          <label>Usuario<input id="support-username" type="text" maxlength="80" placeholder="usuario del chat"></label>
+          <label>Plataforma<select id="support-platform" class="field-select"><option value="twitch">Twitch</option><option value="tiktok">TikTok</option><option value="youtube">YouTube</option><option value="kick">Kick</option></select></label>
+          <label>Dólares<input id="support-amount" type="number" min="0.01" step="0.01" placeholder="2"></label>
+          <label>Nota<input id="support-note" type="text" maxlength="120" placeholder="opcional"></label>
+          <button class="btn-primary" onclick="window.canjePage.registerSupport()">Apuntar y dar puntos</button>
+        </div>
+        <div id="support-preview" class="field-hint" style="margin-top:6px"></div>
+        <p class="desc" style="margin-top:12px">Últimos aportes:</p>
+        <div id="support-list" class="field-hint">Ninguno.</div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Pase de batalla</span></div>
+        <p class="desc">Los viewers suben de nivel con la misma experiencia del chat (mensajes y tiempo viendo), en un contador que empieza en 0 cada temporada. 30 niveles, pista gratis y pista premium. Los premios se entregan solos; los cofres de Streamloots del nivel 30 premium los entregas tú y los marcas abajo.</p>
+        <div id="pass-status" class="field-hint" style="margin-bottom:10px">Cargando estado…</div>
+        <div class="form-group">
+          <label>Nombre de la nueva temporada<input id="pass-season-name" type="text" maxlength="60" placeholder="Temporada 1"></label>
+          <label>Duración (semanas)<input id="pass-season-weeks" type="number" min="1" max="26" step="1" placeholder="5"></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-primary" style="width:auto;padding:10px 18px" onclick="window.canjePage.startSeason()">Empezar temporada</button>
+            <button class="btn-ghost" style="width:auto;padding:10px 18px" onclick="window.canjePage.endSeason()">Terminar la temporada ahora</button>
+          </div>
+          <label>Experiencia por nivel<input id="pass-xp" type="number" min="10" max="100000" step="1" placeholder="400"></label>
+          <span class="field-hint">Con la configuración de niveles por defecto (5 por mensaje cada 30 s y 10 cada 5 min viendo), un viewer habitual gana unos 500-1000 por directo.</span>
+          <label>Precio del pase premium (puntos)<input id="pass-price" type="number" min="1" step="1" placeholder="1000000"></label>
+          <label>Experiencia por misión semanal<input id="pass-mission-xp" type="number" min="0" max="100000" step="1" placeholder="500"></label>
+          <label>Precio de renovar misiones (puntos)<input id="pass-reroll-price" type="number" min="1" step="1" placeholder="25000"></label>
+          <span class="field-hint">Con sus 3 misiones reclamadas, el viewer puede pagar esto por 3 misiones nuevas (hasta 3 veces por semana).</span>
+          <span class="field-hint">Cada semana (de lunes a domingo) salen 3 misiones, las mismas para todos: chat, minutos viendo, Plinko, gachapon, cofres, Mimics, mercado o forja. El viewer las reclama en la pestaña Pase.</span>
+          <button class="btn-primary" style="width:auto;padding:10px 18px" onclick="window.canjePage.savePass()">Guardar</button>
+        </div>
+        <label style="display:block;margin-top:12px">Cofre que regala el Pase Sub
+          <select id="sub-pass-box" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none;width:100%"></select>
+        </label>
+        <span class="field-hint">En los niveles 4, 9, 14 y 19 del Pase Sub se regalan 30, 35, 40 y 50 cofres de este tipo.</span>
+        <label style="display:block;margin-top:10px">Precio del nivel extra del Pase Sub (puntos)<input id="sub-pass-bonus-price" type="number" min="1" step="1" placeholder="1000000"></label>
+        <span class="field-hint">Con el nivel 20 completado, el sub paga esto y gana 50 cofres de Streamloots que entregas tú (aparecen abajo como pendientes).</span>
+        <div><button class="btn-ghost" style="width:auto;padding:8px 14px;margin-top:6px" onclick="window.canjePage.saveSubPassBox()">Guardar Pase Sub</button></div>
+        <p class="desc" style="margin-top:12px">Premios pendientes de entregar (cofres de Streamloots):</p>
+        <div id="pass-pending" class="field-hint">Ninguno.</div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
         <div class="panel-header"><span class="panel-title">Overlay y red local</span></div>
         <p class="desc">Servidor que sirve el overlay a OBS y a TikTok LIVE Studio. Los cambios reinician solo el servidor, sin cerrar Mimiku.</p>
         <div id="overlay-net-status" class="doctor-row"><span class="field-hint">Cargando estado…</span></div>
@@ -1610,6 +1991,7 @@
           <button class="block-btn" onclick="window.mimicsPage.addBlock('economy_event')"><span>📊</span>Evento econ.</button>
           <button class="block-btn" onclick="window.mimicsPage.addBlock('vts_item')"><span>🎰</span>Ruleta ítem</button>
           <button class="block-btn" onclick="window.mimicsPage.addBlock('vts_avatar')"><span>🎭</span>Ruleta avatar</button>
+          <button class="block-btn" onclick="window.mimicsPage.addBlock('subathon_time')"><span>±</span>Subathon</button>
           <button class="block-btn" onclick="window.mimicsPage.addBlock('xp')"><span>⭐</span>XP</button>
           <button class="block-btn" onclick="window.mimicsPage.addBlock('points')"><span>🪙</span>Puntos</button>
           <button class="block-btn" onclick="window.mimicsPage.addBlock('wait')"><span>⏱</span>Esperar</button>

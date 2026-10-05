@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; img-src http: https: data:; media-src http: https:; connect-src 'self' ws:">
+<title>Mimiku Overlay VTuber</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;background:transparent}
+body{font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif}
+#stage{position:fixed;inset:0;pointer-events:none;contain:strict}
+#stage.shaking{animation:stageShake .35s ease-out}
+@keyframes stageShake{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-3px,2px)}80%{transform:translate(2px,-1px)}}
+
+/* ── Objetos ── */
+.obj{position:absolute;left:0;top:0;will-change:transform,opacity;transition:opacity .5s}
+.obj img,.obj svg{width:100%;height:100%;display:block;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))}
+.obj.is-avatar img{object-fit:cover;border-radius:50%;border:4px solid #a78bfa;box-shadow:0 0 0 3px #fff,0 6px 14px rgba(0,0,0,.45)}
+.obj.fading,.obj-label.fading{opacity:0}
+.obj-label{position:absolute;left:0;top:0;padding:2px 9px;border-radius:999px;background:rgba(17,12,32,.85);color:#fff;
+  font-weight:700;font-size:15px;white-space:nowrap;border:2px solid #a78bfa;transition:opacity .5s;will-change:transform}
+
+/* ── Impactos, trozos y manchas ── */
+.impact{position:absolute;left:0;top:0;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;
+  border:5px solid #fff;opacity:.9;animation:impact .35s ease-out forwards}
+@keyframes impact{from{transform:var(--at) scale(.2)}to{transform:var(--at) scale(1.4);opacity:0}}
+.bit{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:3px;animation:bit .85s cubic-bezier(.2,.7,.4,1) forwards}
+@keyframes bit{from{transform:translate(0,0) rotate(0);opacity:1}to{transform:translate(var(--dx),var(--dy)) rotate(var(--spin));opacity:0}}
+.splat{position:absolute;border-radius:46% 54% 60% 40% / 50% 42% 58% 50%;background:var(--c);opacity:.7;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.3));animation:splat var(--life) ease-in forwards;transform-origin:50% 0}
+.splat::after{content:"";position:absolute;left:38%;top:70%;width:18%;height:70%;border-radius:0 0 50% 50%;background:var(--c);animation:drip var(--life) ease-in forwards}
+@keyframes splat{0%{transform:scale(.3)}8%{transform:scale(1.1)}14%{transform:scale(1)}80%{opacity:.7}100%{transform:scale(1) translateY(30px);opacity:0}}
+@keyframes drip{0%,15%{transform:scaleY(0)}100%{transform:scaleY(1.6)}}
+
+/* ── Martillo bonk ── */
+.hammer{position:absolute;transform-origin:98% 50%;animation:bonk 1.2s linear forwards}
+.hammer svg{width:100%;height:100%;filter:drop-shadow(0 8px 10px rgba(0,0,0,.4))}
+@keyframes bonk{0%{transform:rotate(70deg);opacity:0}12%{opacity:1}42%{transform:rotate(95deg);animation-timing-function:cubic-bezier(.6,0,1,.6)}
+  50%{transform:rotate(-4deg)}58%{transform:rotate(10deg)}68%{transform:rotate(0)}85%{transform:rotate(0);opacity:1}100%{transform:rotate(40deg);opacity:0}}
+
+/* ── Yunque ── */
+.anvil{position:absolute;transform-origin:50% 100%;animation:anvil-fall .7s cubic-bezier(.55,0,1,.45) forwards}
+.anvil svg{width:100%;height:100%;filter:drop-shadow(0 10px 12px rgba(0,0,0,.45))}
+.anvil.landed{animation:anvil-land .35s ease-out forwards}
+.anvil.leaving{animation:anvil-leave .7s cubic-bezier(.2,.6,.4,1) forwards}
+@keyframes anvil-fall{0%{transform:translateY(var(--drop))}100%{transform:translateY(0)}}
+@keyframes anvil-land{0%{transform:scale(1.15,.8)}55%{transform:scale(.95,1.06)}100%{transform:scale(1,1)}}
+@keyframes anvil-leave{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--away),-60vh) rotate(var(--turn));opacity:0}}
+.anvil-name{position:absolute;left:50%;top:-26px;transform:translateX(-50%);white-space:nowrap;font:800 16px/1 Arial,sans-serif;color:#fff;-webkit-text-stroke:3px #111827;paint-order:stroke}
+
+/* ── Estrellas de mareo ── */
+.dizzy{position:absolute;height:40px;perspective:300px;transition:opacity .4s}
+.dizzy.out{opacity:0}
+.dizzy-star{position:absolute;left:50%;top:0;width:34px;height:34px;margin-left:-17px;animation:orbit 1.6s linear infinite}
+.dizzy-star svg{width:100%;height:100%}
+@keyframes orbit{0%{transform:rotateY(0) translateZ(var(--orbit,70px)) rotateY(0)}100%{transform:rotateY(360deg) translateZ(var(--orbit,70px)) rotateY(-360deg)}}
+
+/* ── Escudo ── */
+.shield{position:absolute;border-radius:50%;border:4px solid rgba(125,211,252,.95);
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),rgba(56,189,248,.12) 45%,rgba(56,189,248,.28) 100%);
+  box-shadow:0 0 30px rgba(56,189,248,.7),inset 0 0 30px rgba(56,189,248,.5);animation:shieldIn .4s cubic-bezier(.3,1.6,.5,1),shieldPulse 2s ease-in-out .4s infinite;transition:opacity .45s}
+.shield.out{opacity:0}
+.shield.ripple{animation:shieldHit .3s ease-out,shieldPulse 2s ease-in-out .3s infinite}
+@keyframes shieldIn{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes shieldPulse{50%{box-shadow:0 0 44px rgba(56,189,248,.9),inset 0 0 40px rgba(56,189,248,.6)}}
+@keyframes shieldHit{0%{transform:scale(1)}40%{transform:scale(1.08);border-color:#fff}100%{transform:scale(1)}}
+
+/* ── Contador de golpes ── */
+.hits{position:absolute;z-index:5;display:none;min-width:210px;padding:14px 18px 12px;border-radius:18px;color:#fff;
+  background:linear-gradient(160deg,rgba(40,24,72,.92),rgba(17,12,32,.92));border:2px solid rgba(167,139,250,.7);
+  box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 24px rgba(139,92,246,.35)}
+.hits.is-on{display:block}
+.hits.corner-tl{left:24px;top:24px}.hits.corner-tr{right:24px;top:24px}.hits.corner-bl{left:24px;bottom:24px}.hits.corner-br{right:24px;bottom:24px}
+.hits-kicker{display:block;font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#c4b5fd}
+.hits-num{display:block;font-size:56px;line-height:1;font-weight:900;letter-spacing:-.02em;text-shadow:0 3px 0 #6d28d9}
+.hits-num.pop{animation:pop .3s cubic-bezier(.3,1.8,.5,1)}
+@keyframes pop{from{transform:scale(1.35)}to{transform:scale(1)}}
+.hits-record{display:block;margin-top:4px;font-size:14px;font-weight:700;color:#fde68a}
+.hits-top{list-style:none;margin-top:8px;display:flex;flex-direction:column;gap:3px}
+.hits-top li{display:flex;justify-content:space-between;gap:12px;font-size:14px;font-weight:700}
+.hits-top li .who{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hits-top li:nth-child(1) .who{color:#fde047}.hits-top li:nth-child(2) .who{color:#e2e8f0}.hits-top li:nth-child(3) .who{color:#fdba74}
+.hits-top li .count{color:#c4b5fd}
+
+/* ── Modo jefe ── */
+.boss{position:absolute;z-index:5;left:50%;top:22px;width:min(720px,80vw);transform:translate(-50%,-160%);transition:transform .5s cubic-bezier(.3,1.4,.5,1);color:#fff}
+.boss.is-on{transform:translate(-50%,0)}
+.boss-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;text-shadow:0 2px 6px rgba(0,0,0,.7)}
+.boss-title{font-size:26px;font-weight:900;letter-spacing:.02em;text-transform:uppercase}
+.boss-time{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;color:#fde68a}
+.boss-bar{position:relative;height:34px;border-radius:12px;overflow:hidden;background:rgba(17,12,32,.85);border:3px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.boss-fill{position:absolute;inset:0;transform-origin:0 50%;background:linear-gradient(90deg,#dc2626,#f97316 60%,#facc15);transition:transform .25s ease-out}
+.boss-hp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;text-shadow:0 2px 3px rgba(0,0,0,.8)}
+.boss-top{display:flex;gap:14px;justify-content:center;margin-top:6px;font-size:15px;font-weight:700;text-shadow:0 2px 4px rgba(0,0,0,.8)}
+.boss.won .boss-title{color:#86efac}.boss.lost .boss-title{color:#fca5a5}
+.boss.is-over .boss-bar{animation:pop .4s}
+
+/* ── Diana para colocar la cabeza ── */
+#target{position:absolute;border:3px dashed #a78bfa;border-radius:50%;display:none;box-shadow:0 0 0 9999px rgba(10,7,20,.25)}
+#target span{position:absolute;left:50%;top:100%;transform:translate(-50%,8px);white-space:nowrap;
+  font:700 18px "Segoe UI",system-ui,sans-serif;color:#fff;background:#7c3aed;padding:4px 12px;border-radius:999px}
+
+@media (prefers-reduced-motion: reduce){.dizzy-star,.shield,.hits-num.pop{animation:none}}
+</style>
+</head>
+<body>
+<div id="stage"><div id="target"><span>Cabeza del modelo</span></div></div>
+<script src="/vtuber-kit/core.js"></script>
+<script src="/vtuber-kit/shapes.js"></script>
+<script src="/vtuber-kit/effects.js"></script>
+<script src="/vtuber-kit/physics.js"></script>
+<script src="/vtuber-kit/hud.js"></script>
+<script src="/vtuber-kit/main.js"></script>
+</body>
+</html>

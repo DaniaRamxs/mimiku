@@ -20,6 +20,7 @@ const tmi = require("tmi.js")
 const { addPoints } = require("../../services/economy.js")
 const { getDefaultActivityTracker } = require("../../core/interactions/activity-consumer.js")
 const { getDefaultChallengeConsumer } = require("../../core/interactions/chat-activity-consumers.js")
+const { createTwitchEventSub } = require("../../services/twitch-eventsub.js")
 
 let client = null
 let _win = null
@@ -27,6 +28,8 @@ let _channel = null
 let _broadcast = null
 let _eventEngine = null
 let _status = { state: "disconnected", channel: "", error: null }
+let _token = ""
+let _redemptions = null
 
 function setWindow(win) { _win = win }
 function setBroadcast(fn) { _broadcast = fn }
@@ -88,6 +91,45 @@ function emitEvent(event) {
   if (_eventEngine) _eventEngine.emit(event)
 }
 
+// Canjes de puntos de canal (EventSub). Arrancan y paran con el chat.
+function redemptions() {
+  if (!_redemptions) {
+    _redemptions = createTwitchEventSub({
+      getToken: () => _token,
+      getChannel: () => _channel,
+      emit: emitEvent,
+    })
+  }
+  return _redemptions
+}
+
+// Eventos nativos de tmi.js que no son chat (sub, resub, subgift,
+// submysterygift, cheer, raid, follow) normalizados al contrato de Mimiku.
+// Hoy los escuchan las Reacciones VTuber; el resto de Twitch sigue igual.
+function normalizeTwitchNativeEvent(type, { tags = {}, username = "anon", payload = {} }) {
+  const display = tags["display-name"] || username
+  return {
+    id: tags.id ? `twitch-${type}:${tags.id}` : null,
+    platform: "twitch",
+    type,
+    actor: {
+      platformUserId: tags["user-id"] || "",
+      username,
+      displayName: display,
+      ...(isVip(tags) ? { isVip: true } : {}),
+      ...(isSubscriber(tags) ? { isSubscriber: true } : {}),
+      isModerator: isMod(tags),
+    },
+    payload,
+  }
+}
+
+function emitNative(type, details) {
+  try { emitEvent(normalizeTwitchNativeEvent(type, details)) } catch (error) {
+    console.warn(`[twitch] no se pudo emitir el evento ${type}:`, error.message)
+  }
+}
+
 // Delegado a Mimics vía services/twitch.js — la Fase 1.5 movió el estado del
 // reto a un consumidor agnóstico (chat-activity-consumers.js); esto solo
 // reenvía la llamada.
@@ -110,6 +152,8 @@ function subathonSub(tags, display, label) {
 function connect(channel, token) {
   if (client) { client.disconnect().catch(() => {}); client = null }
   _channel = channel.toLowerCase()
+  _token = token || ""
+  _redemptions?.stop() // el canal o el token pueden haber cambiado
   _status = { state: "connecting", channel: _channel, error: null }
 
   client = new tmi.Client({
@@ -153,6 +197,7 @@ function connect(channel, token) {
     send("twitch:event", { type: "sub", text: `🎉 ${display} se suscribió`, username, display })
     sendOverlay({ type: "alert", text: `🎉 ${display} se suscribió!`, duration: 5000 })
     subathonSub(tags, display, "sub")
+    emitNative("sub", { tags, username, payload: { months: 1 } })
   })
 
   client.on("resub", (ch, username, months, msg, tags) => {
@@ -161,6 +206,7 @@ function connect(channel, token) {
     send("twitch:event", { type: "resub", text: `🔁 ${display} resubscribió (${months} meses)`, username, display, months })
     sendOverlay({ type: "alert", text: `🔁 ${display} resubscribió (${months} meses)!`, duration: 5000 })
     subathonSub(tags, display, "resub")
+    emitNative("resub", { tags, username, payload: { months: Number(months) || 1 } })
   })
 
   // Subs regalados: Twitch manda un "subgift" por cada sub, tambien cuando
@@ -171,23 +217,28 @@ function connect(channel, token) {
     send("twitch:event", { type: "subgift", text: `${display} regaló un sub a ${recipient}`, username, display })
     if (!tags["msg-param-community-gift-id"]) sendOverlay({ type: "alert", text: `${display} regaló un sub a ${recipient}!`, duration: 5000 })
     subathonSub(tags, display, `regalo a ${recipient}`)
+    // Los de un lote ya reaccionan una vez con el "submysterygift".
+    if (!tags["msg-param-community-gift-id"]) emitNative("subgift", { tags, username, payload: { count: 1, recipient } })
   })
 
   client.on("anonsubgift", (ch, streakMonths, recipient, methods, tags) => {
     send("twitch:event", { type: "subgift", text: `Un anónimo regaló un sub a ${recipient}`, username: "anon", display: "Anónimo" })
     if (!tags["msg-param-community-gift-id"]) sendOverlay({ type: "alert", text: `Un anónimo regaló un sub a ${recipient}!`, duration: 5000 })
     subathonSub(tags, "Anónimo", `regalo a ${recipient}`)
+    if (!tags["msg-param-community-gift-id"]) emitNative("subgift", { tags: { ...tags, "display-name": "Anónimo" }, username: "anon", payload: { count: 1, recipient } })
   })
 
   client.on("submysterygift", (ch, username, count, methods, tags) => {
     const display = tags["display-name"] || username
     send("twitch:event", { type: "submysterygift", text: `${display} regaló ${count} subs`, username, display, count })
     sendOverlay({ type: "alert", text: `${display} regaló ${count} subs!`, duration: 6000 })
+    emitNative("submysterygift", { tags, username, payload: { count: Number(count) || 1 } })
   })
 
   client.on("anonsubmysterygift", (ch, count, methods, tags) => {
     send("twitch:event", { type: "submysterygift", text: `Un anónimo regaló ${count} subs`, username: "anon", display: "Anónimo", count })
     sendOverlay({ type: "alert", text: `Un anónimo regaló ${count} subs!`, duration: 6000 })
+    emitNative("submysterygift", { tags: { ...tags, "display-name": "Anónimo" }, username: "anon", payload: { count: Number(count) || 1 } })
   })
 
   client.on("cheer", (ch, tags, msg) => {
@@ -197,6 +248,7 @@ function connect(channel, token) {
     addPoints(username, Math.floor(bits / 10) * 3, "bits", { platform: "twitch", platformUserId: tags["user-id"] || "" })
     send("twitch:event", { type: "cheer", text: `💎 ${display} donó ${bits} bits`, username, display, bits })
     sendOverlay({ type: "alert", text: `💎 ${display} donó ${bits} bits!`, duration: 5000 })
+    emitNative("cheer", { tags, username, payload: { bits: Number(bits) || 0 } })
     try {
       require("../../services/subathon.js").getDefaultSubathon().recordTwitchBits({ id: tags.id || "", user: display, bits: Number(bits) })
     } catch (error) {
@@ -208,6 +260,7 @@ function connect(channel, token) {
     addPoints(username, Math.min(viewers, 500), "raid", { platform: "twitch" })
     send("twitch:event", { type: "raid", text: `⚡ ${username} raid con ${viewers} viewers!`, username, viewers })
     sendOverlay({ type: "alert", text: `⚡ ${username} raid con ${viewers} viewers!`, duration: 6000 })
+    emitNative("raid", { username, payload: { viewers: Number(viewers) || 0 } })
   })
 
   client.on("follow", (ch, username, methods) => {
@@ -215,10 +268,15 @@ function connect(channel, token) {
     addPoints(username, 20, "follow", { platform: "twitch" })
     send("twitch:event", { type: "follow", text: `❤️ ${display} siguió el canal!`, username, display })
     sendOverlay({ type: "alert", text: `❤️ ${display} siguió el canal!`, duration: 4000 })
+    emitNative("follow", { username })
   })
 
   client.on("connected", () => {
     _status = { state: "connected", channel: _channel, error: null }
+    // tmi.js vuelve a emitir "connected" al reconectar: EventSub sigue vivo.
+    if (["off", "error"].includes(redemptions().getStatus().state)) {
+      redemptions().start().catch(error => console.warn("[eventsub] no arrancó:", error.message))
+    }
     send("twitch:status", { connected: true, channel })
     say(`mimiku activo ✦ Comandos: !puntos !daily !work !slots !ruleta !bj !duelo !info`)
   })
@@ -234,12 +292,15 @@ function connect(channel, token) {
 }
 
 function disconnect() {
+  _redemptions?.stop()
   client?.disconnect().catch(() => {})
   client = null
   _status = { state: "disconnected", channel: _channel || "", error: null }
 }
 
 function getStatus() { return { ..._status } }
+
+function getRedemptionsStatus() { return _redemptions ? _redemptions.getStatus() : { state: "off", detail: "Desactivado" } }
 
 function sayPublic(msg) { say(msg) }
 
@@ -255,11 +316,12 @@ function getActiveViewers() {
 module.exports = {
   connect, disconnect, setWindow, setBroadcast, setEventEngine,
   say: sayPublic, getActiveViewers, startMiniChallenge,
-  normalizeTwitchChatMessage, isMod, isVip, isSubscriber,
+  normalizeTwitchChatMessage, normalizeTwitchNativeEvent, isMod, isVip, isSubscriber,
   // Puente genérico hacia la ventana del renderer (Fase 1.6): no es
   // "Twitch decidiendo algo del chat", es simplemente dónde ya vivía la
   // referencia a `win` — igual que notify/overlay ya se inyectan en
   // Command Engine desde aquí.
   sendToRenderer: send,
   getStatus,
+  getRedemptionsStatus,
 }

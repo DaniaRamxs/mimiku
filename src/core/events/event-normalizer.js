@@ -19,6 +19,7 @@ function normalizeEvent(input = {}) {
   // cuando el origen lo marcó explícitamente para no cambiar el contrato
   // histórico de eventos que no tienen roles.
   if (actor.isVip === true) normalizedActor.isVip = true
+  if (actor.isSubscriber === true) normalizedActor.isSubscriber = true
 
   // `payload` es opcional: solo lo llevan eventos que no son chat (gift, like,
   // follow...). Se omite cuando no existe para no alterar el contrato de chat.

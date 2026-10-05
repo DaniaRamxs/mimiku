@@ -1,0 +1,221 @@
+/* Pestana Minijuegos: Plinko. Tablero a la izquierda, controles a la derecha.
+   Las casillas usan --c (color de rareza de style.css); t-nada es gris oscuro. */
+
+#panel-games { margin-top: 20px; }
+.plinko { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 26px; align-items: start; }
+.t-nada { --c: #5b5470; }
+
+/* ── Tablero ── */
+.plinko-stage {
+  padding: 14px; border-radius: 26px; border: 1px solid rgba(182, 156, 255, .3);
+  background:
+    radial-gradient(500px 260px at 50% 0%, rgba(168, 85, 247, .28), transparent 70%),
+    linear-gradient(170deg, #241a44, #120d22);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.plinko-board { position: relative; width: min(100%, 620px, calc((100vh - 230px) / .9)); margin: 0 auto; aspect-ratio: 1 / .9; }
+.plinko-board.is-jackpot { animation: plinko-jackpot 1.4s ease-out; border-radius: 18px; }
+@keyframes plinko-jackpot {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  20% { box-shadow: 0 0 60px 20px rgba(245, 158, 11, .55); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.plinko-pegs { position: absolute; inset: 0; }
+.plinko-peg {
+  position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #c9b8ff 45%, #6d55b8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .5);
+}
+.plinko-peg.is-hit { animation: plinko-hit .35s ease-out; }
+@keyframes plinko-hit {
+  40% { transform: scale(1.7); box-shadow: 0 0 16px 4px rgba(255, 213, 74, .8); background: #fff3c4; }
+}
+.plinko-slots {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 13%;
+  display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px;
+}
+.plinko-slot {
+  display: grid; place-items: center; border-radius: 10px 10px 14px 14px; min-width: 0;
+  font-size: clamp(10px, 1.4vw, 13px); font-weight: 800; letter-spacing: .02em; color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, transparent), color-mix(in srgb, var(--c) 20%, #120d22));
+  border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.plinko-slot.t-nada { color: var(--muted); }
+.plinko-slot.is-win { animation: plinko-win 1.2s var(--ease); }
+@keyframes plinko-win {
+  20% { transform: translateY(-8px) scale(1.12); box-shadow: 0 0 26px var(--c); background: var(--c); color: #120d20; }
+  100% { transform: none; }
+}
+.plinko-ball {
+  position: absolute; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; z-index: 2;
+  background: radial-gradient(circle at 35% 30%, #fff, #ffd54a 40%, #d97706);
+  box-shadow: 0 0 18px rgba(255, 213, 74, .8), 0 4px 8px rgba(0, 0, 0, .5);
+}
+
+/* ── Controles ── */
+.plinko-side { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 88px; }
+.plinko-side h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1; }
+.plinko-wallet {
+  display: flex; align-items: baseline; justify-content: space-between; padding: 12px 16px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.plinko-wallet span { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.plinko-wallet strong { font-family: var(--font-display); font-size: 28px; color: #fff; }
+.plinko-play { width: 100%; padding: 16px; font-size: 18px; }
+.plinko-count { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.plinko-chip {
+  font: inherit; font-weight: 800; font-size: 15px; padding: 9px 0; border-radius: 12px; cursor: pointer;
+  color: var(--muted); background: var(--surface); border: 1px solid var(--line); transition: color .15s, background .15s, transform .15s var(--ease);
+}
+.plinko-chip:hover:not(:disabled) { color: var(--text); }
+.plinko-chip:active:not(:disabled) { transform: scale(.96); }
+.plinko-chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.plinko-chip.is-selected { color: #120d20; background: var(--r-legendario); border-color: transparent; }
+.plinko-chip:disabled { opacity: .5; cursor: not-allowed; }
+.plinko-result.is-multi { flex-direction: column; align-items: stretch; gap: 8px; }
+.plinko-result.is-multi > * { width: 100%; text-align: left; }
+.plinko-prizes { list-style: none; display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
+.plinko-prizes li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 12px; background: rgba(18, 13, 32, .45); }
+.plinko-prizes .plinko-prize-art { width: 40px; height: 40px; border-radius: 10px; font-size: 18px; }
+.plinko-prizes .plinko-prize-text strong { font-size: 15px; }
+.plinko-prizes b { margin-left: auto; color: var(--c); font-weight: 800; }
+.plinko-empty { font-size: 13px; color: var(--muted); font-weight: 700; }
+.plinko-play:disabled { opacity: .55; cursor: not-allowed; }
+
+.plinko-result { display: none; }
+.plinko-result.is-shown {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--c) 16%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--c) 70%, transparent);
+  animation: reveal-pop .45s var(--ease) both;
+}
+.plinko-result.is-shown > strong { font-size: 18px; }
+.plinko-result.t-nada { flex-direction: column; align-items: flex-start; gap: 2px; color: var(--muted); }
+.plinko-result.t-nada > strong { color: var(--text); }
+.plinko-result.r-legendario { box-shadow: 0 0 30px color-mix(in srgb, var(--c) 50%, transparent); }
+.plinko-prize-art {
+  flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 14px; overflow: hidden;
+  font-size: 26px; font-weight: 800; background: rgba(18, 13, 32, .6); border: 2px solid var(--c);
+}
+.plinko-prize-art img { width: 100%; height: 100%; object-fit: cover; }
+.plinko-prize-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 13px; color: var(--muted); }
+.plinko-prize-text .rarity { color: var(--c); font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.plinko-prize-text strong { color: var(--text); font-size: 18px; overflow-wrap: anywhere; }
+
+.plinko-side .mini-title { margin: 8px 0 0; }
+.plinko-odds, .plinko-history { list-style: none; display: grid; gap: 6px; }
+.plinko-odds li, .plinko-history li {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 12px;
+  background: var(--surface); font-size: 14px; font-weight: 700;
+}
+.plinko-odds li.is-off { opacity: .45; }
+.plinko-odds b, .plinko-history b { color: var(--c); font-variant-numeric: tabular-nums; }
+.plinko-history li.muted { display: block; color: var(--muted); font-weight: 600; }
+.plinko-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+
+@media (max-width: 900px) {
+  .plinko { grid-template-columns: 1fr; }
+  .plinko-side { position: static; }
+  .plinko-stage { padding: 8px; border-radius: 18px; }
+  .plinko-peg { width: 8px; height: 8px; margin: -4px 0 0 -4px; }
+  .plinko-ball { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
+}
+
+/* ═══ Plinko: capa de efectos (plinko.js) ═══ */
+@property --pk-spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+/* Marco de neon que gira despacio y polvo de estrellas de fondo */
+.plinko-stage { position: relative; isolation: isolate; overflow: hidden; }
+.plinko-stage::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; padding: 2px; pointer-events: none;
+  background: conic-gradient(from var(--pk-spin), transparent 0 20%, #f59e0b 30%, transparent 40% 70%, #a855f7 80%, transparent 90%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: pk-spin 8s linear infinite;
+}
+.plinko-stage::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .55;
+  background: radial-gradient(1px 1px at 12% 20%, #fff, transparent), radial-gradient(1px 1px at 82% 14%, #fde68a, transparent),
+    radial-gradient(1.5px 1.5px at 30% 62%, #c4b5fd, transparent), radial-gradient(1px 1px at 68% 48%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 90% 76%, #fff, transparent), radial-gradient(1px 1px at 6% 84%, #fde68a, transparent);
+  animation: pk-twinkle 3.5s ease-in-out infinite alternate;
+}
+
+/* Dispensador arriba del todo */
+.plinko-dropper {
+  position: absolute; z-index: 3; left: 50%; top: -2.5%; width: 64px; height: 26px; translate: -50% 0;
+  background: linear-gradient(#fde68a, #b45309); clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%);
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, .7));
+}
+.plinko-dropper::after { content: ""; position: absolute; left: 34%; right: 34%; bottom: 0; height: 30%; background: #1a0f2e; border-radius: 0 0 6px 6px; }
+.plinko-dropper.is-drop { animation: pk-drop .3s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* Clavos: titilan en reposo y sueltan un anillo al tocarlos */
+.plinko-peg { animation: pk-peg-idle 4s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.plinko-peg.is-hit { animation: plinko-hit .35s ease-out; }
+.plinko-peg.is-hit::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid #fde68a; pointer-events: none;
+  animation: pk-ring .42s ease-out forwards;
+}
+
+/* Bola: brillo que gira, estela y aplastamiento al caer */
+.plinko-ball::after {
+  content: ""; position: absolute; inset: 2px; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, .75), transparent 35%); animation: pk-roll .45s linear infinite;
+}
+.plinko-ball.is-ghost { z-index: 1; box-shadow: 0 0 12px rgba(255, 213, 74, .6); filter: blur(.6px); }
+.plinko-ball.is-ghost::after { display: none; }
+.plinko-ball.g1 { opacity: .5; scale: .82; }
+.plinko-ball.g2 { opacity: .3; scale: .66; }
+.plinko-ball.g3 { opacity: .16; scale: .5; }
+.plinko-ball.is-landed { animation: pk-squash .38s ease-out; }
+
+/* Efectos sueltos */
+.plinko-fx { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.plinko-spark {
+  position: absolute; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #fff7cc; box-shadow: 0 0 6px #fbbf24;
+  animation: pk-spark .5s ease-out forwards;
+}
+.plinko-beam {
+  position: absolute; bottom: 9%; width: 10%; height: 90%; margin-left: -5%; border-radius: 40% 40% 0 0; transform-origin: bottom;
+  background: linear-gradient(0deg, color-mix(in srgb, var(--c) 85%, #fff), color-mix(in srgb, var(--c) 35%, transparent) 55%, transparent);
+  filter: blur(3px); mix-blend-mode: screen; animation: pk-beam 1.15s ease-out forwards;
+}
+.plinko-float {
+  position: absolute; bottom: 15%; translate: -50% 0; white-space: nowrap; font-family: var(--font-display); font-size: clamp(15px, 2.2vw, 22px);
+  color: color-mix(in srgb, var(--c) 70%, #fff); text-shadow: 0 0 12px var(--c), 0 2px 6px rgba(0, 0, 0, .8); animation: pk-float 1.3s ease-out forwards;
+}
+.plinko-float.t-nada { color: #fde68a; text-shadow: 0 0 10px #f59e0b, 0 2px 6px rgba(0, 0, 0, .8); }
+.plinko-combo {
+  position: absolute; z-index: 4; top: 1%; right: 1%; padding: 5px 12px; border-radius: 999px; opacity: 0; pointer-events: none;
+  font-weight: 900; font-size: 14px; color: #120d20; background: linear-gradient(90deg, #fde68a, #f59e0b); box-shadow: 0 6px 18px rgba(245, 158, 11, .4);
+}
+.plinko-combo.is-on { animation: pk-combo 2.4s ease-out forwards; }
+
+/* Casillas: brillo que las recorre en reposo y rebote al atrapar la bola */
+.plinko-slot { position: relative; }
+.plinko-slot::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, .28) 50%, transparent 65%); translate: -120% 0;
+  animation: pk-sweep 4.5s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .12s);
+}
+.plinko-slot.t-nada::before { opacity: .35; }
+.plinko-slot.is-catch { animation: pk-catch .4s cubic-bezier(.3, 1.6, .5, 1); }
+
+@keyframes pk-spin { to { --pk-spin: 360deg; } }
+@keyframes pk-twinkle { from { opacity: .3; } to { opacity: .7; } }
+@keyframes pk-drop { 40% { transform: scaleX(1.18) translateY(3px); filter: drop-shadow(0 0 18px #fbbf24); } }
+@keyframes pk-peg-idle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+@keyframes pk-ring { from { transform: scale(.6); opacity: 1; } to { transform: scale(2.4); opacity: 0; } }
+@keyframes pk-roll { to { transform: rotate(360deg); } }
+@keyframes pk-squash { 0% { scale: 1.35 .65; } 55% { scale: .9 1.12; } 100% { scale: 1; } }
+@keyframes pk-spark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@keyframes pk-beam { 0% { transform: scaleY(0); opacity: 1; } 35% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(1); opacity: 0; } }
+@keyframes pk-float { 0% { transform: translateY(10px) scale(.6); opacity: 0; } 20% { transform: translateY(-6px) scale(1.15); opacity: 1; } 100% { transform: translateY(-70px) scale(1); opacity: 0; } }
+@keyframes pk-combo { 0% { transform: scale(.4); opacity: 0; } 12% { transform: scale(1.2); opacity: 1; } 22% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes pk-sweep { 0%, 70% { translate: -120% 0; } 100% { translate: 120% 0; } }
+@keyframes pk-catch { 40% { transform: translateY(5px) scaleY(.92); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .plinko-stage::before, .plinko-stage::after, .plinko-peg, .plinko-ball::after, .plinko-slot::before, .plinko-dropper.is-drop, .plinko-ball.is-landed { animation: none !important; }
+}

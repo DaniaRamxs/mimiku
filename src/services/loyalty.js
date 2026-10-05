@@ -20,7 +20,7 @@ const THEMES = ["noche", "pastel"]
 const DEFAULT_CONFIG = Object.freeze({
   enabled: true,
   stamps: 10,
-  rewardPoints: 20000,
+  rewardPoints: 100000,
   streamGapHours: 3,
   position: "bottom-right",
   durationSeconds: 7,
@@ -169,6 +169,24 @@ function createLoyaltyService({ platform, getChannel, now = () => new Date(), li
     })()
   }
 
+  // Tarjeta de un viewer para la pagina de canje: sellos de la semana, si ya
+  // sello en este directo y si ahora hay directo (fuera de directo no se sella).
+  function viewerStatus(viewerId) {
+    const config = getConfig()
+    const channelId = activeChannel()
+    const week = weekKey(now())
+    const current = streams.current()
+    const filled = viewerId ? stampsThisWeek(channelId, viewerId, week) : 0
+    const completed = !!(viewerId && db.prepare("SELECT 1 FROM loyalty_completions WHERE channel_id=? AND viewer_id=? AND week_key=?").get(channelId, viewerId, week))
+    const claimedThisStream = !!(viewerId && current && db.prepare("SELECT 1 FROM loyalty_claims WHERE channel_id=? AND viewer_id=? AND stream_id=?").get(channelId, viewerId, current.id))
+    return {
+      enabled: config.enabled, title: config.title, total: config.stamps, filled: Math.min(filled, config.stamps), completed,
+      // Directo: hay uno activo (chat reciente) o Twitch dice que esta en vivo
+      // aunque nadie haya escrito todavia.
+      claimedThisStream, live: !!current || streams.isTwitchLive(), rewardPoints: config.rewardPoints, week,
+    }
+  }
+
   // Estado para el panel: directo actual y tarjetas completas de la semana.
   function status() {
     const channelId = activeChannel()
@@ -206,7 +224,7 @@ function createLoyaltyService({ platform, getChannel, now = () => new Date(), li
     return overlayPayload(config, { displayName: "ViewerDemo", avatarUrl: null, filled, justStamped: filled, completed, week: weekKey(now()) })
   }
 
-  return { getConfig, setConfig, claim, noteActivity, startNewStream, status, setDelivered, preview }
+  return { getConfig, setConfig, claim, noteActivity, startNewStream, status, viewerStatus, setDelivered, preview }
 }
 
 let defaultService = null

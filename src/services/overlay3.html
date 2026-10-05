@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src http: https: data:; connect-src 'self' ws:; font-src data:">
+<title>Mimiku Overlay 3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;background:transparent}
+body{font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif}
+#stage{position:fixed;inset:0;pointer-events:none}
+
+/* ── Gachapon (!gachapon) ── */
+.gp{position:absolute;left:50%;top:50%;width:420px;height:560px;margin:-280px 0 0 -210px;
+  --gp-c:#a1a1aa;--gp-glow:rgba(161,161,170,.55)}
+.gp.r-raro{--gp-c:#3b82f6;--gp-glow:rgba(59,130,246,.6)}
+.gp.r-epico{--gp-c:#a855f7;--gp-glow:rgba(168,85,247,.65)}
+.gp.r-legendario{--gp-c:#f59e0b;--gp-glow:rgba(245,158,11,.75)}
+.gp.out{animation:gpOut .5s ease-in forwards}
+@keyframes gpOut{to{opacity:0;transform:scale(.85)}}
+
+/* capsula: mitad de color arriba, mitad blanca abajo */
+.gp-capsule{position:absolute;left:50%;top:150px;width:150px;height:150px;margin-left:-75px;
+  animation:gpDrop .8s cubic-bezier(.3,1.5,.6,1) both, gpShake .9s ease-in-out .9s both}
+.gp-half{position:absolute;left:0;width:150px;height:75px;overflow:hidden}
+.gp-half::before{content:"";position:absolute;left:0;width:150px;height:150px;border-radius:50%}
+.gp-top{top:0}
+.gp-top::before{top:0;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.75),var(--gp-c) 45%,rgba(0,0,0,.25) 100%)}
+.gp-bottom{top:75px}
+.gp-bottom::before{top:-75px;background:radial-gradient(circle at 35% 70%,#fff,#e7e5f0 55%,#b9b5c9 100%)}
+.gp-band{position:absolute;left:-4px;right:-4px;top:71px;height:8px;border-radius:4px;background:#2a2438}
+.gp-capsule{filter:drop-shadow(0 0 18px var(--gp-glow)) drop-shadow(0 14px 22px rgba(0,0,0,.45))}
+.gp.open .gp-capsule{animation:none}
+.gp.open .gp-top{animation:gpTopOff .7s cubic-bezier(.2,.8,.3,1) forwards}
+.gp.open .gp-bottom{animation:gpBottomOff .7s cubic-bezier(.2,.8,.3,1) forwards}
+.gp.open .gp-band{animation:gpFade .3s forwards}
+@keyframes gpDrop{0%{transform:translateY(-520px) rotate(-30deg)}100%{transform:translateY(0) rotate(0)}}
+@keyframes gpShake{0%,100%{transform:rotate(0)}15%{transform:rotate(-12deg)}30%{transform:rotate(10deg)}45%{transform:rotate(-8deg)}60%{transform:rotate(7deg)}75%{transform:rotate(-4deg)}}
+@keyframes gpTopOff{to{transform:translate(-90px,-170px) rotate(-70deg);opacity:0}}
+@keyframes gpBottomOff{to{transform:translate(80px,190px) rotate(50deg);opacity:0}}
+@keyframes gpFade{to{opacity:0}}
+
+/* destello al abrir */
+.gp-burst{position:absolute;left:50%;top:225px;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;
+  border:6px solid var(--gp-c);box-shadow:0 0 40px var(--gp-c);opacity:0}
+.gp.open .gp-burst{animation:gpBurst .8s ease-out forwards}
+@keyframes gpBurst{0%{opacity:1;transform:scale(.3)}100%{opacity:0;transform:scale(9)}}
+.gp-rays{position:absolute;left:50%;top:225px;width:620px;height:620px;margin:-310px 0 0 -310px;border-radius:50%;opacity:0;
+  background:repeating-conic-gradient(from 0deg,var(--gp-glow) 0deg 8deg,transparent 8deg 22deg);
+  -webkit-mask:radial-gradient(circle,#000 18%,transparent 68%);mask:radial-gradient(circle,#000 18%,transparent 68%)}
+.gp.open.r-epico .gp-rays,.gp.open.r-legendario .gp-rays{animation:gpRaysIn .6s ease-out forwards, gpSpin 14s linear infinite}
+@keyframes gpRaysIn{to{opacity:1}}
+@keyframes gpSpin{to{transform:rotate(360deg)}}
+.gp-spark{position:absolute;left:50%;top:225px;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;
+  background:#fff7d6;box-shadow:0 0 12px #fbbf24,0 0 24px #f59e0b;opacity:0}
+.gp.open .gp-spark{animation:gpSpark 1.4s ease-out forwards}
+@keyframes gpSpark{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
+
+/* premio: carta coleccionable con marco de foil y holograma (igual que la pagina de canje) */
+@property --gp-spin{syntax:"<angle>";inherits:true;initial-value:210deg}
+.gp{--gp-frame:linear-gradient(160deg,#e4e4e7,#71717a 55%,#a1a1aa);--gp-soft:rgba(161,161,170,.22);--gp-holo:.08}
+.gp.r-raro{--gp-frame:linear-gradient(160deg,#bfdbfe,#1d4ed8 55%,#60a5fa);--gp-soft:rgba(59,130,246,.24);--gp-holo:.2}
+.gp.r-epico{--gp-frame:conic-gradient(from var(--gp-spin),#f0abfc,#7e22ce,#22d3ee,#a855f7,#f0abfc,#6b21a8,#67e8f9,#f0abfc);
+  --gp-soft:rgba(168,85,247,.26);--gp-holo:.34}
+.gp.r-legendario{--gp-frame:conic-gradient(from var(--gp-spin),#fef3c7,#f59e0b,#b45309,#fde68a,#fffbeb,#f59e0b,#92400e,#fcd34d,#fef3c7);
+  --gp-soft:rgba(245,158,11,.26);--gp-holo:.4}
+.gp-card{position:absolute;left:50%;top:56px;width:300px;margin-left:-150px;perspective:900px;
+  opacity:0;transform:translateY(150px) scale(.2) rotateY(90deg)}
+.gp.open .gp-card{animation:gpCardIn 1.05s cubic-bezier(.2,1.1,.4,1) .2s forwards}
+@keyframes gpCardIn{
+  0%{opacity:0;transform:translateY(150px) scale(.2) rotateY(90deg)}
+  45%{opacity:1;transform:translateY(-14px) scale(1.06) rotateY(-14deg)}
+  72%{opacity:1;transform:translateY(4px) scale(.99) rotateY(5deg)}
+  100%{opacity:1;transform:none}}
+.gp-tilt{position:relative;padding:10px;border-radius:22px;background:var(--gp-frame);overflow:hidden;
+  box-shadow:0 0 36px var(--gp-glow),0 22px 44px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.25);
+  animation:gpFloat 5s ease-in-out 1.3s infinite,gpFrameSpin 9s linear infinite}
+@keyframes gpFloat{0%,100%{transform:rotateY(0) rotateX(0)}25%{transform:rotateY(-8deg) rotateX(3deg)}75%{transform:rotateY(8deg) rotateX(-3deg)}}
+@keyframes gpFrameSpin{to{--gp-spin:570deg}}
+/* gema arriba del marco (raro en adelante) */
+.gp.r-raro .gp-tilt::after,.gp.r-epico .gp-tilt::after,.gp.r-legendario .gp-tilt::after{content:"";position:absolute;z-index:4;top:3px;left:50%;
+  width:13px;height:13px;margin-left:-6.5px;transform:rotate(45deg);border-radius:2px;
+  background:linear-gradient(135deg,#fff,var(--gp-c) 45%,#1b1430 130%);box-shadow:0 0 0 1.5px rgba(18,13,32,.85),0 0 12px var(--gp-c)}
+.gp-face{position:relative;z-index:1;padding:12px 12px 14px;border-radius:14px;text-align:center;
+  background:linear-gradient(180deg,var(--gp-soft),rgba(15,11,28,.97) 45%),#0f0b1c;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),inset 0 0 0 3px rgba(0,0,0,.45),inset 0 0 0 4px var(--gp-soft)}
+.gp-name{font-size:25px;font-weight:900;line-height:1.1;color:#fff;overflow-wrap:anywhere;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.gp-pic{position:relative;height:210px;margin:10px 0;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 35%,var(--gp-soft),#140f24 75%),#140f24;box-shadow:inset 0 0 0 2px var(--gp-c)}
+.gp-pic img{width:100%;height:100%;object-fit:cover}
+.gp-initial{font-size:100px;font-weight:900;color:var(--gp-c);text-shadow:0 0 24px var(--gp-glow)}
+.gp-rarity{display:inline-block;padding:4px 14px;border-radius:999px;background:var(--gp-c);color:#fff;
+  font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.gp.r-comun .gp-rarity{background:#d4d4d8;color:#1b1430;text-shadow:none}
+.gp-desc{margin-top:6px;font-size:14px;line-height:1.3;color:#c4bce8;overflow-wrap:anywhere}
+.gp-who{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.1);font-size:15px;font-weight:800;color:#e4dcff}
+.gp-who img{width:28px;height:28px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--gp-c)}
+.gp-who b{color:var(--gp-c)}
+.gp.r-comun .gp-who b{color:#e4e4e7}
+/* capas de luz: holograma (textura segun rareza), purpurina (legendario) y barrido de brillo */
+.gp-holo,.gp-sparkle,.gp-sheen{position:absolute;z-index:2;inset:0;border-radius:inherit;pointer-events:none}
+.gp-holo{opacity:var(--gp-holo);mix-blend-mode:color-dodge;filter:saturate(1.4) contrast(1.1) brightness(.85);
+  background-image:repeating-linear-gradient(110deg,#ff3fa4 0%,#ffd54a 5%,#4dffb8 10%,#3fc6ff 15%,#b25cff 20%,#ff3fa4 25%);
+  background-size:400% 400%;animation:gpHoloDrift 5s ease-in-out infinite}
+.gp.r-raro .gp-holo{background-image:repeating-linear-gradient(110deg,#60a5fa 0%,#67e8f9 6%,#a5b4fc 12%,#60a5fa 18%),
+  repeating-linear-gradient(90deg,transparent 0 2px,rgba(255,255,255,.18) 2px 3px);background-size:400% 400%,100% 100%}
+.gp.r-epico .gp-holo{background-image:repeating-linear-gradient(110deg,#ff3fa4 0%,#ffd54a 5%,#4dffb8 10%,#3fc6ff 15%,#b25cff 20%,#ff3fa4 25%),
+  repeating-conic-gradient(from 45deg at 50% 50%,rgba(255,255,255,.2) 0 25%,transparent 0 50%);background-size:400% 400%,16px 16px}
+.gp.r-legendario .gp-holo{background-image:repeating-linear-gradient(110deg,#ffd54a 0%,#ff8a3d 4%,#ff3fa4 8%,#b25cff 12%,#3fc6ff 16%,#4dffb8 20%,#ffd54a 24%),
+  radial-gradient(circle,rgba(255,244,200,.5) 0 1px,transparent 1.4px);background-size:400% 400%,7px 7px}
+.gp-tilt>.gp-holo{opacity:calc(var(--gp-holo) * .35)}
+.gp-pic .gp-holo{z-index:1;border-radius:0}
+@keyframes gpHoloDrift{0%,100%{background-position:0% 30%,0 0}50%{background-position:100% 70%,0 0}}
+.gp-sparkle{display:none}
+.gp.r-legendario .gp-sparkle{display:block;mix-blend-mode:color-dodge;
+  background-image:radial-gradient(circle,#fff 0 1.2px,transparent 1.8px),radial-gradient(circle,#fde68a 0 1.2px,transparent 1.8px);
+  background-size:23px 23px,37px 37px;background-position:0 0,11px 17px;animation:gpTwinkle 1.8s ease-in-out infinite}
+@keyframes gpTwinkle{0%,100%{opacity:.2}50%{opacity:.75}}
+.gp-sheen{z-index:3;mix-blend-mode:overlay;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.9) 47%,transparent 58%) no-repeat;
+  background-size:260% 100%;background-position:130% 0;animation:gpSheen 3.6s ease-in-out 1.05s infinite}
+@keyframes gpSheen{0%{background-position:130% 0}40%,100%{background-position:-130% 0}}
+/* Ventana de robo (!robarpj) */
+.gp-steal{margin-top:10px;font-size:13px;font-weight:800;color:#fca5a5;letter-spacing:.02em}
+.gp-steal-bar{height:5px;margin-top:5px;border-radius:3px;background:#ef4444;transform-origin:left;animation:gpStealBar linear forwards}
+@keyframes gpStealBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+/* Cambio de dueno al robar: se tacha el dueno y aparece el ladron */
+.gp-owner{position:relative;display:inline-block}
+.gp-owner::after{content:"";position:absolute;left:-3px;right:-3px;top:52%;height:3px;border-radius:2px;background:#ef4444;
+  transform:scaleX(0);transform-origin:left}
+.gp-who.stolen{opacity:.55;transition:opacity .4s .5s}
+.gp-who.stolen .gp-owner::after{animation:gpStrike .45s ease-out forwards}
+.gp-who.stolen.now .gp-owner::after{animation:none;transform:scaleX(1)}
+@keyframes gpStrike{to{transform:scaleX(1)}}
+.gp-newowner{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;padding:7px 10px;border-radius:12px;
+  background:rgba(239,68,68,.16);border:2px solid #ef4444;color:#fee2e2;font-size:15px;font-weight:800;
+  opacity:0;transform:scale(.6);animation:gpNewOwner .5s cubic-bezier(.3,1.6,.5,1) .5s forwards}
+.gp-newowner.now{animation-delay:0s}
+.gp-newowner img{width:32px;height:32px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px #ef4444}
+.gp-newowner b{color:#fca5a5}
+@keyframes gpNewOwner{to{opacity:1;transform:scale(1)}}
+.gp-card.stolen .gp-tilt{animation:gpFloat 5s ease-in-out 1.3s infinite,gpFrameSpin 9s linear infinite,gpStolenFlash .25s ease-in-out .5s 6 alternate}
+.gp-card.settled .gp-tilt{--gp-frame:linear-gradient(160deg,#fecaca,#b91c1c 55%,#ef4444);
+  box-shadow:0 0 40px rgba(239,68,68,.65),0 22px 44px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.25)}
+@keyframes gpStolenFlash{to{box-shadow:0 0 54px rgba(239,68,68,.95),0 22px 44px rgba(0,0,0,.55),inset 0 0 0 4px #ef4444}}
+.gp-thief{position:absolute;left:50%;top:40px;transform:translateX(-50%);padding:12px 22px;border-radius:14px;
+  background:rgba(20,8,12,.94);border:3px solid #ef4444;box-shadow:0 0 26px rgba(239,68,68,.6);
+  color:#fee2e2;font-size:20px;font-weight:800;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;
+  animation:gpThiefIn .45s cubic-bezier(.3,1.5,.5,1) both}
+.gp-thief b{color:#fca5a5}
+.gp-thief.gift{background:rgba(8,18,14,.94);border-color:#22c55e;box-shadow:0 0 26px rgba(34,197,94,.55);color:#dcfce7}
+.gp-thief.gift b{color:#86efac}
+.gp-thief.out{animation:gpFade .4s forwards}
+@keyframes gpThiefIn{from{opacity:0;transform:translate(-50%,-30px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+// Overlay 3: tercera fuente para OBS. Cada widget registra aqui los tipos de
+// mensaje que atiende: handlers["tipo"] = function(mensaje) { ... }
+var handlers = {};
+
+// ── Gachapon (!gachapon) ──────────────────────────────────────────────────────
+// Los resultados se muestran de a uno, en orden de llegada.
+var GP_RARITIES = ["comun", "raro", "epico", "legendario"];
+var GP_DROP_MS = 1800, GP_SHOW_MS = 7500, GP_OUT_MS = 500, GP_QUEUE_MAX = 10;
+var gpQueue = [], gpBusy = false;
+
+function gpEl(tag, className, text) {
+  var el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+function gpSafeUrl(value) {
+  var url = String(value || "");
+  return /^https?:\/\//i.test(url) ? url : "";
+}
+
+function gpBuild(m) {
+  var prize = m.prize || {};
+  var rarity = GP_RARITIES.indexOf(prize.rarity) >= 0 ? prize.rarity : "comun";
+  var root = gpEl("div", "gp r-" + rarity);
+  root.appendChild(gpEl("div", "gp-rays"));
+  root.appendChild(gpEl("div", "gp-burst"));
+  if (rarity === "legendario") {
+    for (var i = 0; i < 18; i++) {
+      var spark = gpEl("div", "gp-spark");
+      var angle = (Math.PI * 2 * i) / 18, dist = 170 + Math.random() * 90;
+      spark.style.setProperty("--dx", Math.round(Math.cos(angle) * dist) + "px");
+      spark.style.setProperty("--dy", Math.round(Math.sin(angle) * dist) + "px");
+      spark.style.animationDelay = (Math.random() * 0.25).toFixed(2) + "s";
+      root.appendChild(spark);
+    }
+  }
+  var capsule = gpEl("div", "gp-capsule");
+  capsule.appendChild(gpEl("div", "gp-half gp-top"));
+  capsule.appendChild(gpEl("div", "gp-half gp-bottom"));
+  capsule.appendChild(gpEl("div", "gp-band"));
+  root.appendChild(capsule);
+
+  // .gp-card entra desde la capsula; .gp-tilt flota y lleva el marco; .gp-face es el contenido.
+  var card = gpEl("div", "gp-card");
+  var tilt = gpEl("div", "gp-tilt");
+  var content = gpEl("div", "gp-face");
+  tilt.appendChild(content);
+  tilt.appendChild(gpEl("div", "gp-holo"));
+  tilt.appendChild(gpEl("div", "gp-sparkle"));
+  tilt.appendChild(gpEl("div", "gp-sheen"));
+  card.appendChild(tilt);
+  content.appendChild(gpEl("div", "gp-name", String(prize.name || "Premio")));
+  var pic = gpEl("div", "gp-pic");
+  var image = gpSafeUrl(prize.image);
+  if (image) {
+    var img = document.createElement("img");
+    img.alt = "";
+    img.onerror = function() { if (img.parentNode) img.parentNode.replaceChild(gpEl("div", "gp-initial", String(prize.name || "?").charAt(0).toUpperCase()), img); };
+    img.src = image;
+    pic.appendChild(img);
+  } else {
+    pic.appendChild(gpEl("div", "gp-initial", String(prize.name || "?").charAt(0).toUpperCase()));
+  }
+  pic.appendChild(gpEl("div", "gp-holo"));
+  content.appendChild(pic);
+  content.appendChild(gpEl("div", "gp-rarity", prize.rarityLabel || rarity));
+  if (prize.description) content.appendChild(gpEl("div", "gp-desc", String(prize.description)));
+  var who = gpEl("div", "gp-who");
+  var avatar = gpSafeUrl(m.avatar);
+  if (avatar) { var face = document.createElement("img"); face.alt = ""; face.src = avatar; who.appendChild(face); }
+  who.appendChild(gpEl("b", "gp-owner", String(m.viewer || "?")));
+  who.appendChild(gpEl("span", "", "lo sacó del gachapon"));
+  content.appendChild(who);
+  // Cuenta atras de !robarpj, solo si la ventana sigue abierta al mostrarse.
+  var stealMs = Math.max(0, Number(m.stealMs) || 0) - (Date.now() - (m.receivedAt || Date.now()));
+  if (stealMs > 1000) {
+    var steal = gpEl("div", "gp-steal", "!robarpj para robarlo");
+    var bar = gpEl("div", "gp-steal-bar");
+    bar.style.animationDuration = stealMs + "ms";
+    steal.appendChild(bar);
+    content.appendChild(steal);
+    root.gpSteal = steal;
+    setTimeout(function() { if (steal.parentNode) steal.parentNode.removeChild(steal); }, stealMs);
+  }
+  root.gpDropId = m.dropId || null;
+  root.gpCard = content;
+  root.gpFrame = card;
+  root.gpWho = who;
+  root.appendChild(card);
+  return root;
+}
+
+// La tarjeta termina de entrar ~1 s despues de abrirse la capsula.
+var GP_CARD_READY_MS = GP_DROP_MS + 1000, GP_STOLEN_EXTRA_MS = 3500;
+var gpShown = null, gpOutTimer = null;
+
+function gpScheduleOut(root, ms) {
+  clearTimeout(gpOutTimer);
+  root.gpOutAt = Date.now() + ms;
+  gpOutTimer = setTimeout(function() {
+    root.classList.add("out");
+    setTimeout(function() {
+      if (root.parentNode) root.parentNode.removeChild(root);
+      gpShown = null;
+      gpBusy = false;
+      gpNext();
+    }, GP_OUT_MS);
+  }, ms);
+}
+
+// Cambio de dueno: tacha a quien lo saco y presenta al ladron. `animate`
+// false = la capsula ya sale robada (el robo llego mientras estaba en cola).
+function gpMarkStolen(root, s, animate) {
+  if (root.gpStolen) return;
+  root.gpStolen = true;
+  if (root.gpSteal && root.gpSteal.parentNode) root.gpSteal.parentNode.removeChild(root.gpSteal);
+  root.gpWho.classList.add("stolen");
+  if (!animate) root.gpWho.classList.add("now");
+  var row = gpEl("div", "gp-newowner" + (animate ? "" : " now"));
+  row.appendChild(gpEl("span", "", "Ahora es de"));
+  var face = gpSafeUrl(s.thiefAvatar);
+  if (face) {
+    var img = document.createElement("img");
+    img.alt = "";
+    img.onerror = function() { if (img.parentNode) img.parentNode.removeChild(img); };
+    img.src = face;
+    row.appendChild(img);
+  }
+  row.appendChild(gpEl("b", "", String(s.thief || "?").slice(0, 30)));
+  root.gpCard.appendChild(row);
+  if (animate) {
+    root.gpFrame.classList.add("stolen");
+    setTimeout(function() { root.gpFrame.classList.add("settled"); }, 2100);
+  } else {
+    root.gpFrame.classList.add("settled");
+  }
+}
+
+function gpNext() {
+  if (gpBusy || !gpQueue.length) return;
+  gpBusy = true;
+  var m = gpQueue.shift();
+  var root = gpBuild(m);
+  root.gpReadyAt = Date.now() + GP_CARD_READY_MS;
+  gpShown = root;
+  document.getElementById("stage").appendChild(root);
+  setTimeout(function() { root.classList.add("open"); }, GP_DROP_MS);
+  if (m.stolen) setTimeout(function() { gpMarkStolen(root, m.stolen, false); }, GP_CARD_READY_MS);
+  gpScheduleOut(root, GP_SHOW_MS);
+}
+
+handlers.gachapon_result = function(m) {
+  if (gpQueue.length >= GP_QUEUE_MAX) return;
+  m.receivedAt = Date.now();
+  gpQueue.push(m);
+  gpNext();
+};
+
+// Aviso de robo: independiente de la cola de capsulas.
+var GP_THIEF_MS = 4500;
+// Banner corto arriba: "<a> le robo/regalo <personaje> a <b>".
+function gpBanner(kind, from, verb, prizeName, to) {
+  var old = document.querySelector(".gp-thief");
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  var box = gpEl("div", "gp-thief" + (kind ? " " + kind : ""));
+  box.appendChild(gpEl("b", "", String(from || "?").slice(0, 30)));
+  box.appendChild(document.createTextNode(" " + verb + " " + String(prizeName || "un personaje").slice(0, 60) + " a "));
+  box.appendChild(gpEl("b", "", String(to || "?").slice(0, 30)));
+  document.getElementById("stage").appendChild(box);
+  setTimeout(function() { box.classList.add("out"); }, GP_THIEF_MS);
+  setTimeout(function() { if (box.parentNode) box.parentNode.removeChild(box); }, GP_THIEF_MS + 400);
+}
+
+handlers.gachapon_gift = function(m) {
+  gpBanner("gift", m.from, "le regaló", (m.prize || {}).name, m.to);
+};
+
+handlers.gachapon_stolen = function(m) {
+  var prize = m.prize || {};
+  gpBanner("", m.thief, "le robó", prize.name, m.owner);
+  if (!m.dropId) return;
+  // Capsula en pantalla: se anima el cambio de dueno y se alarga para que se vea.
+  var root = gpShown;
+  if (root && root.gpDropId === m.dropId && !root.classList.contains("out")) {
+    var wait = Math.max(0, root.gpReadyAt - Date.now());
+    setTimeout(function() { gpMarkStolen(root, m, true); }, wait);
+    gpScheduleOut(root, Math.max(root.gpOutAt - Date.now(), wait + GP_STOLEN_EXTRA_MS));
+    return;
+  }
+  // Capsula todavia en cola: saldra ya con el nuevo dueno.
+  for (var i = 0; i < gpQueue.length; i++) {
+    if (gpQueue[i].dropId === m.dropId) { gpQueue[i].stolen = m; return; }
+  }
+};
+
+// ── Conexion con Mimiku ───────────────────────────────────────────────────────
+var ws = null, reconnectTimer = null, reconnectDelay = 1000, overlayClosing = false;
+
+function handleOverlayMessage(e) {
+  var m;
+  try { m = JSON.parse(e.data); } catch (_) { return; }
+  var handler = m && typeof m.type === "string" && Object.prototype.hasOwnProperty.call(handlers, m.type) ? handlers[m.type] : null;
+  if (handler) handler(m);
+}
+
+function overlaySocketUrl() {
+  try {
+    if (typeof location !== "undefined" && /^https?:$/.test(location.protocol) && location.host) {
+      return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
+    }
+  } catch (_) {}
+  return "ws://127.0.0.1:7778";
+}
+
+function scheduleOverlayReconnect() {
+  if (overlayClosing || reconnectTimer !== null) return;
+  reconnectTimer = setTimeout(function() { reconnectTimer = null; connectOverlay(); }, reconnectDelay);
+  reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+}
+
+function disconnectOverlaySocket(socket) {
+  if (ws !== socket) return;
+  ws = null;
+  socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
+  if (socket.readyState < WebSocket.CLOSING) socket.close();
+  scheduleOverlayReconnect();
+}
+
+function connectOverlay() {
+  if (overlayClosing || ws) return;
+  var socket;
+  try { socket = new WebSocket(overlaySocketUrl()); } catch (_) { scheduleOverlayReconnect(); return; }
+  ws = socket;
+  socket.onopen = function() { if (ws === socket) reconnectDelay = 1000; };
+  socket.onmessage = handleOverlayMessage;
+  socket.onclose = socket.onerror = function() { disconnectOverlaySocket(socket); };
+}
+
+window.addEventListener("beforeunload", function() {
+  overlayClosing = true;
+  clearTimeout(reconnectTimer);
+  if (ws) disconnectOverlaySocket(ws);
+});
+
+connectOverlay();
+</script>
+</body>
+</html>

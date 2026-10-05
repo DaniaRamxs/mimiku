@@ -17,7 +17,8 @@ function createLocalAssetStore(rootDirectory) {
     const normalizedMime = String(mimeType).toLowerCase().split(";")[0]
     const extension = MIME_EXTENSIONS.get(normalizedMime)
     if (!extension) throw new Error("Tipo de archivo no permitido")
-    const maxBytes = kind === "card" ? 5 * 1024 * 1024 : 50 * 1024 * 1024
+    // Personajes: hasta 10 MB (los GIF animados pesan bastante).
+    const maxBytes = kind === "card" ? 10 * 1024 * 1024 : 50 * 1024 * 1024
     if (!data.length || data.length > maxBytes) throw new Error("Tamaño de archivo no permitido")
     const sourceExtension = path.extname(String(name)).toLowerCase()
     if (sourceExtension && sourceExtension !== extension && !(normalizedMime === "image/jpeg" && sourceExtension === ".jpeg")) {

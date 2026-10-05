@@ -5,8 +5,12 @@
 // nuevo el ranking arranca vacio. Los contadores viven en SQLite: si Mimiku se
 // reinicia a mitad de directo, el top sigue donde estaba.
 //
-// Solo avisa al overlay cuando el top cambia (nombres, orden o numeros), y
-// agrupa rafagas de mensajes para no mandar un aviso por cada uno.
+// Solo avisa al overlay cuando el top cambia (nombres, orden, numeros o
+// fotos), y agrupa rafagas de mensajes para no mandar un aviso por cada uno.
+//
+// Fotos: TikTok las trae en el evento; Twitch no, asi que se piden con
+// `getAvatar` solo para quien esta en el top 3 (no para todo el chat) y se
+// guardan en la fila en cuanto llegan.
 const TOP_SIZE = 3
 const DEFAULT_DEBOUNCE_MS = 250
 
@@ -15,9 +19,11 @@ function viewerKey(event) {
   return `${event.platform}:${actor.platformUserId || "legacy:" + String(actor.username || "").toLowerCase()}`
 }
 
-function createChatTopService({ db, sessions, now = () => new Date(), onChange = () => {}, debounceMs = DEFAULT_DEBOUNCE_MS }) {
+// `getAvatar(platform, username)` -> Promise<url|null> (opcional).
+function createChatTopService({ db, sessions, now = () => new Date(), onChange = () => {}, debounceMs = DEFAULT_DEBOUNCE_MS, getAvatar = null }) {
   let timer = null
   let lastSignature = null
+  const lookedUp = new Set()   // viewer_key ya consultados en este proceso
 
   sessions.onNewStream(() => {
     clearTimeout(timer)
@@ -63,9 +69,23 @@ function createChatTopService({ db, sessions, now = () => new Date(), onChange =
     }
   }
 
+  function fetchMissingAvatars(current) {
+    if (!getAvatar || !current.streamId) return
+    for (const entry of current.entries) {
+      if (entry.avatar || lookedUp.has(entry.key)) continue
+      lookedUp.add(entry.key)
+      Promise.resolve(getAvatar(entry.platform, entry.username)).then(url => {
+        if (!url || !/^https:\/\//.test(url)) return
+        db.prepare("UPDATE chat_top_counts SET avatar_url=? WHERE viewer_key=? AND avatar_url=''").run(url, entry.key)
+        schedule()
+      }).catch(() => {})
+    }
+  }
+
   function emit() {
     const current = snapshot()
-    const signature = JSON.stringify([current.streamId, current.entries.map(entry => [entry.key, entry.messages, entry.name])])
+    fetchMissingAvatars(current)
+    const signature = JSON.stringify([current.streamId, current.entries.map(entry => [entry.key, entry.messages, entry.name, entry.avatar])])
     if (signature === lastSignature) return
     lastSignature = signature
     onChange(current)
@@ -97,6 +117,13 @@ function getDefaultChatTopService(onChange) {
       db: require("./local-runtime.js").getLocalPlatform().db,
       sessions: require("./stream-sessions.js").getDefaultStreamSessions(),
       onChange: onChange || (() => {}),
+      // Foto de Twitch via Helix; primero la guardada en la identidad local.
+      getAvatar: (platform, username) => {
+        if (platform !== "twitch") return null
+        const local = require("./local-runtime.js").getLocalPlatform().identities.byUsername(username, "twitch")
+        if (local && /^https:\/\//.test(local.avatar_url || "")) return local.avatar_url
+        return require("./twitch-avatars.js").getDefaultTwitchAvatars().getAvatar(username)
+      },
     })
   }
   return defaultService

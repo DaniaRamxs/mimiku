@@ -29,8 +29,8 @@ async function addHoursWatched(channelId, username, hours, platformName = "twitc
 }
 
 async function getCards(channelId) { return getLocalPlatform().profiles.listCards(channelId) }
-async function createCard(channelId, name, description, imagePath, rarity) {
-  return getLocalPlatform().profiles.createCard(channelId, { name, description, imagePath, rarity })
+async function createCard(channelId, name, description, imagePath, rarity, exclusive = "") {
+  return getLocalPlatform().profiles.createCard(channelId, { name, description, imagePath, rarity, exclusive })
 }
 async function deleteCard(cardId) { return getLocalPlatform().profiles.removeCard(cardId) }
 async function getPacks(channelId) { return getLocalPlatform().profiles.listPacks(channelId) }

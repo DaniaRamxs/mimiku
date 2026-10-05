@@ -10,6 +10,7 @@
     "check:syntax": "node scripts/check-syntax.cjs",
     "check:distribution": "node scripts/check-distribution.cjs",
     "verify": "npm run check:syntax && npm run check:distribution && npm test",
+    "backup": "node scripts/backup.cjs",
     "prestart": "npm run rebuild:electron",
     "start": "electron .",
     "rebuild": "npm run rebuild:electron",

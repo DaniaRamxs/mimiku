@@ -18,10 +18,12 @@ const levelsPage = require("./pages/levels.js")
 const emotesPage = require("./pages/emotes.js")
 const vipsPage = require("./pages/vips.js")
 const vtuberPage = require("./pages/vtuber.js")
+const vtuberReactions = require("./pages/vtuber-reactions.js")
 const widgetsPage = require("./pages/widgets.js")
 const subathonPage = require("./pages/subathon.js")
 const commandsPage = require("./pages/commands.js")
 const overlayDiagnosticsPage = require("./pages/overlay-diagnostics.js")
+const canjePage = require("./pages/canje.js")
 
 const windowControls = {
   minimize: () => ipcRenderer.invoke("app:minimize"),
@@ -42,18 +44,19 @@ function showPage(id) {
 
   if (id === "economy") { economy.renderRanking(); economy.renderLog() }
   if (id === "mods")    modsPage.refreshModList()
-  if (id === "cards")   { cardsPage.loadCards(); cardsPage.loadPacks() }
+  if (id === "cards")   cardsPage.initCards()
   if (id === "mimics")  { mimicsPage.loadMimics(); mimicsPage.loadBoxes(); roulettePage.loadRoulette(); chestsPage.loadChestInventory() }
   if (id === "levels")  { levelsPage.initLevels() }
   if (id === "emotes")  { emotesPage.initEmotes() }
   if (id === "vips")    { vipsPage.initVips() }
-  if (id === "vtuber")  { vtuberPage.initVtuber() }
+  if (id === "vtuber")  { vtuberPage.initVtuber(); vtuberReactions.initReactions() }
   if (id === "arena")   { arenaPage.initArena() }
   if (id === "events")  eventsPage.refreshStatus()
   if (id === "widgets") widgetsPage.initWidgets()
   if (id === "subathon") subathonPage.initSubathon().catch(error => console.error("[Subathon]", error))
   if (id === "commands") commandsPage.initCommands()
   if (id === "settings") overlayDiagnosticsPage.refreshOverlayDiagnostics().catch(error => console.error("[OverlayDiagnostics]", error))
+  if (id === "settings") canjePage.refreshCanje().catch(error => console.error("[Canje]", error))
 }
 function showToast(msg) {
   const t = document.getElementById("toast")
@@ -90,6 +93,7 @@ const rendererApi = {
   subathonPage,
   commandsPage,
   overlayDiagnosticsPage,
+  canjePage,
   ...windowControls,
   showPage,
   showToast,
@@ -103,6 +107,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   })
 
   dashboard.initDashboard()
+  // La voz de las Reacciones VTuber suena aunque no se este en esa pagina.
+  vtuberReactions.initSpeech()
   const appConfig = await settings.initSettings()
   overlayDiagnosticsPage.initOverlayDiagnostics().catch(error => console.error("[OverlayDiagnostics]", error))
   const version = await ipcRenderer.invoke("app:getVersion")

@@ -1,0 +1,562 @@
+/* Cosmeticos de perfil: un bloque por banner y por marco, elegido con la
+   clase is-<id> (ver profile-cosmetics.js en el servidor). Las capas extra
+   y los SVG salen de profile-decor.js. Los banners son contenedores
+   (container-type: size), asi que las particulas se mueven en cqh/cqw y
+   recorren igual de bien la tarjeta grande que la miniatura. */
+
+@property --pf-spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+:root {
+  --pf-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 15 0 11 0 6a6 6 0 0 1 12-3a6 6 0 0 1 12 3c0 5-5 9-12 15z'/%3E%3C/svg%3E");
+  --pf-star4: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  --pf-star5: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+/* ── Piezas comunes ── */
+.pf-bit, .pf-banner > i, .pf-art, .pf-invaders { position: absolute; }
+.pf-art { left: 0; right: 0; bottom: 0; width: 100%; height: 45%; display: block; z-index: 1; }
+
+/* Estrellas que parpadean (varios banners) */
+.is-banner-aurora .pf-bit, .is-banner-synthwave .pf-bit, .is-banner-agujero .pf-bit, .is-banner-eclipse .pf-bit, .is-banner-arcade .pf-bit, .is-banner-galaxia .pf-bit {
+  left: var(--x); top: calc(var(--s) * 60% - 34%); width: 2px; height: 2px; border-radius: 50%; background: #fff; box-shadow: 0 0 5px #fff;
+  animation: pf-twinkle calc(2.6s * var(--s)) ease-in-out infinite alternate; animation-delay: var(--d);
+}
+.is-banner-agujero .pf-bit, .is-banner-eclipse .pf-bit, .is-banner-galaxia .pf-bit { top: calc(var(--s) * 110% - 62%); }
+.is-banner-galaxia .pf-bit { width: 3px; height: 3px; box-shadow: 0 0 6px #fff; }
+.is-banner-arcade .pf-bit { border-radius: 0; box-shadow: none; animation-timing-function: steps(2); }
+
+/* Destellos de cuatro puntas */
+.is-banner-oro .pf-bit, .is-banner-oceano .pf-bit, .is-banner-sub .pf-bit {
+  z-index: 2; left: var(--x); top: calc(var(--s) * 70% - 30%); width: calc(9cqh * var(--s)); aspect-ratio: 1; background: #fff; clip-path: var(--pf-star4);
+  animation: pf-sparkle 2.4s ease-in-out infinite; animation-delay: var(--d);
+}
+.is-banner-oceano .pf-bit { top: calc(var(--s) * 30% + 40%); width: calc(6cqh * var(--s)); }
+.is-banner-sub .pf-bit { background: #fde68a; }
+
+/* ═══════════════ Banners ═══════════════ */
+
+/* Aurora */
+.pf-banner.is-banner-aurora { background: #071226; }
+.pf-banner.is-banner-aurora::before, .pf-banner.is-banner-aurora::after {
+  content: ""; position: absolute; inset: -40%; filter: blur(28px); opacity: .9;
+  background: radial-gradient(40% 30% at 30% 60%, #34d399, transparent 70%), radial-gradient(35% 25% at 60% 40%, #22d3ee, transparent 70%),
+    radial-gradient(30% 25% at 80% 70%, #a855f7, transparent 70%);
+  animation: pf-aurora 12s ease-in-out infinite alternate;
+}
+.pf-banner.is-banner-aurora::after { animation-duration: 17s; animation-direction: alternate-reverse; opacity: .6; mix-blend-mode: screen; }
+.is-banner-aurora .pf-art { z-index: 2; height: 38%; }
+@keyframes pf-aurora { from { transform: translateX(-12%) rotate(-4deg); } to { transform: translateX(12%) rotate(4deg); } }
+
+/* Oceano */
+.pf-banner.is-banner-oceano { background: radial-gradient(30cqh 30cqh at 78% 22%, #fef9c3, rgba(254, 249, 195, .4) 40%, transparent 70%), linear-gradient(180deg, #7dd3fc, #0284c7 55%, #0c4a6e); }
+.pf-banner.is-banner-oceano::before, .pf-banner.is-banner-oceano::after {
+  content: ""; position: absolute; left: -50%; width: 200%; height: 60%; bottom: -18%;
+  background: radial-gradient(60px 30px at 50% 0, transparent 98%, rgba(255, 255, 255, .35) 100%) 0 0 / 120px 60px,
+    linear-gradient(rgba(14, 116, 144, .55), rgba(8, 47, 73, .9));
+  border-radius: 40% 40% 0 0; animation: pf-wave 7s linear infinite;
+}
+.pf-banner.is-banner-oceano::after { bottom: -30%; opacity: .8; animation-duration: 11s; animation-direction: reverse; }
+@keyframes pf-wave { to { transform: translateX(25%); } }
+
+/* Nevada */
+.pf-banner.is-banner-nieve { background: linear-gradient(180deg, #0b1a36, #2c4a7c 55%, #8fb3e0); }
+.pf-banner.is-banner-nieve::before {
+  content: ""; position: absolute; right: 14%; top: 12%; width: 22cqh; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #fff, #dbeafe 60%, #bfdbfe); box-shadow: 0 0 30px 8px rgba(219, 234, 254, .35);
+}
+.is-banner-nieve .pf-art { height: 55%; }
+.is-banner-nieve .pf-bit {
+  z-index: 2; top: -6%; left: var(--x); width: calc(2.6cqh * var(--s) + 2px); aspect-ratio: 1; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 4px rgba(255, 255, 255, .8); opacity: calc(var(--s) * .7); animation: pf-snow calc(7s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-snow { 33% { transform: translate(3cqw, 38cqh); } 66% { transform: translate(-2cqw, 76cqh); } to { transform: translate(2cqw, 115cqh); } }
+
+/* Burbujas */
+.pf-banner.is-banner-burbujas { background: linear-gradient(180deg, #67e8f9, #0891b2 45%, #0c4a6e); }
+.pf-banner.is-banner-burbujas::before {
+  content: ""; position: absolute; inset: -20% -10%; transform-origin: top;
+  background: repeating-linear-gradient(100deg, rgba(255, 255, 255, .2) 0 4%, transparent 4% 11%);
+  -webkit-mask-image: linear-gradient(#000, transparent 85%); mask-image: linear-gradient(#000, transparent 85%);
+  animation: pf-rays-sway 8s ease-in-out infinite alternate;
+}
+.pf-banner.is-banner-burbujas::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 22%; background: linear-gradient(transparent, rgba(8, 47, 73, .85)); }
+.is-banner-burbujas .pf-bit {
+  z-index: 1; bottom: -14cqh; left: var(--x); width: calc(12cqh * var(--s)); aspect-ratio: 1; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .75);
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, .95) 0 10%, rgba(255, 255, 255, .12) 14%, transparent 62%);
+  animation: pf-bubble calc(6s / var(--s)) ease-in infinite; animation-delay: var(--d);
+}
+@keyframes pf-rays-sway { from { transform: skewX(-8deg); } to { transform: skewX(8deg); } }
+@keyframes pf-bubble { 25% { transform: translate(2cqw, -35cqh); } 50% { transform: translate(-1.5cqw, -70cqh); } 75% { transform: translate(1.5cqw, -100cqh); } to { transform: translate(0, -135cqh); } }
+
+/* Fiesta */
+.pf-banner.is-banner-confeti { background: radial-gradient(80% 120% at 50% 0, #6d28d9, #1e1b4b 70%); }
+.pf-banner.is-banner-confeti::before, .pf-banner.is-banner-confeti::after {
+  content: ""; position: absolute; top: -30%; left: 4%; width: 40%; height: 170%; transform-origin: 50% 0; mix-blend-mode: screen;
+  background: linear-gradient(rgba(255, 255, 255, .4), transparent 80%); clip-path: polygon(45% 0, 55% 0, 100% 100%, 0 100%);
+  animation: pf-spot 4s ease-in-out infinite alternate;
+}
+.pf-banner.is-banner-confeti::after { left: auto; right: 4%; animation-delay: -2s; background: linear-gradient(rgba(244, 114, 182, .5), transparent 80%); }
+.is-banner-confeti .pf-bit {
+  z-index: 1; top: -8%; left: var(--x); width: calc(2cqh + 3px); height: calc(3.2cqh + 4px); border-radius: 2px; background: hsl(var(--h) 92% 62%);
+  animation: pf-confetti calc(4s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-spot { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+@keyframes pf-confetti { to { transform: translate(4cqw, 120cqh) rotate(540deg) rotateY(720deg); } }
+
+/* Sakura */
+.pf-banner.is-banner-sakura { background: linear-gradient(160deg, #fff1f5, #fbcfe8 45%, #f9a8d4); }
+.is-banner-sakura .pf-art.is-branch { top: 0; bottom: auto; width: auto; height: 72%; transform-origin: 0 0; animation: pf-branch 6s ease-in-out infinite alternate; }
+.is-banner-sakura .pf-bit {
+  z-index: 2; top: -12%; left: var(--x); width: calc(5cqh + 3px); height: calc(3.6cqh + 2px); border-radius: 100% 0 100% 0; background: #f472b6;
+  opacity: .85; transform: scale(var(--s)); animation: pf-petal 8s linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-branch { to { transform: rotate(2.5deg); } }
+@keyframes pf-petal { to { transform: translate(-30cqh, 125cqh) rotate(540deg) scale(var(--s)); } }
+
+/* Synthwave */
+.pf-banner.is-banner-synthwave { background: linear-gradient(180deg, #1e0b3a 0%, #6d28d9 38%, #ec4899 62%, #f97316 74%); }
+.pf-banner.is-banner-synthwave::before {
+  content: ""; position: absolute; left: 50%; top: 18%; width: 34%; aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%;
+  background: linear-gradient(#fde047, #f97316 70%);
+  -webkit-mask: repeating-linear-gradient(180deg, #000 0 10%, transparent 10% 13%); mask: repeating-linear-gradient(180deg, #000 0 10%, transparent 10% 13%);
+}
+.pf-banner.is-banner-synthwave::after {
+  content: ""; position: absolute; left: -50%; right: -50%; bottom: -10%; height: 45%; transform: perspective(160px) rotateX(55deg); transform-origin: bottom;
+  background: linear-gradient(#ec4899 2px, transparent 2px) 0 0 / 100% 22px, linear-gradient(90deg, #ec4899 2px, transparent 2px) 0 0 / 40px 100%, #1e0b3a;
+  animation: pf-grid 1.4s linear infinite;
+}
+@keyframes pf-grid { to { background-position: 0 22px, 0 0, 0 0; } }
+
+/* Corazones */
+.pf-banner.is-banner-corazones { background: linear-gradient(135deg, #500724, #be185d 55%, #f472b6); }
+.pf-banner.is-banner-corazones::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 110cqh; aspect-ratio: 1; translate: -50% -50%;
+  background: radial-gradient(circle, rgba(255, 228, 230, .55), transparent 60%); animation: pf-beat 1.4s ease-in-out infinite;
+}
+.is-banner-corazones .pf-bit {
+  z-index: 1; bottom: -14cqh; left: var(--x); width: calc(11cqh * var(--s)); aspect-ratio: 1.1; background: hsl(calc(330 + var(--h) / 18) 95% 82%);
+  -webkit-mask: var(--pf-heart) center / contain no-repeat; mask: var(--pf-heart) center / contain no-repeat;
+  animation: pf-heart-up calc(6s / var(--s)) ease-in infinite; animation-delay: var(--d);
+}
+@keyframes pf-beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.14); } 30% { transform: scale(1); } 45% { transform: scale(1.08); } }
+@keyframes pf-heart-up {
+  25% { transform: translate(3cqw, -35cqh) rotate(10deg); } 50% { transform: translate(-2cqw, -70cqh) rotate(-10deg); }
+  to { transform: translate(1cqw, -130cqh) rotate(0); opacity: .2; }
+}
+
+/* Codigo */
+.pf-banner.is-banner-matrix { background: radial-gradient(120% 90% at 50% 120%, #052e16, #010805 70%); }
+.pf-banner.is-banner-matrix::after { content: ""; position: absolute; inset: 0; z-index: 2; background: repeating-linear-gradient(rgba(0, 0, 0, .25) 0 1px, transparent 1px 3px); }
+.is-banner-matrix .pf-bit {
+  top: 0; left: var(--x); writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap; letter-spacing: -.1em;
+  font: 700 calc(7cqh + 3px) / 1 ui-monospace, "Cascadia Mono", Consolas, monospace; color: #4ade80; text-shadow: 0 0 6px rgba(74, 222, 128, .85);
+  -webkit-mask-image: linear-gradient(transparent, #000 75%); mask-image: linear-gradient(transparent, #000 75%);
+  opacity: calc(var(--s) * .7); animation: pf-code calc(5s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-code { from { transform: translateY(-100%); } to { transform: translateY(100cqh); } }
+
+/* Luciernagas */
+.pf-banner.is-banner-luciernagas { background: radial-gradient(60% 80% at 70% 20%, rgba(52, 211, 153, .18), transparent 70%), linear-gradient(180deg, #020617, #062a24 75%, #0a3d2e); }
+.pf-banner.is-banner-luciernagas::before {
+  content: ""; position: absolute; right: 16%; top: 12%; width: 18cqh; aspect-ratio: 1; border-radius: 50%;
+  box-shadow: inset -4cqh 2cqh 0 #fef9c3; filter: drop-shadow(0 0 8px rgba(254, 249, 195, .6));
+}
+.is-banner-luciernagas .pf-art { height: 62%; }
+.is-banner-luciernagas .pf-bit {
+  z-index: 2; left: var(--x); top: calc(var(--s) * 50% - 5%); width: 4px; height: 4px; border-radius: 50%; background: #ecfccb;
+  box-shadow: 0 0 6px 2px rgba(190, 242, 100, .8), 0 0 14px 4px rgba(163, 230, 53, .35);
+  animation: pf-wander calc(9s / var(--s)) ease-in-out infinite alternate, pf-blink calc(2.4s / var(--s)) ease-in-out infinite; animation-delay: var(--d);
+}
+@keyframes pf-wander { 33% { transform: translate(6cqw, -12cqh); } 66% { transform: translate(-4cqw, 8cqh); } to { transform: translate(8cqw, 4cqh); } }
+@keyframes pf-blink { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
+
+/* Lampara de lava */
+.pf-banner.is-banner-lava { background: linear-gradient(180deg, #2e0538, #86198f 55%, #db2777); }
+.pf-banner.is-banner-lava::after { content: ""; position: absolute; z-index: 2; top: 0; bottom: 0; left: 8%; width: 12%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent); }
+.is-banner-lava .pf-bit {
+  left: calc(var(--x) * .85); bottom: -40cqh; width: calc(48cqh * var(--s)); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #fed7aa, #fb923c 35%, #ea580c 65%, #9a3412); box-shadow: 0 0 24px rgba(251, 146, 60, .55);
+  animation: pf-lava calc(11s / var(--s)) ease-in-out infinite alternate; animation-delay: var(--d);
+}
+@keyframes pf-lava { 50% { transform: translateY(-80cqh) scale(.88, 1.14); } to { transform: translateY(-150cqh) scale(1.1, .9); } }
+
+/* Arcade */
+.pf-banner.is-banner-arcade { background: linear-gradient(180deg, #05010f, #1e1048 80%, #3b0764); }
+.pf-banner.is-banner-arcade::after {
+  content: ""; position: absolute; inset: 0; z-index: 3;
+  background: repeating-linear-gradient(rgba(0, 0, 0, .28) 0 2px, transparent 2px 4px), radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, .6));
+}
+.is-banner-arcade .pf-invaders { z-index: 1; left: 6%; top: 12%; width: 62%; height: auto; filter: drop-shadow(0 0 4px #f472b6); animation: pf-march 4s steps(8) infinite alternate; }
+.is-banner-arcade .pf-ship {
+  z-index: 1; left: 50%; bottom: 8%; width: 10cqh; height: 7cqh; margin-left: -5cqh; background: #4ade80;
+  clip-path: polygon(50% 0, 62% 40%, 100% 55%, 100% 100%, 0 100%, 0 55%, 38% 40%); animation: pf-ship 4s ease-in-out infinite alternate;
+}
+.is-banner-arcade .pf-laser {
+  z-index: 1; left: 50%; bottom: 15%; width: 2px; height: 10cqh; margin-left: -1px; background: #fde047; box-shadow: 0 0 6px #fde047;
+  animation: pf-ship 4s ease-in-out infinite alternate, pf-laser .9s linear infinite;
+}
+@keyframes pf-march { to { transform: translate(30cqw, 8cqh); } }
+@keyframes pf-ship { from { transform: translateX(-28cqw); } to { transform: translateX(28cqw); } }
+@keyframes pf-laser { from { translate: 0 0; opacity: 1; } to { translate: 0 -85cqh; opacity: .2; } }
+
+/* Galaxia */
+.pf-banner.is-banner-galaxia { background: radial-gradient(60% 80% at 30% 40%, rgba(168, 85, 247, .65), transparent 70%), radial-gradient(50% 70% at 75% 60%, rgba(59, 130, 246, .55), transparent 70%), #05030f; }
+.pf-banner.is-banner-galaxia::before {
+  content: ""; position: absolute; inset: -60%; filter: blur(18px);
+  background: conic-gradient(from 0deg, transparent, rgba(236, 72, 153, .3), transparent 30%, rgba(56, 189, 248, .25), transparent 60%, rgba(168, 85, 247, .3), transparent);
+  animation: pf-rot 40s linear infinite;
+}
+.is-banner-galaxia .pf-shoot {
+  z-index: 2; top: 18%; left: 78%; width: 34cqh; height: 2px; border-radius: 2px; transform-origin: left;
+  background: linear-gradient(90deg, #fff, transparent); opacity: 0; animation: pf-shoot 5s ease-out infinite;
+}
+@keyframes pf-shoot { 0%, 70% { opacity: 0; transform: rotate(160deg) translateX(0); } 73% { opacity: 1; } 90%, 100% { opacity: 0; transform: rotate(160deg) translateX(60cqw); } }
+
+/* Infierno */
+.pf-banner.is-banner-fuego { background: linear-gradient(0deg, #fde047, #f97316 25%, #dc2626 55%, #1c0505); background-size: 100% 140%; animation: pf-heat 2.5s ease-in-out infinite alternate; }
+.is-banner-fuego .pf-bit {
+  bottom: -10px; left: var(--x); width: calc(2.4cqh + 2px); aspect-ratio: 1; border-radius: 50%; background: #fde047; box-shadow: 0 0 8px #f97316;
+  animation: pf-ember calc(3.5s / var(--s)) ease-in infinite; animation-delay: var(--d);
+}
+@keyframes pf-heat { to { background-position: 0 -40%; } }
+@keyframes pf-ember { to { transform: translate(8cqw, -115cqh) scale(.2); opacity: 0; } }
+
+/* Tormenta */
+.pf-banner.is-banner-tormenta { background: linear-gradient(180deg, #0b1120, #1e293b 55%, #334155); }
+.pf-banner.is-banner-tormenta::before {
+  content: ""; position: absolute; z-index: 1; left: -30%; right: -30%; top: -20%; height: 70%; filter: blur(6px);
+  background: radial-gradient(30% 60% at 20% 40%, #475569, transparent 70%), radial-gradient(25% 50% at 45% 30%, #334155, transparent 70%),
+    radial-gradient(30% 60% at 70% 45%, #475569, transparent 70%), radial-gradient(25% 55% at 90% 30%, #1e293b, transparent 70%);
+  animation: pf-drift 14s ease-in-out infinite alternate;
+}
+.is-banner-tormenta .pf-art.is-bolt { z-index: 0; top: 4%; bottom: auto; left: 46%; width: auto; height: 88%; opacity: 0; filter: drop-shadow(0 0 8px #7dd3fc); animation: pf-bolt 5s linear infinite; }
+.is-banner-tormenta .pf-flash { inset: 0; z-index: 3; background: #e0f2fe; opacity: 0; mix-blend-mode: overlay; animation: pf-flash 5s linear infinite; }
+.is-banner-tormenta .pf-bit {
+  z-index: 2; top: -25cqh; left: var(--x); width: 1.5px; height: calc(14cqh * var(--s)); background: linear-gradient(transparent, rgba(186, 230, 253, .75));
+  animation: pf-rain calc(.8s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-drift { from { transform: translateX(-8%); } to { transform: translateX(8%); } }
+@keyframes pf-bolt { 0%, 78%, 100% { opacity: 0; } 79% { opacity: 1; } 81% { opacity: .2; } 83% { opacity: 1; } 87% { opacity: 0; } }
+@keyframes pf-flash { 0%, 78%, 100% { opacity: 0; } 79% { opacity: .75; } 81% { opacity: 0; } 83% { opacity: .5; } 86% { opacity: 0; } }
+@keyframes pf-rain { from { transform: translate(0, 0) rotate(14deg); } to { transform: translate(-36cqh, 145cqh) rotate(14deg); } }
+
+/* Ciudad neon: dos filas de edificios en bucle (cada tira mide 3 veces su alto) */
+.pf-banner.is-banner-ciudad { background: linear-gradient(180deg, #0b0420 0%, #3b0764 45%, #be185d 78%, #fb923c 100%); }
+.pf-banner.is-banner-ciudad::after { content: ""; position: absolute; inset: 0; z-index: 3; background: linear-gradient(transparent 60%, rgba(244, 114, 182, .3)), repeating-linear-gradient(rgba(0, 0, 0, .12) 0 1px, transparent 1px 3px); }
+.is-banner-ciudad .pf-sun {
+  left: 50%; bottom: 20%; width: 64cqh; aspect-ratio: 1; margin-left: -32cqh; border-radius: 50%; background: linear-gradient(#fde047, #f472b6 75%);
+  -webkit-mask: repeating-linear-gradient(180deg, #000 0 8%, transparent 8% 11%); mask: repeating-linear-gradient(180deg, #000 0 8%, transparent 8% 11%);
+  animation: pf-sun-rise 4s ease-in-out infinite alternate;
+}
+.is-banner-ciudad .pf-layer { left: 0; bottom: 0; width: calc(100% + var(--tile)); height: var(--tall); background-repeat: repeat-x; background-size: var(--tile) 100%; animation: pf-pan var(--speed) linear infinite; }
+.is-banner-ciudad .pf-layer.l1 {
+  --tall: 62cqh; --tile: 186cqh; --speed: 36s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 80' preserveAspectRatio='none'%3E%3Cpath d='M0 80V46h16V30h14v22h12V24h6v-8h4v8h10v20h18V34h14v22h10V20h16v20h20V28h8V18h2v10h8v22h16V36h22v12h44v32z' fill='%233b0f6b'/%3E%3C/svg%3E");
+}
+.is-banner-ciudad .pf-layer.l2 {
+  --tall: 46cqh; --tile: 138cqh; --speed: 15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 80' preserveAspectRatio='none'%3E%3Cpath d='M0 80V52h22V38h18v22h14V30h20v26h10V44h24v20h12V34h8v-8h8v8h8v24h20V42h18v12h16V36h42v44z' fill='%230a0418'/%3E%3Cg fill='%23fde68a'%3E%3Crect x='5' y='58' width='3' height='4'/%3E%3Crect x='12' y='66' width='3' height='4'/%3E%3Crect x='26' y='44' width='3' height='4'/%3E%3Crect x='33' y='54' width='3' height='4'/%3E%3Crect x='58' y='36' width='3' height='4'/%3E%3Crect x='66' y='46' width='3' height='4'/%3E%3Crect x='88' y='50' width='3' height='4'/%3E%3Crect x='98' y='60' width='3' height='4'/%3E%3Crect x='131' y='32' width='3' height='4'/%3E%3Crect x='168' y='48' width='3' height='4'/%3E%3Crect x='204' y='42' width='3' height='4'/%3E%3Crect x='226' y='50' width='3' height='4'/%3E%3C/g%3E%3Cg fill='%23f472b6'%3E%3Crect x='60' y='60' width='3' height='4'/%3E%3Crect x='124' y='44' width='3' height='4'/%3E%3Crect x='175' y='60' width='3' height='4'/%3E%3Crect x='214' y='62' width='3' height='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+@keyframes pf-sun-rise { to { transform: translateY(-5cqh) scale(1.04); } }
+@keyframes pf-pan { to { transform: translateX(calc(var(--tile) * -1)); } }
+
+/* Abismo: medusas que laten mientras suben */
+.pf-banner.is-banner-medusas { background: radial-gradient(70% 90% at 50% -10%, #1e3a8a, #020617 75%); }
+.pf-banner.is-banner-medusas::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 160%;
+  background: radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, .7), transparent), radial-gradient(1px 1px at 70% 60%, rgba(255, 255, 255, .5), transparent),
+    radial-gradient(1.5px 1.5px at 45% 85%, rgba(191, 219, 254, .6), transparent) 0 0 / 90px 90px;
+  animation: pf-drift-up 18s linear infinite alternate;
+}
+.is-banner-medusas .pf-bit {
+  --hue: calc(180 + var(--h) / 3);
+  z-index: 1; left: calc(var(--x) * .9); bottom: -30cqh; width: calc(18cqh * var(--s)); height: calc(14cqh * var(--s));
+  border-radius: 50% 50% 22% 22% / 70% 70% 30% 30%;
+  background: radial-gradient(ellipse at 50% 30%, hsl(var(--hue) 100% 88% / .95), hsl(var(--hue) 95% 60% / .55) 55%, transparent 76%);
+  box-shadow: 0 0 18px hsl(var(--hue) 100% 70% / .6);
+  animation: pf-jelly-up calc(14s / var(--s)) linear infinite, pf-jelly-pulse 1.8s ease-in-out infinite; animation-delay: var(--d);
+}
+.is-banner-medusas .pf-bit::after {
+  content: ""; position: absolute; left: 18%; right: 18%; top: 72%; height: 140%; transform-origin: top;
+  background: repeating-linear-gradient(90deg, hsl(var(--hue) 100% 80% / .65) 0 1.5px, transparent 1.5px 22%);
+  -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent);
+  animation: pf-tentacle 1.8s ease-in-out infinite;
+}
+@keyframes pf-drift-up { to { transform: translateY(-30%); } }
+@keyframes pf-jelly-up { from { translate: 0 0; } to { translate: 3cqw -170cqh; } }
+@keyframes pf-jelly-pulse { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.12, .86); } }
+@keyframes pf-tentacle { 0%, 100% { transform: skewX(6deg) scaleY(1); } 50% { transform: skewX(-6deg) scaleY(.82); } }
+
+/* Lujo dorado */
+.pf-banner.is-banner-oro { background: linear-gradient(115deg, #78350f, #f59e0b 25%, #fef3c7 45%, #d97706 60%, #fde68a 78%, #92400e); }
+.pf-banner.is-banner-oro::after {
+  content: ""; position: absolute; inset: -20% -60%; background: linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, .7) 50%, transparent 60%);
+  animation: pf-shine 3.5s ease-in-out infinite;
+}
+@keyframes pf-shine { 0%, 40% { transform: translateX(-60%); } 90%, 100% { transform: translateX(60%); } }
+
+/* Prisma */
+.pf-banner.is-banner-prisma {
+  background: linear-gradient(115deg, #ff3fa4, #ffd54a, #4dffb8, #3fc6ff, #b25cff, #ff3fa4, #ffd54a); background-size: 300% 300%;
+  animation: pf-prism 6s ease-in-out infinite alternate;
+}
+.pf-banner.is-banner-prisma::after { content: ""; position: absolute; inset: 0; background: radial-gradient(rgba(255, 255, 255, .45) 1px, transparent 1.5px) 0 0 / 12px 12px; mix-blend-mode: overlay; }
+.is-banner-prisma .pf-sheen, .is-banner-sub .pf-sheen {
+  z-index: 1; inset: -20% -60%; background: linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, .6) 50%, transparent 62%);
+  mix-blend-mode: overlay; animation: pf-shine 4s ease-in-out infinite;
+}
+@keyframes pf-prism { to { background-position: 100% 100%; } }
+
+/* Agujero negro: disco de acrecion aplastado + anillo de luz curvada */
+.pf-banner.is-banner-agujero { background: radial-gradient(50% 90% at 50% 50%, #1c0a00, #000 70%); }
+.is-banner-agujero .pf-lens, .is-banner-agujero .pf-disk, .is-banner-agujero .pf-core { left: 50%; top: 50%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; }
+.is-banner-agujero .pf-lens {
+  width: 64cqh; opacity: .85; filter: blur(1px);
+  background: conic-gradient(from var(--pf-spin), #fed7aa, #f97316, #fff7ed, #ea580c, #fed7aa);
+  -webkit-mask: radial-gradient(circle, transparent 54%, #000 57%, #000 64%, transparent 72%); mask: radial-gradient(circle, transparent 54%, #000 57%, #000 64%, transparent 72%);
+  animation: pf-spin 4s linear infinite;
+}
+.is-banner-agujero .pf-core { width: 34cqh; background: #000; box-shadow: 0 0 6cqh 1.5cqh rgba(251, 146, 60, .6), inset 0 0 3cqh #000; }
+.is-banner-agujero .pf-disk {
+  width: 160cqh; rotate: -8deg; transform: scaleY(.22); filter: blur(.6px);
+  background: conic-gradient(from var(--pf-spin), #fff7ed, #fdba74 10%, #ea580c 25%, #7c2d12 40%, #fdba74 55%, #fff 62%, #f97316 75%, #9a3412 90%, #fff7ed);
+  -webkit-mask: radial-gradient(circle, transparent 22%, #000 24%, #000 38%, transparent 50%); mask: radial-gradient(circle, transparent 22%, #000 24%, #000 38%, transparent 50%);
+  animation: pf-spin 3s linear infinite;
+}
+
+/* Eclipse */
+.pf-banner.is-banner-eclipse { background: radial-gradient(60% 100% at 50% 50%, #312e81, #0b0618 70%); }
+.is-banner-eclipse .pf-rays {
+  left: 50%; top: 50%; width: 140cqh; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 247, 214, .95) 15%, rgba(251, 191, 36, .35) 26%, transparent 44%),
+    repeating-conic-gradient(from 0deg, rgba(254, 243, 199, .5) 0 3deg, transparent 3deg 12deg);
+  -webkit-mask: radial-gradient(circle, #000 22%, transparent 62%); mask: radial-gradient(circle, #000 22%, transparent 62%);
+  animation: pf-rot 40s linear infinite, pf-breathe 3s ease-in-out infinite alternate;
+}
+.is-banner-eclipse .pf-moon {
+  left: 50%; top: 50%; width: 42cqh; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: radial-gradient(circle at 60% 40%, #1f1b2e, #05030a); box-shadow: 0 0 0 .6cqh #fff7d6, 0 0 5cqh 1.5cqh rgba(253, 230, 138, .8);
+}
+.is-banner-eclipse .pf-moon::after {
+  content: ""; position: absolute; right: 4%; top: 8%; width: 8cqh; aspect-ratio: 1; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 4cqh 1.5cqh #fff; animation: pf-diamond 6s ease-in-out infinite;
+}
+@keyframes pf-breathe { from { scale: 1; } to { scale: 1.1; } }
+@keyframes pf-diamond { 0%, 70%, 100% { opacity: 0; transform: scale(.3); } 80% { opacity: 1; transform: scale(1); } }
+
+/* Banner Sub */
+.pf-banner.is-banner-sub { background: linear-gradient(120deg, #2e1065, #6d28d9 45%, #9146ff 65%, #b45309 120%); }
+.pf-banner.is-banner-sub::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(45deg, rgba(251, 191, 36, .14) 0 2px, transparent 2px 22px), repeating-linear-gradient(-45deg, rgba(251, 191, 36, .14) 0 2px, transparent 2px 22px);
+}
+
+/* ═══════════════ Marcos ═══════════════ */
+
+/* Particulas repartidas alrededor del aro (angulo --a al azar) */
+.pf-fbit { position: absolute; z-index: 4; left: calc(50% + cos(var(--a)) * var(--r, 62%)); top: calc(50% + sin(var(--a)) * var(--r, 62%)); }
+
+/* Chispas */
+.pf-avatar.is-frame-chispas { --ring: conic-gradient(from var(--pf-spin), #fff, #b69cff, #fde68a, #fff, #b69cff, #fde68a, #fff); --glow: rgba(182, 156, 255, .8); }
+.is-frame-chispas .pf-ring { animation: pf-spin 3s linear infinite; }
+.is-frame-chispas::after {
+  content: ""; position: absolute; z-index: 3; inset: -14%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(3px 3px at 15% 20%, #fff, transparent), radial-gradient(2px 2px at 85% 30%, #fde68a, transparent),
+    radial-gradient(3px 3px at 80% 85%, #fff, transparent), radial-gradient(2px 2px at 10% 75%, #b69cff, transparent);
+  animation: pf-twinkle 1.4s ease-in-out infinite alternate;
+}
+
+/* Orejas de gato y de zorro: se mueven de vez en cuando */
+.pf-avatar.is-frame-gato { --ring: linear-gradient(135deg, #f9a8d4, #c084fc); --glow: rgba(249, 168, 212, .6); }
+.pf-avatar.is-frame-zorro { --ring: linear-gradient(135deg, #fdba74, #f97316 50%, #fff7ed); --glow: rgba(249, 115, 22, .6); }
+.pf-ear-l { transform-origin: 27px 24px; animation: pf-twitch-l 4s ease-in-out infinite; }
+.pf-ear-r { transform-origin: 73px 24px; animation: pf-twitch-r 4s ease-in-out infinite; animation-delay: -1.7s; }
+@keyframes pf-twitch-l { 0%, 84%, 100% { transform: rotate(0); } 88% { transform: rotate(-14deg); } 92% { transform: rotate(5deg); } 95% { transform: rotate(-4deg); } }
+@keyframes pf-twitch-r { 0%, 84%, 100% { transform: rotate(0); } 88% { transform: rotate(14deg); } 92% { transform: rotate(-5deg); } 95% { transform: rotate(4deg); } }
+
+/* Neon */
+.pf-avatar.is-frame-neon { --ring: #ff3fd8; --glow: #ff3fd8; }
+.is-frame-neon .pf-ring { animation: pf-neon 3s steps(1) infinite; }
+.is-frame-neon::after {
+  content: ""; position: absolute; z-index: 3; inset: -13%; border-radius: 50%; pointer-events: none;
+  border: calc(var(--size) * .025) solid #22e6ff; box-shadow: 0 0 calc(var(--size) * .08) #22e6ff, inset 0 0 calc(var(--size) * .06) #22e6ff;
+  animation: pf-neon 2.3s steps(1) infinite reverse;
+}
+@keyframes pf-neon { 0%, 100% { opacity: 1; } 42% { opacity: .3; } 44% { opacity: 1; } 46% { opacity: .5; } 48% { opacity: 1; } }
+
+/* 8 bits */
+.pf-avatar.is-frame-pixel { --ring: repeating-conic-gradient(from var(--pf-spin), #4ade80 0 15deg, #166534 15deg 30deg); --glow: rgba(74, 222, 128, .7); }
+.is-frame-pixel .pf-ring { animation: pf-spin 4s steps(12) infinite; }
+.pf-px-heart { animation: pf-px-bob 1s steps(1) infinite; }
+@keyframes pf-px-bob { 50% { transform: translateY(-2px); } }
+
+/* Enamorado */
+.pf-avatar.is-frame-corazones { --ring: linear-gradient(135deg, #fda4af, #f43f5e 50%, #fbcfe8); --glow: rgba(244, 63, 94, .8); }
+.is-frame-corazones .pf-ring { animation: pf-beat 1.3s ease-in-out infinite; }
+.is-frame-corazones .pf-fbit {
+  width: calc(var(--size) * .15); aspect-ratio: 1.1; margin: calc(var(--size) * -.075); background: hsl(calc(335 + var(--h) / 24) 92% 70%);
+  -webkit-mask: var(--pf-heart) center / contain no-repeat; mask: var(--pf-heart) center / contain no-repeat;
+  animation: pf-float-up calc(3.2s / var(--s)) ease-out infinite; animation-delay: var(--d);
+}
+
+/* Escarcha */
+.pf-avatar.is-frame-hielo { --ring: conic-gradient(from var(--pf-spin), #e0f2fe, #38bdf8, #f0f9ff, #7dd3fc, #e0f2fe); --glow: rgba(56, 189, 248, .8); }
+.is-frame-hielo .pf-ring { animation: pf-spin 8s linear infinite; }
+.is-frame-hielo .pf-fbit {
+  --r: 66%; width: calc(var(--size) * .13); aspect-ratio: 1; margin: calc(var(--size) * -.065);
+  background: linear-gradient(#e0f2fe, #e0f2fe) center / 100% 16% no-repeat, linear-gradient(#e0f2fe, #e0f2fe) center / 16% 100% no-repeat;
+  filter: drop-shadow(0 0 3px #38bdf8); animation: pf-flake calc(3s / var(--s)) ease-in-out infinite; animation-delay: var(--d);
+}
+@keyframes pf-flake { 0%, 100% { transform: rotate(0) scale(.5); opacity: .2; } 50% { transform: rotate(90deg) scale(1); opacity: 1; } }
+
+/* Diablillo */
+.pf-avatar.is-frame-cuernos { --ring: linear-gradient(135deg, #7f1d1d, #ef4444, #450a0a); --glow: rgba(239, 68, 68, .7); }
+.is-frame-cuernos .pf-fx { inset: -18%; border-radius: 50%; background: radial-gradient(circle, rgba(239, 68, 68, .75) 45%, transparent 70%); animation: pf-glow-pulse 1.8s ease-in-out infinite alternate; }
+.pf-horns { transform-origin: 50px 20px; animation: pf-wiggle 3s ease-in-out infinite; }
+@keyframes pf-wiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-4deg); } 90% { transform: rotate(4deg); } 95% { transform: rotate(-2deg); } }
+
+/* Corona de flores */
+.pf-avatar.is-frame-flores { --ring: linear-gradient(135deg, #bbf7d0, #4ade80 50%, #fbcfe8); --glow: rgba(74, 222, 128, .5); }
+.is-frame-flores .pf-decor svg { transform-origin: 50% 57%; animation: pf-sway 4s ease-in-out infinite alternate; }
+.pf-flower > g { animation: pf-rot 12s linear infinite; }
+@keyframes pf-sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+
+/* Alas: vampiro y angel */
+.pf-avatar.is-frame-murcielago { --ring: conic-gradient(from var(--pf-spin), #4a044e, #a21caf, #1e1530, #dc2626, #4a044e); --glow: rgba(162, 28, 175, .7); }
+.is-frame-murcielago .pf-ring { animation: pf-spin 6s linear infinite; }
+.is-frame-murcielago .pf-wing { transform-origin: 16px 52px; animation: pf-flap 1s ease-in-out infinite; }
+.pf-avatar.is-frame-alas { --ring: linear-gradient(135deg, #fff, #fde68a 40%, #fff 60%, #fbbf24); --glow: rgba(255, 255, 255, .9); }
+.is-frame-alas .pf-wing { transform-origin: 17px 54px; animation: pf-flap 2.6s ease-in-out infinite; }
+.is-frame-alas .pf-decor svg { filter: drop-shadow(0 0 6px rgba(255, 255, 255, .7)); }
+@keyframes pf-flap { 0%, 100% { transform: rotate(0) scaleX(1); } 50% { transform: rotate(14deg) scaleX(.82); } }
+
+/* Halo */
+.pf-avatar.is-frame-halo { --ring: radial-gradient(circle, #fff7d6, #fde68a); --glow: rgba(253, 230, 138, .9); }
+.is-frame-halo .pf-decor { animation: pf-float 3s ease-in-out infinite; }
+.is-frame-halo .pf-fx {
+  inset: -45%; border-radius: 50%; background: repeating-conic-gradient(rgba(253, 230, 138, .5) 0 5deg, transparent 5deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 68%); mask: radial-gradient(circle, #000 30%, transparent 68%);
+  animation: pf-rot 24s linear infinite;
+}
+
+/* Llamas */
+.pf-avatar.is-frame-llamas { --ring: conic-gradient(from var(--pf-spin), #fde047, #f97316, #dc2626, #f97316, #fde047, #f97316, #dc2626, #fde047); --glow: rgba(249, 115, 22, .9); }
+.is-frame-llamas .pf-ring { animation: pf-spin 2.4s linear infinite; }
+.is-frame-llamas .pf-decor { animation: pf-flicker .5s ease-in-out infinite alternate; }
+.is-frame-llamas .pf-fbit {
+  --r: 52%; width: calc(var(--size) * .06); aspect-ratio: 1; margin: calc(var(--size) * -.03); border-radius: 50%;
+  background: #fde047; box-shadow: 0 0 6px #f97316; animation: pf-float-up calc(2.2s / var(--s)) ease-out infinite; animation-delay: var(--d);
+}
+
+/* Orbita: cada planeta va de lado a lado (x) mientras sube y baja (y) con
+   medio ciclo de desfase, y pasa por detras de la foto en la mitad de arriba. */
+.pf-avatar.is-frame-orbita { --ring: conic-gradient(from var(--pf-spin), #0ea5e9, #e0f2fe, #6366f1, #0ea5e9); --glow: rgba(56, 189, 248, .8); }
+.is-frame-orbita .pf-ring { animation: pf-spin 5s linear infinite; }
+.pf-orb {
+  --T: 6s; --X: calc(var(--size) * .78); --Y: calc(var(--size) * .2); --delay: 0s;
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  animation: pf-orb-x calc(var(--T) / 2) ease-in-out infinite alternate, pf-orb-z var(--T) steps(1) infinite; animation-delay: var(--delay);
+}
+.pf-orb i {
+  position: absolute; width: calc(var(--size) * .16); aspect-ratio: 1; margin: calc(var(--size) * -.08); border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #60a5fa 40%, #1e3a8a); box-shadow: 0 0 calc(var(--size) * .08) rgba(96, 165, 250, .8);
+  animation: pf-orb-y calc(var(--T) / 2) ease-in-out infinite alternate; animation-delay: calc(var(--T) / -4 + var(--delay));
+}
+.pf-orb.o2 { --T: 4.2s; --X: calc(var(--size) * .64); --Y: calc(var(--size) * .3); --delay: -1.3s; }
+.pf-orb.o2 i { width: calc(var(--size) * .1); margin: calc(var(--size) * -.05); background: radial-gradient(circle at 35% 30%, #fff, #f472b6 45%, #831843); box-shadow: 0 0 calc(var(--size) * .06) rgba(244, 114, 182, .8); }
+@keyframes pf-orb-x { from { transform: translateX(calc(var(--X) * -1)); } to { transform: translateX(var(--X)); } }
+@keyframes pf-orb-y { from { transform: translateY(calc(var(--Y) * -1)) scale(.7); } to { transform: translateY(var(--Y)) scale(1.15); } }
+@keyframes pf-orb-z { 0%, 49.9% { z-index: 4; } 50%, 100% { z-index: 0; } }
+
+/* Electricidad */
+.pf-avatar.is-frame-rayo { --ring: conic-gradient(from var(--pf-spin), #e0f2fe, #22d3ee, #fff, #0ea5e9, #e0f2fe, #67e8f9, #fff); --glow: rgba(34, 211, 238, .95); }
+.is-frame-rayo .pf-ring { animation: pf-spin .9s linear infinite, pf-neon 1.7s steps(1) infinite; }
+.is-frame-rayo .pf-decor svg { filter: drop-shadow(0 0 3px #22d3ee); }
+.pf-zap { opacity: 0; animation: pf-zap 1.6s steps(1) infinite; }
+.pf-zap.z2 { animation-duration: 1.3s; animation-delay: -.4s; }
+.pf-zap.z3 { animation-duration: 1.9s; animation-delay: -.9s; }
+.pf-zap.z4 { animation-delay: -1.2s; }
+.pf-zap.z5 { animation-duration: 1.1s; animation-delay: -.2s; }
+@keyframes pf-zap { 0% { opacity: 1; } 12% { opacity: 0; } 20% { opacity: 1; } 45%, 100% { opacity: 0; } }
+
+/* Glitch */
+.pf-avatar.is-frame-glitch { --ring: linear-gradient(135deg, #fff, #a1a1aa); --glow: rgba(255, 255, 255, .5); }
+.is-frame-glitch::before, .is-frame-glitch::after {
+  content: ""; position: absolute; z-index: 2; inset: calc(var(--ring-w) * -.55); border-radius: 50%; pointer-events: none;
+  border: var(--ring-w) solid #ff2a6d; mix-blend-mode: screen; animation: pf-glitch-a 2.6s steps(1) infinite;
+}
+.is-frame-glitch::after { border-color: #05d9e8; animation-name: pf-glitch-b; }
+.is-frame-glitch .pf-photo { animation: pf-glitch-photo 2.6s steps(1) infinite; }
+@keyframes pf-glitch-a {
+  0%, 100% { transform: translate(-2px, 0); clip-path: inset(0); } 20% { transform: translate(-6px, 2px); clip-path: inset(10% 0 55% 0); }
+  22% { transform: translate(4px, -1px); clip-path: inset(60% 0 8% 0); } 24% { transform: translate(-2px, 0); clip-path: inset(0); }
+  70% { transform: translate(5px, 0); clip-path: inset(30% 0 40% 0); } 72% { transform: translate(-2px, 0); clip-path: inset(0); }
+}
+@keyframes pf-glitch-b {
+  0%, 100% { transform: translate(2px, 0); clip-path: inset(0); } 20% { transform: translate(6px, -2px); clip-path: inset(50% 0 20% 0); }
+  22% { transform: translate(-4px, 1px); clip-path: inset(5% 0 70% 0); } 24% { transform: translate(2px, 0); clip-path: inset(0); }
+  70% { transform: translate(-5px, 0); clip-path: inset(55% 0 15% 0); } 72% { transform: translate(2px, 0); clip-path: inset(0); }
+}
+@keyframes pf-glitch-photo {
+  0%, 100% { transform: none; filter: none; } 20% { transform: translate(3px, 0) skewX(-8deg); filter: hue-rotate(90deg) saturate(2); }
+  22% { transform: translate(-3px, 0); filter: none; } 24% { transform: none; } 70% { transform: translate(-2px, 1px) skewX(5deg); filter: hue-rotate(-60deg); } 72% { transform: none; filter: none; }
+}
+
+/* Corona */
+.pf-avatar.is-frame-corona { --ring: linear-gradient(135deg, #fef3c7, #f59e0b 35%, #fde68a 55%, #b45309); --glow: rgba(251, 191, 36, .8); }
+.pf-glint { transform-box: fill-box; transform-origin: center; animation: pf-sparkle 2.2s ease-in-out infinite; }
+.pf-glint.g2 { animation-delay: -1.1s; }
+
+/* Arcoiris */
+.pf-avatar.is-frame-arcoiris { --ring: conic-gradient(from var(--pf-spin), #ff3fa4, #ffd54a, #4dffb8, #3fc6ff, #b25cff, #ff3fa4); --glow: rgba(255, 255, 255, .7); }
+.is-frame-arcoiris .pf-ring { animation: pf-spin 2s linear infinite; }
+.is-frame-arcoiris .pf-fbit {
+  --r: 66%; width: calc(var(--size) * .14); aspect-ratio: 1; margin: calc(var(--size) * -.07); background: hsl(var(--h) 100% 80%);
+  clip-path: var(--pf-star4); animation: pf-sparkle calc(2.4s / var(--s)) ease-in-out infinite; animation-delay: var(--d);
+}
+
+/* Cosmos */
+.pf-avatar.is-frame-cosmos { --ring: conic-gradient(from var(--pf-spin), #1e1b4b, #7c3aed, #ec4899, #38bdf8, #1e1b4b, #a855f7, #1e1b4b); --glow: rgba(168, 85, 247, .85); }
+.is-frame-cosmos .pf-ring { animation: pf-spin 6s linear infinite; }
+.is-frame-cosmos::before {
+  content: ""; position: absolute; z-index: 0; inset: -26%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(124, 58, 237, .6), rgba(236, 72, 153, .22) 50%, transparent 70%); animation: pf-glow-pulse 3s ease-in-out infinite alternate;
+}
+.is-frame-cosmos .pf-fx {
+  z-index: 4; inset: -24%; border-radius: 50%; animation: pf-rot 16s linear infinite;
+  background: radial-gradient(2px 2px at 10% 50%, #fff, transparent), radial-gradient(1.5px 1.5px at 30% 8%, #c4b5fd, transparent),
+    radial-gradient(2px 2px at 88% 26%, #fff, transparent), radial-gradient(1.5px 1.5px at 92% 70%, #f9a8d4, transparent),
+    radial-gradient(2px 2px at 60% 96%, #fff, transparent), radial-gradient(1.5px 1.5px at 16% 84%, #7dd3fc, transparent), radial-gradient(2.5px 2.5px at 74% 6%, #fff, transparent);
+}
+
+/* Circulo magico (detras de la foto) */
+.pf-avatar.is-frame-runas { --ring: conic-gradient(from var(--pf-spin), #7c3aed, #67e8f9, #c4b5fd, #7c3aed); --glow: rgba(139, 92, 246, .9); }
+.is-frame-runas .pf-ring { animation: pf-spin 4s linear infinite; }
+.is-frame-runas .pf-fx { inset: -40%; }
+.is-frame-runas .pf-fx svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 3px #8b5cf6); }
+.pf-rune-a { animation: pf-rot 22s linear infinite; }
+.pf-rune-b { animation: pf-rot 34s linear infinite reverse; }
+
+/* Marco Sub */
+.pf-avatar.is-frame-sub { --ring: conic-gradient(from var(--pf-spin), #6d28d9, #fbbf24, #9146ff, #fde68a, #6d28d9); --glow: rgba(145, 70, 255, .8); }
+.is-frame-sub .pf-ring { animation: pf-spin 5s linear infinite; }
+.is-frame-sub .pf-fx { z-index: 4; inset: -16%; animation: pf-rot 5s linear infinite; }
+.is-frame-sub .pf-fx i { position: absolute; left: 50%; top: 0; width: 15%; aspect-ratio: 1; margin-left: -7.5%; background: #fde68a; clip-path: var(--pf-star5); }
+
+/* ── Animaciones compartidas ── */
+@keyframes pf-spin { to { --pf-spin: 360deg; } }
+@keyframes pf-rot { to { transform: rotate(360deg); } }
+@keyframes pf-twinkle { from { opacity: .2; } to { opacity: 1; } }
+@keyframes pf-float { 50% { transform: translateY(-4%); } }
+@keyframes pf-flicker { from { transform: scaleY(1); } to { transform: scaleY(1.06) translateY(-1%); } }
+@keyframes pf-sparkle { 0%, 100% { transform: scale(0) rotate(0); opacity: 0; } 50% { transform: scale(1) rotate(90deg); opacity: 1; } }
+@keyframes pf-glow-pulse { from { opacity: .35; transform: scale(.94); } to { opacity: 1; transform: scale(1.06); } }
+@keyframes pf-float-up { from { transform: translateY(0) scale(.4); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(calc(var(--size) * -.7)) scale(1); opacity: 0; } }
+
+/* En la lista de la Comunidad hay muchas tarjetas a la vez: menos particulas. */
+.pf-mini .pf-bit:nth-of-type(n + 11) { display: none; }
+.pf-mini .is-frame-alas, .pf-mini .is-frame-murcielago { margin-left: 20px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-banner, .pf-banner *, .pf-banner::before, .pf-banner::after, .pf-avatar *, .pf-avatar::before, .pf-avatar::after { animation: none !important; }
+}

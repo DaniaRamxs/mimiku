@@ -24,6 +24,13 @@ const DEFAULT_HTTP_PORT = 7777
 const OVERLAY_PATH = path.join(__dirname, "overlay.html")
 // Overlay 2: segunda fuente para OBS con los widgets nuevos (avatares flotantes...).
 const OVERLAY2_PATH = path.join(__dirname, "overlay2.html")
+// Overlay 3: tercera fuente para OBS, para los widgets que no caben en las otras dos.
+const OVERLAY3_PATH = path.join(__dirname, "overlay3.html")
+// Overlay VTuber: objetos con fisica y sonidos de las Reacciones VTuber.
+const OVERLAY_VTUBER_PATH = path.join(__dirname, "overlay-vtuber.html")
+const VTUBER_KIT_DIR = path.join(__dirname, "overlay-vtuber")
+const VTUBER_KIT_PATTERN = /^\/vtuber-kit\/([a-z][a-z-]{0,40}\.js)$/
+const OVERLAY_PAGES = { "/overlay": OVERLAY_PATH, "/overlay2": OVERLAY2_PATH, "/overlay3": OVERLAY3_PATH, "/vtuber": OVERLAY_VTUBER_PATH }
 const PANEL_DIR = path.join(__dirname, "..", "..", "mod-panel")
 const API_TOKEN = randomUUID()
 
@@ -81,6 +88,8 @@ function start() {
   // Regalos de plataformas de directo (TikTok): puntos + donaciones + reglas de Mimic.
   const giftService = require("./gifts.js")
   giftService.registerGiftConsumer(eventEngine, giftService.getDefaultGiftService())
+  // Reacciones VTuber: follows, subs, bits, regalos... -> objetos, voz y VTube Studio.
+  require("./vtuber-reactions.js").getDefaultVtuberReactions().register(eventEngine)
   // Rangos (superfan): barrido periodico por cambio de mes o caducidad de overrides.
   // Solo se anuncia en el overlay la ENTRADA al rango; las salidas no se anuncian.
   require("./ranks.js").getDefaultRankService().start()
@@ -149,9 +158,18 @@ function createRequestHandler({ localApi, apiHandler, ssnRoute }) {
       apiHandler(req, res)
       return
     }
-    if (req.url === "/overlay" || req.url === "/overlay2") {
+    const kitScript = VTUBER_KIT_PATTERN.exec(req.url.split("?")[0])
+    if (kitScript) {
+      // Scripts del overlay VTuber: solo nombres simples de esa carpeta.
+      const file = path.join(VTUBER_KIT_DIR, kitScript[1])
+      if (!fs.existsSync(file)) { res.writeHead(404); res.end(); return }
+      res.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-cache, no-store, must-revalidate" })
+      res.end(fs.readFileSync(file, "utf8"))
+      return
+    }
+    if (Object.prototype.hasOwnProperty.call(OVERLAY_PAGES, req.url)) {
       // leer el archivo en cada request — sin cache
-      const html = fs.readFileSync(req.url === "/overlay2" ? OVERLAY2_PATH : OVERLAY_PATH, "utf8")
+      const html = fs.readFileSync(OVERLAY_PAGES[req.url], "utf8")
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -210,6 +228,10 @@ function handleConnection(ws) {
       if (msg.type === "get_channel") {
         const ch = require("./currentChannel.js").get()
         ws.send(JSON.stringify({ type: "set_channel", channel: ch }))
+      } else if (msg.type === "vtuber_hit") {
+        // Un objeto del overlay VTuber golpeo la cabeza del modelo.
+        require("./vtuber-reactions.js").getDefaultVtuberReactions().handleHit({ by: msg.by, direction: msg.direction })
+          .catch(error => console.warn("[reacciones] impacto:", error.message))
       }
     } catch {}
   })
@@ -219,7 +241,10 @@ function handleConnection(ws) {
   try {
     ws.send(JSON.stringify(require("./widgets.js").chatTopConfigMessage()))
     ws.send(JSON.stringify(require("./widgets.js").floatAvatarsConfigMessage()))
+    ws.send(JSON.stringify(require("./widgets.js").jailConfigMessage()))
+    ws.send(JSON.stringify(require("./jail.js").getDefaultJail().state()))
     ws.send(JSON.stringify({ type: "chat_top", ...require("./chat-top.js").getDefaultChatTopService().snapshot() }))
+    for (const message of require("./vtuber-reactions.js").getDefaultVtuberReactions().overlayState()) ws.send(JSON.stringify(message))
   } catch (error) {
     console.warn("[chat-top] no se pudo enviar el estado inicial:", error.message)
   }

@@ -22,4 +22,5 @@ module.exports = {
   getActiveViewers: twitchAdapter.getActiveViewers,
   startMiniChallenge: twitchAdapter.startMiniChallenge,
   getStatus: twitchAdapter.getStatus,
+  getRedemptionsStatus: twitchAdapter.getRedemptionsStatus,
 }

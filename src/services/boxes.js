@@ -80,9 +80,17 @@ function createBoxService({ platform, getChannel, random = Math.random, log = co
 
   // Abre hasta `requested` cofres del viewer (en orden de nombre de caja).
   function open(identity, requested = 1) {
+    return openForViewer(findViewer(identity).id, requested)
+  }
+
+  // Igual que open() pero con el id interno del viewer (p. ej. desde la pagina
+  // de canje). `boxId` limita la apertura a un tipo de cofre y `limit` el
+  // maximo de cofres por llamada.
+  function openForViewer(viewerId, requested = 1, boxId = null, limit = MAX_OPEN_PER_COMMAND) {
     const channelId = activeChannel()
-    const viewer = findViewer(identity)
+    const viewer = { id: viewerId }
     const owned = platform.mimics.boxInventory(channelId, viewer.id)
+      .filter(row => boxId === null || row.box_id === String(boxId))
     if (!owned.length) return { ok: false, reason: "empty" }
 
     const allMimics = platform.mimics.list(channelId)
@@ -94,7 +102,7 @@ function createBoxService({ platform, getChannel, random = Math.random, log = co
     }
 
     const totalOwned = owned.reduce((sum, row) => sum + row.quantity, 0)
-    const count = Math.max(1, Math.min(Math.trunc(Number(requested)) || 1, totalOwned, MAX_OPEN_PER_COMMAND))
+    const count = Math.max(1, Math.min(Math.trunc(Number(requested)) || 1, totalOwned, limit))
     const openId = randomUUID()
     const rewards = new Map() // mimicId -> { mimic, quantity }
     const boxNames = []
@@ -123,18 +131,19 @@ function createBoxService({ platform, getChannel, random = Math.random, log = co
       }
     })()
 
+    platform.activity.record(channelId, viewer.id, "chest", count)
     return {
       ok: true,
       opened: count,
       boxNames: [...new Set(boxNames)],
       rewards: [...rewards.values()].map(({ mimic, quantity }) => ({
-        name: mimic.name, rarity: mimic.rarity, quantity,
+        id: mimic.id, name: mimic.name, icon: mimic.icon, rarity: mimic.rarity, quantity,
       })),
       remaining: platform.mimics.boxInventory(channelId, viewer.id).reduce((sum, row) => sum + row.quantity, 0),
     }
   }
 
-  return { inventory, listAll, open }
+  return { inventory, listAll, open, openForViewer }
 }
 
 let defaultService = null

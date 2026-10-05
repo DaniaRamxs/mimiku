@@ -1,0 +1,259 @@
+/* Cosmeticos de perfil, coleccion 2. Mismas reglas que profile-cosmetics.css
+   (un bloque por is-<id>) y reutiliza sus animaciones compartidas
+   (pf-spin, pf-rot, pf-sparkle, pf-shine, pf-flap, pf-float-up...). */
+
+/* ═══════════════ Banners ═══════════════ */
+
+/* Destellos de cuatro puntas */
+.is-banner-cristales .pf-bit, .is-banner-diamante .pf-bit {
+  z-index: 3; left: var(--x); top: calc(var(--s) * 80% - 40%); width: calc(8cqh * var(--s)); aspect-ratio: 1; background: #fff; clip-path: var(--pf-star4);
+  animation: pf-sparkle 2.2s ease-in-out infinite; animation-delay: var(--d);
+}
+
+/* Dunas */
+.pf-banner.is-banner-dunas { background: linear-gradient(180deg, #7c2d12, #f97316 40%, #fde68a 75%); }
+.is-banner-dunas .pf-sun {
+  left: 64%; top: 12%; width: 34cqh; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, #fff7ed 30%, #fdba74 55%, transparent 70%);
+  animation: pf-sun-rise 6s ease-in-out infinite alternate;
+}
+.is-banner-dunas .pf-art { height: 62%; }
+.is-banner-dunas .pf-bit {
+  z-index: 2; left: -4%; top: calc(var(--s) * 40% + 30%); width: calc(1cqh + 1.5px); aspect-ratio: 1; border-radius: 50%; background: #fef3c7; opacity: .8;
+  animation: pf-sand calc(3s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-sand { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: .9; } 50% { transform: translate(55cqw, -6cqh); } 100% { transform: translate(110cqw, 2cqh); opacity: 0; } }
+
+/* Otono */
+.pf-banner.is-banner-otono { background: linear-gradient(160deg, #fef3c7, #fdba74 50%, #c2410c); }
+.pf-banner.is-banner-otono::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: radial-gradient(60% 100% at 30% 100%, #9a3412, transparent 70%), radial-gradient(50% 100% at 80% 100%, #b45309, transparent 70%); }
+.is-banner-otono .pf-bit {
+  z-index: 1; top: -10%; left: var(--x); width: calc(7cqh + 4px); height: calc(4.5cqh + 3px); border-radius: 0 85% 0 85%;
+  background: hsl(calc(14 + var(--h) / 10) 88% calc(42% + var(--s) * 10%)); box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .15);
+  animation: pf-leaf calc(7s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-leaf {
+  25% { transform: translate(6cqw, 30cqh) rotate(100deg); } 50% { transform: translate(-3cqw, 62cqh) rotate(210deg); }
+  75% { transform: translate(5cqw, 92cqh) rotate(300deg); } 100% { transform: translate(0, 125cqh) rotate(400deg); }
+}
+
+/* Entre nubes */
+.pf-banner.is-banner-nubes { background: linear-gradient(180deg, #93c5fd, #c7d2fe 60%, #fbcfe8); }
+.pf-banner.is-banner-nubes::before {
+  content: ""; position: absolute; left: 50%; bottom: -70%; width: 160cqh; aspect-ratio: 1; translate: -50% 0; border-radius: 50%; opacity: .55;
+  background: radial-gradient(circle, transparent 52%, #f9a8d4 53% 56%, #fde68a 56% 59%, #86efac 59% 62%, #93c5fd 62% 65%, #c4b5fd 65% 68%, transparent 69%);
+}
+.is-banner-nubes .pf-cloud {
+  --w: 34cqh; top: 20%; left: 0; width: var(--w); height: calc(var(--w) * .34); border-radius: 999px; background: #fff;
+  box-shadow: 0 6px 0 rgba(148, 163, 184, .25); animation: pf-cloud 26s linear infinite;
+}
+.is-banner-nubes .pf-cloud::before, .is-banner-nubes .pf-cloud::after { content: ""; position: absolute; border-radius: 50%; background: #fff; }
+.is-banner-nubes .pf-cloud::before { left: 16%; bottom: 30%; width: 40%; aspect-ratio: 1; }
+.is-banner-nubes .pf-cloud::after { left: 44%; bottom: 20%; width: 32%; aspect-ratio: 1; }
+.is-banner-nubes .pf-cloud.c2 { --w: 22cqh; top: 52%; opacity: .85; animation-duration: 18s; animation-delay: -7s; }
+.is-banner-nubes .pf-cloud.c3 { --w: 46cqh; top: 62%; animation-duration: 34s; animation-delay: -20s; }
+.is-banner-nubes .pf-cloud.c4 { --w: 18cqh; top: 10%; opacity: .7; animation-duration: 22s; animation-delay: -14s; }
+@keyframes pf-cloud { from { transform: translateX(-60cqh); } to { transform: translateX(calc(100cqw + 10cqh)); } }
+
+/* Ecualizador */
+.pf-banner.is-banner-ecualizador { background: radial-gradient(70% 90% at 50% 100%, #3b0764, #0a0614 70%); }
+.pf-banner.is-banner-ecualizador::after { content: ""; position: absolute; left: 0; right: 0; bottom: 9%; height: 2px; background: #f0abfc; box-shadow: 0 0 12px #e879f9; }
+.is-banner-ecualizador .pf-eq { position: absolute; left: 4%; right: 4%; bottom: 10%; height: 74%; display: flex; align-items: flex-end; gap: 1.1%; }
+.is-banner-ecualizador .pf-eq i {
+  flex: 1; height: 100%; border-radius: 3px 3px 0 0; transform-origin: bottom;
+  background: linear-gradient(0deg, #22d3ee, #a855f7 55%, #f472b6); box-shadow: 0 0 10px rgba(168, 85, 247, .5);
+  animation: pf-eq 1.1s ease-in-out infinite alternate;
+}
+.is-banner-ecualizador .pf-eq i:nth-child(2n) { animation-name: pf-eq-low; animation-duration: .8s; }
+.is-banner-ecualizador .pf-eq i:nth-child(3n) { animation-duration: .65s; animation-delay: -.3s; }
+.is-banner-ecualizador .pf-eq i:nth-child(4n + 1) { animation-delay: -.5s; }
+.is-banner-ecualizador .pf-eq i:nth-child(5n) { animation-duration: 1.4s; }
+.is-banner-ecualizador .pf-eq i:nth-child(7n) { animation-duration: .5s; animation-delay: -.2s; }
+@keyframes pf-eq { from { transform: scaleY(.12); } to { transform: scaleY(1); } }
+@keyframes pf-eq-low { from { transform: scaleY(.08); } to { transform: scaleY(.62); } }
+
+/* Cristales */
+.pf-banner.is-banner-cristales { background: radial-gradient(60% 90% at 50% 100%, #22d3ee, transparent 70%), linear-gradient(160deg, #1e1b4b, #4338ca 55%, #312e81); }
+.is-banner-cristales .pf-art { height: 85%; filter: drop-shadow(0 0 8px rgba(165, 180, 252, .6)); }
+.is-banner-cristales .pf-sheen { z-index: 2; inset: -20% -60%; background: linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, .45) 50%, transparent 60%); mix-blend-mode: overlay; animation: pf-shine 3.6s ease-in-out infinite; }
+
+/* Portal */
+.pf-banner.is-banner-portal { background: radial-gradient(60% 100% at 50% 50%, #2e1065, #050212 70%); }
+.is-banner-portal .pf-vortex, .is-banner-portal .pf-eye { left: 50%; top: 50%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; }
+.is-banner-portal .pf-vortex {
+  width: 150cqh; background: conic-gradient(from 0deg, #7c3aed, #22d3ee, #ec4899, #7c3aed, #22d3ee, #ec4899, #7c3aed);
+  -webkit-mask: radial-gradient(circle, transparent 8%, #000 14%, rgba(0, 0, 0, .6) 40%, transparent 62%); mask: radial-gradient(circle, transparent 8%, #000 14%, rgba(0, 0, 0, .6) 40%, transparent 62%);
+  animation: pf-rot 6s linear infinite; filter: blur(2px);
+}
+.is-banner-portal .pf-vortex.v2 {
+  width: 110cqh; opacity: .7; mix-blend-mode: screen; animation-duration: 3.5s; animation-direction: reverse;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .55) 0 6deg, transparent 6deg 30deg);
+}
+.is-banner-portal .pf-eye { width: 22cqh; background: radial-gradient(circle, #fff, #c4b5fd 40%, #7c3aed 70%, transparent 72%); animation: pf-breathe 1.6s ease-in-out infinite alternate; }
+.is-banner-portal .pf-bit {
+  z-index: 2; left: 50%; top: 50%; width: 3px; height: 3px; border-radius: 50%; background: #e9d5ff; box-shadow: 0 0 6px #c084fc;
+  animation: pf-suck calc(3s / var(--s)) ease-in infinite; animation-delay: var(--d);
+}
+@keyframes pf-suck { from { transform: rotate(var(--a)) translateX(90cqh); opacity: 0; } 20% { opacity: 1; } to { transform: rotate(calc(var(--a) + 540deg)) translateX(0); opacity: 0; } }
+
+/* Senal perdida: carta de ajuste que se corta en estatica */
+.pf-banner.is-banner-estatica { background: #111; }
+.is-banner-estatica .pf-noise {
+  inset: -50%; opacity: .55; animation: pf-noise .5s steps(5) infinite;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px;
+}
+.is-banner-estatica .pf-bars {
+  inset: 0; z-index: 1; animation: pf-bars-cut 6s steps(1) infinite;
+  background: linear-gradient(90deg, #e5e5e5 0 14.3%, #facc15 0 28.6%, #22d3ee 0 42.9%, #22c55e 0 57.2%, #d946ef 0 71.5%, #ef4444 0 85.8%, #2563eb 0) top / 100% 72% no-repeat,
+    linear-gradient(90deg, #2563eb 0 14.3%, #111 0 28.6%, #d946ef 0 42.9%, #111 0 57.2%, #22d3ee 0 71.5%, #111 0 85.8%, #e5e5e5 0) bottom / 100% 28% no-repeat;
+}
+.pf-banner.is-banner-estatica::after { content: ""; position: absolute; z-index: 2; left: 0; right: 0; top: -20%; height: 18%; background: linear-gradient(transparent, rgba(255, 255, 255, .18), transparent); animation: pf-roll 3s linear infinite; }
+.is-banner-estatica .pf-nosignal {
+  position: absolute; z-index: 3; left: 50%; top: 50%; translate: -50% -50%; padding: .4em .9em; background: rgba(0, 0, 0, .7); color: #fff;
+  font: 900 calc(8cqh + 6px) / 1 ui-monospace, Consolas, monospace; letter-spacing: .14em; white-space: nowrap; animation: pf-nosignal 6s steps(1) infinite;
+}
+@keyframes pf-noise { 0% { transform: translate(0, 0); } 20% { transform: translate(-7%, 4%); } 40% { transform: translate(5%, -6%); } 60% { transform: translate(-4%, -3%); } 80% { transform: translate(6%, 5%); } }
+@keyframes pf-bars-cut { 0% { opacity: 1; } 40% { opacity: 0; } 42% { opacity: 1; } 44%, 100% { opacity: 0; } }
+@keyframes pf-nosignal { 0%, 44% { opacity: 0; } 45%, 100% { opacity: 1; } }
+@keyframes pf-roll { to { transform: translateY(700%); } }
+
+/* Estanque koi: cada pez gira alrededor del centro */
+.pf-banner.is-banner-koi { background: radial-gradient(70% 120% at 50% 50%, #0e7490, #083344 75%); }
+.pf-banner.is-banner-koi::before, .pf-banner.is-banner-koi::after {
+  content: ""; position: absolute; left: 30%; top: 40%; width: 30cqh; aspect-ratio: 1; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .35);
+  animation: pf-ripple 4s ease-out infinite;
+}
+.pf-banner.is-banner-koi::after { left: 68%; top: 20%; animation-delay: -2s; }
+.is-banner-koi .pf-art.is-pads { z-index: 3; top: 0; height: 100%; }
+.pf-koi { --R: 26cqh; z-index: 2; left: 50%; top: 50%; width: 0; height: 0; animation: pf-rot 12s linear infinite; }
+.pf-koi b {
+  position: absolute; left: var(--R); top: -5cqh; width: 26cqh; height: 10cqh; rotate: -90deg; transform-origin: center;
+  background: radial-gradient(circle at 26% 40%, #fff 0 16%, transparent 18%), radial-gradient(circle at 55% 62%, #fff 0 12%, transparent 14%), #f97316;
+  -webkit-mask: var(--pf-fish) center / 100% 100% no-repeat; mask: var(--pf-fish) center / 100% 100% no-repeat;
+  animation: pf-swim .6s ease-in-out infinite alternate;
+}
+.pf-koi.k2 { --R: 38cqh; animation-duration: 17s; animation-delay: -6s; }
+.pf-koi.k2 b { background: radial-gradient(circle at 30% 50%, #dc2626 0 18%, transparent 20%), #fff7ed; }
+.pf-koi.k3 { --R: 16cqh; animation-duration: 9s; animation-direction: reverse; }
+.pf-koi.k3 b { rotate: 90deg; background: radial-gradient(circle at 40% 45%, #111 0 14%, transparent 16%), #fbbf24; }
+.is-banner-koi { --pf-fish: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 16'%3E%3Cellipse cx='15' cy='8' rx='14' ry='6'/%3E%3Cpath d='M27 8 L40 1 L36 8 L40 15 Z'/%3E%3C/svg%3E"); }
+@keyframes pf-ripple { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes pf-swim { from { transform: skewY(-6deg); } to { transform: skewY(6deg); } }
+
+/* Supernova */
+.pf-banner.is-banner-supernova { background: radial-gradient(60% 100% at 50% 50%, #312e81, #000 72%); }
+.is-banner-supernova .pf-nova, .is-banner-supernova .pf-wave { left: 50%; top: 50%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; }
+.is-banner-supernova .pf-nova {
+  width: 26cqh; background: radial-gradient(circle, #fff 20%, #fde68a 45%, #f472b6 65%, transparent 72%);
+  box-shadow: 0 0 8cqh 3cqh rgba(244, 114, 182, .5); animation: pf-nova 3s ease-in-out infinite;
+}
+.is-banner-supernova .pf-wave { width: 40cqh; border: .8cqh solid rgba(253, 230, 138, .85); box-shadow: 0 0 4cqh rgba(244, 114, 182, .6); animation: pf-shock 3s ease-out infinite; }
+.is-banner-supernova .pf-wave.w2 { animation-delay: -1s; border-color: rgba(167, 139, 250, .8); }
+.is-banner-supernova .pf-wave.w3 { animation-delay: -2s; border-color: rgba(103, 232, 249, .75); }
+.is-banner-supernova .pf-bit {
+  z-index: 1; left: 50%; top: 50%; width: calc(1.4cqh + 1px); aspect-ratio: 1; border-radius: 50%; background: hsl(calc(var(--h) / 4 + 30) 100% 80%);
+  animation: pf-debris calc(3s / var(--s)) ease-out infinite; animation-delay: var(--d);
+}
+@keyframes pf-nova { 0%, 100% { transform: scale(.9); } 10% { transform: scale(1.35); } 30% { transform: scale(1); } }
+@keyframes pf-shock { from { transform: scale(.2); opacity: 1; } to { transform: scale(4.5); opacity: 0; } }
+@keyframes pf-debris { from { transform: rotate(var(--a)) translateX(4cqh); opacity: 1; } to { transform: rotate(var(--a)) translateX(75cqw); opacity: 0; } }
+
+/* Diamante */
+.pf-banner.is-banner-diamante { background: linear-gradient(135deg, #e0f2fe, #93c5fd 30%, #1e3a8a 70%, #0f172a); }
+.is-banner-diamante .pf-prism {
+  left: 50%; top: 50%; width: 200cqh; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: .35; mix-blend-mode: screen;
+  background: repeating-conic-gradient(from 0deg, #f472b6 0 4deg, transparent 4deg 14deg, #fde047 14deg 18deg, transparent 18deg 28deg, #67e8f9 28deg 32deg, transparent 32deg 42deg);
+  -webkit-mask: radial-gradient(circle, #000 10%, transparent 60%); mask: radial-gradient(circle, #000 10%, transparent 60%);
+  animation: pf-rot 30s linear infinite;
+}
+.is-banner-diamante .pf-art.is-gem { z-index: 2; left: 50%; top: 6%; bottom: auto; width: auto; height: 88%; translate: -50% 0; filter: drop-shadow(0 0 14px rgba(186, 230, 253, .9)); animation: pf-gem-float 4s ease-in-out infinite; }
+.is-banner-diamante .pf-sheen { z-index: 3; inset: -20% -60%; background: linear-gradient(100deg, transparent 42%, rgba(255, 255, 255, .55) 50%, transparent 58%); mix-blend-mode: overlay; animation: pf-shine 3.2s ease-in-out infinite; }
+@keyframes pf-gem-float { 50% { transform: translateY(-4cqh) rotate(2deg); } }
+
+/* ═══════════════ Marcos ═══════════════ */
+
+/* Burbujas */
+.pf-avatar.is-frame-burbujas { --ring: linear-gradient(135deg, #a5f3fc, #22d3ee 50%, #e0f2fe); --glow: rgba(34, 211, 238, .7); }
+.is-frame-burbujas .pf-fbit {
+  --r: 58%; width: calc(var(--size) * .13 * var(--s)); aspect-ratio: 1; margin: calc(var(--size) * -.065); border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, .85); background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, .95) 0 12%, rgba(165, 243, 252, .2) 16%, transparent 62%);
+  animation: pf-float-up calc(3s / var(--s)) ease-out infinite; animation-delay: var(--d);
+}
+
+/* Estrellitas: seis estrellas en un anillo que gira */
+.pf-avatar.is-frame-estrellas { --ring: linear-gradient(135deg, #fef9c3, #facc15 50%, #fde68a); --glow: rgba(250, 204, 21, .7); }
+.is-frame-estrellas .pf-fx { z-index: 4; animation: pf-rot 14s linear infinite; }
+.is-frame-estrellas .pf-fx i {
+  position: absolute; left: 50%; top: 50%; width: calc(var(--size) * .16); aspect-ratio: 1; margin: calc(var(--size) * -.08);
+  background: #fde047; clip-path: var(--pf-star5); transform: rotate(var(--deg)) translateY(calc(var(--size) * -.64)) rotate(calc(var(--deg) * -1));
+}
+.is-frame-estrellas .pf-fx i:nth-child(1) { --deg: 0deg; }
+.is-frame-estrellas .pf-fx i:nth-child(2) { --deg: 60deg; background: #f9a8d4; }
+.is-frame-estrellas .pf-fx i:nth-child(3) { --deg: 120deg; }
+.is-frame-estrellas .pf-fx i:nth-child(4) { --deg: 180deg; background: #a5f3fc; }
+.is-frame-estrellas .pf-fx i:nth-child(5) { --deg: 240deg; }
+.is-frame-estrellas .pf-fx i:nth-child(6) { --deg: 300deg; background: #c4b5fd; }
+.is-frame-estrellas .pf-fx i:nth-child(odd) { animation: pf-star-pulse 1.4s ease-in-out infinite alternate; }
+@keyframes pf-star-pulse { to { opacity: .35; filter: brightness(1.6); } }
+
+/* Auriculares */
+.pf-avatar.is-frame-auriculares { --ring: linear-gradient(135deg, #1f1530, #a855f7 50%, #22d3ee); --glow: rgba(168, 85, 247, .7); }
+.pf-cup { transform-box: fill-box; transform-origin: center; animation: pf-beat 1.2s ease-in-out infinite; }
+.pf-sound { animation: pf-sound 1.2s ease-out infinite; }
+.pf-sound.s2 { animation-delay: .2s; }
+@keyframes pf-sound { 0%, 100% { opacity: 0; } 30% { opacity: 1; } }
+
+/* Orejas de conejo: la derecha se dobla de vez en cuando */
+.pf-avatar.is-frame-conejo { --ring: linear-gradient(135deg, #fff, #fbcfe8 50%, #f9a8d4); --glow: rgba(249, 168, 212, .6); }
+.pf-bun-l { transform-origin: 40px 24px; animation: pf-twitch-l 5s ease-in-out infinite; animation-delay: -2s; }
+.pf-bun-r { transform-origin: 60px 22px; animation: pf-flop 6s ease-in-out infinite; }
+@keyframes pf-flop { 0%, 55%, 100% { transform: rotate(0); } 62%, 85% { transform: rotate(48deg); } 90% { transform: rotate(-6deg); } }
+
+/* Laurel */
+.pf-avatar.is-frame-laurel { --ring: linear-gradient(135deg, #fef3c7, #f59e0b 40%, #fde68a 60%, #b45309); --glow: rgba(245, 158, 11, .7); }
+
+/* Vortice (detras de la foto) */
+.pf-avatar.is-frame-vortice { --ring: conic-gradient(from var(--pf-spin), #7c3aed, #22d3ee, #ec4899, #7c3aed); --glow: rgba(124, 58, 237, .85); }
+.is-frame-vortice .pf-ring { animation: pf-spin 2s linear infinite; }
+.is-frame-vortice .pf-fx i {
+  position: absolute; inset: -38%; border-radius: 50%; animation: pf-rot 3s linear infinite;
+  background: repeating-conic-gradient(from 0deg, #a855f7 0 10deg, #22d3ee 10deg 20deg, transparent 20deg 45deg);
+  -webkit-mask: radial-gradient(circle, transparent 34%, #000 38%, transparent 70%); mask: radial-gradient(circle, transparent 34%, #000 38%, transparent 70%);
+  filter: blur(1.5px);
+}
+
+/* Ondas: anillos de neon que salen de la foto */
+.pf-avatar.is-frame-ondas { --ring: conic-gradient(from var(--pf-spin), #22d3ee, #e879f9, #22d3ee); --glow: rgba(34, 211, 238, .9); }
+.is-frame-ondas .pf-ring { animation: pf-spin 3s linear infinite; }
+.is-frame-ondas .pf-fx i { position: absolute; inset: 0; border-radius: 50%; border: calc(var(--size) * .025) solid #22d3ee; box-shadow: 0 0 calc(var(--size) * .06) #22d3ee; animation: pf-ring-out 2.4s ease-out infinite; }
+.is-frame-ondas .pf-fx i:nth-child(2) { animation-delay: -.8s; border-color: #e879f9; box-shadow: 0 0 calc(var(--size) * .06) #e879f9; }
+.is-frame-ondas .pf-fx i:nth-child(3) { animation-delay: -1.6s; }
+@keyframes pf-ring-out { from { transform: scale(1); opacity: .95; } to { transform: scale(1.75); opacity: 0; } }
+
+/* Cristal */
+.pf-avatar.is-frame-cristal { --ring: conic-gradient(from var(--pf-spin), #ede9fe, #a78bfa, #e0f2fe, #c4b5fd, #ede9fe); --glow: rgba(167, 139, 250, .8); }
+.is-frame-cristal .pf-ring { animation: pf-spin 7s linear infinite; }
+.pf-shards { transform-origin: 50px 57px; animation: pf-rot 18s linear infinite; }
+.is-frame-cristal .pf-decor svg { filter: drop-shadow(0 0 4px #a78bfa); }
+
+/* Fenix: alas de fuego y brasas */
+.pf-avatar.is-frame-fenix { --ring: conic-gradient(from var(--pf-spin), #fde047, #f97316, #dc2626, #f97316, #fde047); --glow: rgba(249, 115, 22, .95); }
+.is-frame-fenix .pf-ring { animation: pf-spin 2s linear infinite; }
+.is-frame-fenix .pf-wing { transform-origin: 17px 54px; animation: pf-flap 1.8s ease-in-out infinite; }
+.is-frame-fenix .pf-decor svg { filter: drop-shadow(0 0 6px rgba(249, 115, 22, .9)); }
+.is-frame-fenix .pf-fbit {
+  --r: 56%; width: calc(var(--size) * .06); aspect-ratio: 1; margin: calc(var(--size) * -.03); border-radius: 50%;
+  background: #fde047; box-shadow: 0 0 6px #f97316; animation: pf-float-up calc(2s / var(--s)) ease-out infinite; animation-delay: var(--d);
+}
+
+/* Diamante */
+.pf-avatar.is-frame-diamante { --ring: conic-gradient(from var(--pf-spin), #fff, #bae6fd, #f9a8d4, #fff, #fde68a, #a5f3fc, #fff); --glow: rgba(186, 230, 253, .95); }
+.is-frame-diamante .pf-ring { animation: pf-spin 3s linear infinite; }
+.is-frame-diamante .pf-decor svg { filter: drop-shadow(0 0 5px rgba(186, 230, 253, .95)); }
+.is-frame-diamante .pf-fbit {
+  --r: 66%; width: calc(var(--size) * .12); aspect-ratio: 1; margin: calc(var(--size) * -.06); background: #fff;
+  clip-path: var(--pf-star4); animation: pf-sparkle calc(2s / var(--s)) ease-in-out infinite; animation-delay: var(--d);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-shards, .pf-cup, .pf-sound, .pf-bun-l, .pf-bun-r { animation: none !important; }
+}

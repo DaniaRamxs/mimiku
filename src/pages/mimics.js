@@ -20,8 +20,9 @@ const BLOCK_TYPES = {
   economy_event:{ icon: "📊", label: "Evento economía", color: "#0ea5e9" },
   vts_item:     { icon: "🎰", label: "Ruleta ítem VTS", color: "#e11d48" },
   vts_avatar:   { icon: "🎭", label: "Ruleta avatar VTS", color: "#c026d3" },
+  subathon_time:{ icon: "±", label: "Tiempo subathon", color: "#7c3aed" },
   xp:           { icon: "⭐", label: "XP",           color: "#ec4899" },
-  points:       { icon: "🪙", label: "Puntos",       color: "#14b8a6" },
+  points:      { icon: "🪙", label: "Puntos",       color: "#14b8a6" },
   wait:         { icon: "⏱", label: "Esperar",      color: "#64748b" },
 }
 const RARITY_CLASSES = new Set(["comun", "raro", "epico", "legendario", "evento"])
@@ -95,7 +96,8 @@ function addBlock(type) {
     economy_event:{ type:"economy_event", event:"rain", amount:100, duration_min:5, percent:10 },
     vts_item:     { type:"vts_item" },
     vts_avatar:   { type:"vts_avatar" },
-    xp:           { type:"xp",      amount:50 },
+    subathon_time:{ type:"subathon_time", mode:"remove", min:10, max:30 },
+    xp:          { type:"xp",      amount:50 },
     points:       { type:"points",  amount:50 },
     wait:         { type:"wait",    ms:2000 },
   }
@@ -118,7 +120,7 @@ function moveBlock(index, dir) {
 }
 
 function updateBlockField(index, field, value) {
-  if (["duration","ms","amount","seconds","reward"].includes(field)) value = parseInt(value) || 0
+  if (["duration","ms","amount","seconds","reward","min","max"].includes(field)) value = parseInt(value) || 0
   if (field === "volume") value = parseFloat(value) || 0
   currentSequence[index][field] = value
 }
@@ -240,6 +242,15 @@ function renderSequence() {
       fields = `<span class="block-note">🎰 Pone un accesorio aleatorio sobre tu VTuber (temporal). Configura el pool en la página VTuber.</span>`
     } else if (block.type === "vts_avatar") {
       fields = `<span class="block-note">🎭 Cambia tu modelo VTuber completo al azar. Configura los modelos en la página VTuber.</span>`
+    } else if (block.type === "subathon_time") {
+      fields = `
+        <select onchange="window.mimicsPage.updateBlockField(${i},'mode',this.value)">
+          <option value="remove" ${block.mode!=="add"?"selected":""}>Quitar tiempo</option>
+          <option value="add" ${block.mode==="add"?"selected":""}>Sumar tiempo</option>
+        </select>
+        <label class="block-inline">Min (minutos): <input type="number" min="0" value="${block.min}" onchange="window.mimicsPage.updateBlockField(${i},'min',this.value)"></label>
+        <label class="block-inline">Max (minutos): <input type="number" min="0" value="${block.max}" onchange="window.mimicsPage.updateBlockField(${i},'max',this.value)"></label>
+        <span class="block-note">Minutos al azar entre min y max. Solo con el subathon en marcha o en pausa; nunca baja de 1 minuto.</span>`
     } else if (block.type === "xp") {
       fields = `<label class="block-inline">Cantidad: <input type="number" value="${block.amount}" onchange="window.mimicsPage.updateBlockField(${i},'amount',this.value)"></label>`
     } else if (block.type === "points") {
@@ -304,8 +315,13 @@ async function editMimic(id) {
 }
 
 async function removeMimic(id) {
-  await ipcRenderer.invoke("mimics:delete", id)
-  showToast("Mimic eliminado")
+  try {
+    const removed = await ipcRenderer.invoke("mimics:delete", id)
+    showToast(removed === false ? "Ese Mimic ya no existía" : "Mimic eliminado")
+  } catch (error) {
+    console.error("[Mimics] no se pudo eliminar:", error.message)
+    showToast("No se pudo eliminar el Mimic: " + error.message.replace(/^Error invoking remote method '[^']+': /, ""))
+  }
   loadMimics()
 }
 
