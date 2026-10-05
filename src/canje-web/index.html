@@ -21,6 +21,8 @@
 <link rel="stylesheet" href="profile.css">
 <link rel="stylesheet" href="community.css">
 <link rel="stylesheet" href="posts.css">
+<link rel="stylesheet" href="stream.css">
+<link rel="stylesheet" href="duels.css">
 <link rel="stylesheet" href="profile-cosmetics.css">
 <link rel="stylesheet" href="profile-cosmetics-2.css">
 <link rel="stylesheet" href="spotlight.css">
@@ -38,6 +40,10 @@
     </div>
   </div>
   <div class="top-right">
+    <button id="live-pill" class="live-pill" type="button" hidden>
+      <span class="live-pill-dot" aria-hidden="true"></span>
+      <span>En directo</span>
+    </button>
     <div id="top-actions" class="top-actions" hidden>
       <button id="news-btn" class="top-btn" type="button" aria-label="Novedades">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4a1 1 0 0 0 1 1h2l5 4V5L6 9H4a1 1 0 0 0-1 1zm13.5 2A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
@@ -55,6 +61,16 @@
     </div>
   </div>
 </header>
+
+<div id="stream-backdrop" class="stream-backdrop" hidden></div>
+<div id="stream-player" class="stream-player" hidden>
+  <div class="stream-bar">
+    <span class="stream-bar-title"><span class="live-pill-dot" aria-hidden="true"></span> En directo</span>
+    <button id="stream-size" class="stream-btn" type="button">Ventana pequeña</button>
+    <button id="stream-close" class="stream-btn" type="button" aria-label="Cerrar el directo">Cerrar</button>
+  </div>
+  <div id="stream-frame" class="stream-frame"></div>
+</div>
 
 <dialog id="drawer" class="drawer" aria-labelledby="drawer-title">
   <div class="drawer-head">
@@ -77,6 +93,7 @@
   </section>
 
   <div id="content" hidden>
+    <section id="stream-card" class="stream-card" aria-label="Directo en Twitch" hidden></section>
     <nav class="tabs" role="tablist" aria-label="Secciones">
       <button class="tab" type="button" role="tab" id="tab-profile" data-tab="profile" aria-controls="panel-profile" aria-selected="true">Perfil</button>
       <button class="tab" type="button" role="tab" id="tab-home" data-tab="home" aria-controls="panel-home" aria-selected="false">Tienda</button>
@@ -570,6 +587,8 @@
 <script src="achievements-ui.js"></script>
 <script src="community-ui.js"></script>
 <script src="posts-ui.js"></script>
+<script src="stream-ui.js"></script>
+<script src="duels-ui.js"></script>
 <script src="cosmetic-spotlight.js"></script>
 <script src="rewards-ui.js"></script>
 <script src="social-actions.js"></script>

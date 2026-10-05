@@ -16,7 +16,7 @@
   var BACKOFF_MS = 15000
   var BANNER_MS = 4200
   var KEEP = 60
-  var GAME_NAMES = { plinko: "Plinko", scratch: "Rasca y gana", wheel: "Ruleta", slots: "Slots", hilo: "Alta o baja", mines: "Buscaminas", blackjack: "Blackjack", gacha: "Gachapon" }
+  var GAME_NAMES = { plinko: "Plinko", scratch: "Rasca y gana", wheel: "Ruleta", slots: "Slots", hilo: "Alta o baja", mines: "Buscaminas", blackjack: "Blackjack", duelo: "Duelo", gacha: "Gachapon" }
   var RARITY_LABELS = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" }
 
   var scopes = {}

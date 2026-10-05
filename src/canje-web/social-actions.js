@@ -187,7 +187,13 @@
         box.textContent = ""
         box.appendChild(giftCard(profile, result.gift))
         box.appendChild(robCard(profile, result.rob))
-      }).catch(function () { box.remove() })
+        if (window.DuelsUI) box.appendChild(window.DuelsUI.profileCard(profile))
+      }).catch(function () {
+        // Sin recompensas (regalar/robar) se puede seguir retando a duelo.
+        box.textContent = ""
+        if (window.DuelsUI) box.appendChild(window.DuelsUI.profileCard(profile))
+        else box.remove()
+      })
       return box
     },
   }

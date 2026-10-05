@@ -137,6 +137,7 @@
     clearTimeout(pollTimer)
     show("account", false)
     if (window.PostsUI) window.PostsUI.hide()
+    if (window.StreamUI) { window.StreamUI.close(); window.StreamUI.onState(null) }
     show("content", false)
     show("empty", false)
     show("login", true)
@@ -351,7 +352,9 @@
     window.RewardsUI.onViewer()
     window.CommunityUI.setVisible(currentTab === "community")
     if (state.achievements && state.achievements.length) window.AchievementsUI.notify(state.achievements)
+    if (window.DuelsUI) window.DuelsUI.onState(state.duels)
     window.PostsUI.onState(state)
+    if (state.stream !== undefined) window.StreamUI.onState(state.stream)
     $("updated").textContent = "Actualizado a las " + new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })
     return (viewer.uses || []).some(function (use) { return use.status === "pending" || use.status === "playing" })
   }
@@ -465,7 +468,7 @@
       tab.addEventListener("click", function () { selectTab(tab.getAttribute("data-tab")) })
     })
     selectTab(tabFromHash(location.hash))
-    window.CanjeApp = { api: api, toast: toast, randomKey: randomKey, reload: function () { return load() }, formatNumber: formatNumber, login: function () { if (config) login() }, selectTab: selectTab }
+    window.CanjeApp = { api: api, toast: toast, randomKey: randomKey, reload: function () { return load() }, formatNumber: formatNumber, login: function () { if (config) login() }, selectTab: selectTab, state: function () { return lastState } }
     $("login-btn").addEventListener("click", function () { if (config) login() })
     $("logout").addEventListener("click", logout)
     $("reveal-close").addEventListener("click", function () { $("reveal").close ? $("reveal").close() : $("reveal").removeAttribute("open") })

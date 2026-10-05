@@ -553,6 +553,17 @@
     drawerMode = null
   }
 
+  // Si no carga (sin conexion, demasiadas peticiones...), aviso con reintentar.
+  function drawerError(error, retry) {
+    var body = $("drawer-body")
+    body.textContent = ""
+    body.appendChild(el("p", "hint ps-empty", "No se pudo cargar: " + error.message))
+    var again = el("button", "btn btn-quiet", "Reintentar")
+    again.type = "button"
+    again.addEventListener("click", function () { body.textContent = ""; body.appendChild(el("p", "hint", "Cargando…")); retry() })
+    body.appendChild(again)
+  }
+
   function loadNews() {
     return app().api("/api/posts?kind=update").then(function (result) {
       isStreamer = result.isStreamer
@@ -565,13 +576,14 @@
       body.appendChild(list)
       // Abrir las novedades tambien las da por vistas en el buzon.
       return app().api("/api/mailbox/seen", { method: "POST", body: {} }).then(refreshSummary)
-    }).catch(function (error) { app().toast(error.message) })
+    }).catch(function (error) { drawerError(error, loadNews) })
   }
 
   function loadMailbox() {
     return app().api("/api/mailbox").then(function (result) {
       var body = $("drawer-body")
       body.textContent = ""
+      if (window.DuelsUI) body.appendChild(window.DuelsUI.mailboxSection())
       var note = el("p", "ps-mail-note", "")
       var paintNote = function (claimable) {
         note.hidden = !claimable
@@ -590,7 +602,7 @@
       }).forEach(function (item) { list.appendChild(itemNode(item, { onClaimed: onClaimed })) })
       body.appendChild(list)
       return app().api("/api/mailbox/seen", { method: "POST", body: {} }).then(refreshSummary)
-    }).catch(function (error) { app().toast(error.message) })
+    }).catch(function (error) { drawerError(error, loadMailbox) })
   }
 
   function refreshSummary() {
@@ -602,7 +614,8 @@
     var grew = summary.unread > lastSummary.unread
     lastSummary = summary
     var count = $("mail-count")
-    var total = Math.max(summary.unread, summary.claimable)
+    // Retos, turnos y resultados de duelos tambien cuentan en el sobre.
+    var total = Math.max(summary.unread, summary.claimable) + (window.DuelsUI ? window.DuelsUI.count() : 0)
     count.hidden = !total
     count.textContent = total > 9 ? "9+" : String(total)
     $("mail-btn").classList.toggle("has-gift", summary.claimable > 0)
@@ -629,9 +642,12 @@
     // app.js en cada refresco: el resumen del buzon (viene en /api/state).
     onState: function (state) {
       $("top-actions").hidden = false
-      if (state && state.mailbox) paintSummary(state.mailbox)
+      // Sin buzon de posts, el sobre sigue contando los duelos.
+      paintSummary(state && state.mailbox ? state.mailbox : lastSummary)
     },
     setVisible: function (value) { if (value && !postsLoaded && window.CanjeApp) loadPosts(true) },
     hide: function () { $("top-actions").hidden = true },
+    // Tras un duelo: el contador y, si el Buzon esta abierto, su lista.
+    refresh: function () { if (drawerMode === "mail") loadMailbox(); return refreshSummary() },
   }
 })()

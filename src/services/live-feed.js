@@ -7,7 +7,7 @@
 // marcar "es tuyo"; hacia fuera salen el nombre a mostrar y el resultado.
 const MAX_EVENTS = 80
 const MAX_LIST = 40
-const GAMES = ["plinko", "scratch", "wheel", "slots", "hilo", "mines", "blackjack", "gacha", "robar", "regalo"]
+const GAMES = ["plinko", "scratch", "wheel", "slots", "hilo", "mines", "blackjack", "gacha", "robar", "regalo", "duelo"]
 const KINDS = ["play", "steal", "rob", "rob-fail", "gift"]
 
 function createLiveFeed({ now = Date.now } = {}) {

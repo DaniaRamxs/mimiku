@@ -8,7 +8,7 @@ const { createCanjeServer, createTwitchValidator, createSessionSigner, SESSION_D
 
 const HASH = "b".repeat(64)
 
-async function setup(t) {
+async function setup(t, extra = {}) {
   const assetDir = fs.mkdtempSync(path.join(os.tmpdir(), "canje-srv-"))
   fs.writeFileSync(path.join(assetDir, `${HASH}.png`), "PNGDATA")
   fs.writeFileSync(path.join(assetDir, "secreto.txt"), "no")
@@ -23,7 +23,7 @@ async function setup(t) {
   const sessions = createSessionSigner({ getKey: () => "clave-de-prueba" })
   // "good" en los tests = una sesion valida de Mimiku para el viewer 111.
   const goodSession = sessions.issue({ twitchId: "111", login: "luna" }).token
-  const server = createCanjeServer({ data, validator, sessions, assetDir, getConfig: () => ({ clientId: "abc123abc123", channelDisplay: "emili" }), log: { error() {} } })
+  const server = createCanjeServer({ data, validator, sessions, assetDir, getConfig: () => ({ clientId: "abc123abc123", channelDisplay: "emili" }), log: { error() {} }, ...extra })
   const port = await server.start(0)
   const base = `http://127.0.0.1:${port}`
   const call = (route, { token, rawToken, method = "GET", body, headers = {} } = {}) => fetch(base + route, {
@@ -216,4 +216,20 @@ test("la sesion firmada caduca, no se puede falsificar y depende de la clave", (
 
   clock.value = expiresAt + 1
   assert.equal(signer.verify(token), null)
+})
+
+test("/api/state lleva el directo del canal y la pagina deja cargar el reproductor de Twitch", async t => {
+  let state = { live: true, streamId: "s1", startedAt: "2026-10-05T18:00:00Z", login: "HikkiDX", display: "HikkiDX", title: "Gachapon y blackjack", game: "Just Chatting", viewers: 42, thumbnail: "https://static-cdn.jtvnw.net/previews-ttv/live_user_hikkidx-640x360.jpg" }
+  const { call } = await setup(t, { getStream: () => state })
+  const live = await (await call("/api/state", { token: "good" })).json()
+  assert.deepEqual(live.stream, { live: true, login: "hikkidx", display: "HikkiDX", title: "Gachapon y blackjack", game: "Just Chatting", viewers: 42, startedAt: "2026-10-05T18:00:00Z", streamId: "s1", thumbnail: "https://static-cdn.jtvnw.net/previews-ttv/live_user_hikkidx-640x360.jpg" })
+  state = { ...state, thumbnail: "https://otro-sitio.example/x.jpg", login: "no valido!" }
+  const odd = (await (await call("/api/state", { token: "good" })).json()).stream
+  assert.deepEqual([odd.thumbnail, odd.login], ["", ""], "solo miniaturas de Twitch y logins validos")
+  state = { live: false, login: "hikkidx" }
+  assert.deepEqual((await (await call("/api/state", { token: "good" })).json()).stream, { live: false, login: "hikkidx" })
+  state = null
+  assert.equal((await (await call("/api/state", { token: "good" })).json()).stream, null, "sin token de Twitch no se sabe")
+  const page = await call("/")
+  assert.match(page.headers.get("content-security-policy"), /frame-src https:\/\/player\.twitch\.tv/)
 })

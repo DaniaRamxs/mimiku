@@ -14,7 +14,7 @@ const STALE_MS = 3 * POLL_MS
 function createTwitchLiveStatus({ getToken, getChannel, fetchImpl, helix = null, now = Date.now, log = console }) {
   const api = helix || createTwitchHelix({ getToken, fetchImpl })
   let timer = null
-  let state = null      // { live, streamId, startedAt, checkedAt }
+  let state = null      // { live, streamId, startedAt, checkedAt, title, game, viewers, thumbnail, login, display }
   let warned = false
 
   async function check() {
@@ -23,9 +23,15 @@ function createTwitchLiveStatus({ getToken, getChannel, fetchImpl, helix = null,
       if (!channel || !api.hasToken()) { state = null; return state }
       const body = await api.get(`streams?user_login=${encodeURIComponent(channel)}`)
       const stream = Array.isArray(body.data) ? body.data[0] : null
+      // Titulo, juego, espectadores y miniatura: los ensena la pagina de canje.
       state = stream
-        ? { live: true, streamId: String(stream.id), startedAt: stream.started_at, checkedAt: now() }
-        : { live: false, streamId: null, startedAt: null, checkedAt: now() }
+        ? {
+          live: true, streamId: String(stream.id), startedAt: stream.started_at, checkedAt: now(),
+          title: String(stream.title || ""), game: String(stream.game_name || ""), viewers: Number(stream.viewer_count) || 0,
+          thumbnail: String(stream.thumbnail_url || "").replace("{width}", "640").replace("{height}", "360"),
+          login: String(stream.user_login || channel), display: String(stream.user_name || channel),
+        }
+        : { live: false, streamId: null, startedAt: null, checkedAt: now(), login: channel }
       warned = false
     } catch (error) {
       state = null

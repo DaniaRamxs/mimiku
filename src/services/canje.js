@@ -140,8 +140,11 @@ function getDefaultCanje() {
         })
         feed.subscribe("community", (channelId, event) => community.track(channelId, event))
         const broadcasterLogin = () => String(require("./app-config.js").getAppConfig().streamer.twitchChannel || getChannel() || "").toLowerCase()
+        const duelLimits = require("./minigames.js").createMinigames({ platform, getChannel })
         return createCanjeServer({
           community,
+          duels: require("./canje-duels.js").createCanjeDuels({ platform, getChannel, feed, getLimits: () => duelLimits.getConfig() }),
+          getStream: () => require("./twitch-live-status.js").getDefaultLiveStatus().get(),
           // Posts, Novedades y Buzon: publica solo la cuenta de Twitch del canal.
           posts: require("./canje-posts.js").createCanjePosts({
             platform, getChannel,

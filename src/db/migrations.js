@@ -1037,6 +1037,38 @@ const MIGRATIONS = [
       );
     `,
   },
+  {
+    version: 26,
+    name: "duels",
+    up: `
+      -- Duelos entre viewers (canje-duels.js). status: drafting (quien reta
+      -- juega su mano), open (esperando al rival), playing (el rival juega),
+      -- done, declined, cancelled, expired. winner: challenger | opponent | push.
+      CREATE TABLE IF NOT EXISTS canje_duels (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        game TEXT NOT NULL,
+        challenger_id TEXT NOT NULL,
+        opponent_id TEXT NOT NULL,
+        bet INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        challenger_json TEXT NOT NULL DEFAULT '{}',
+        opponent_json TEXT NOT NULL DEFAULT '{}',
+        winner TEXT,
+        payout INTEGER NOT NULL DEFAULT 0,
+        fee INTEGER NOT NULL DEFAULT 0,
+        request_key TEXT UNIQUE,
+        created_at TEXT NOT NULL,
+        sent_at TEXT,
+        accepted_at TEXT,
+        resolved_at TEXT,
+        challenger_seen INTEGER NOT NULL DEFAULT 0,
+        opponent_seen INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_canje_duels_challenger ON canje_duels(channel_id, challenger_id, status);
+      CREATE INDEX IF NOT EXISTS idx_canje_duels_opponent ON canje_duels(channel_id, opponent_id, status);
+    `,
+  },
 ]
 
 function applyMigrations(db) {
