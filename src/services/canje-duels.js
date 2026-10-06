@@ -46,7 +46,8 @@ const MESSAGES = {
   "bad-key": "Petición no válida. Recarga la página.",
 }
 
-function createCanjeDuels({ platform, getChannel, getLimits, feed = null, now = Date.now, random = Math.random }) {
+// `nameStyleOf`: estilo de nombre equipado de un viewer (tienda de perfil).
+function createCanjeDuels({ platform, getChannel, getLimits, feed = null, now = Date.now, random = Math.random, nameStyleOf = () => "" }) {
   const db = platform.db
 
   function activeChannel() {
@@ -215,7 +216,7 @@ function createCanjeDuels({ platform, getChannel, getLimits, feed = null, now = 
     const done = duel.status === "done"
     const a = identity(duel.challenger_id)
     const b = identity(duel.opponent_id)
-    const person = row => ({ login: row.username, display: nameOf(row), avatar: /^https:\/\//.test(row.avatar_url || "") ? row.avatar_url : null })
+    const person = row => ({ login: row.username, display: nameOf(row), nameStyle: row.id ? nameStyleOf(row.id) : "", avatar: /^https:\/\//.test(row.avatar_url || "") ? row.avatar_url : null })
     let myTurn = false
     if (duel.game === "bj") myTurn = (duel.status === "drafting" && role === "challenger") || (duel.status === "playing" && role === "opponent")
     if (duel.game === "checkers") myTurn = duel.status === "playing" && duel.challenger.turn === SIDE_OF[role]

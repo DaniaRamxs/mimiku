@@ -24,6 +24,7 @@ const { handleLiveApi, LIVE_ROUTES } = require("./canje-live.js")
 const { handleRewardsApi, REWARDS_ROUTES } = require("./canje-rewards.js")
 const { handlePostsApi, POSTS_ROUTES } = require("./canje-posts.js")
 const { handleDuelsApi, DUELS_ROUTES } = require("./canje-duels.js")
+const { handleJobsApi, JOBS_ROUTES } = require("./canje-jobs.js")
 
 const WEB_DIR = path.join(__dirname, "..", "canje-web")
 const STATIC_FILES = {
@@ -39,6 +40,12 @@ const STATIC_FILES = {
   "/game-slots.js": ["game-slots.js", "text/javascript; charset=utf-8"],
   "/game-hilo.js": ["game-hilo.js", "text/javascript; charset=utf-8"],
   "/game-mines.js": ["game-mines.js", "text/javascript; charset=utf-8"],
+  "/jobs-kit.js": ["jobs-kit.js", "text/javascript; charset=utf-8"],
+  "/job-dishes.js": ["job-dishes.js", "text/javascript; charset=utf-8"],
+  "/job-mine.js": ["job-mine.js", "text/javascript; charset=utf-8"],
+  "/job-fish.js": ["job-fish.js", "text/javascript; charset=utf-8"],
+  "/jobs.css": ["jobs.css", "text/css; charset=utf-8"],
+  "/name-styles.css": ["name-styles.css", "text/css; charset=utf-8"],
   "/effects-ui.js": ["effects-ui.js", "text/javascript; charset=utf-8"],
   "/pass-ui.js": ["pass-ui.js", "text/javascript; charset=utf-8"],
   "/sub-pass-ui.js": ["sub-pass-ui.js", "text/javascript; charset=utf-8"],
@@ -232,7 +239,7 @@ function requestKey(body) {
 }
 
 // `data`: canje-data.js. `assetDir`: carpeta de imagenes de Mimiku.
-function createCanjeServer({ data, gacha = null, games = null, effects = null, pass = null, support = null, profiles = null, live = null, rewards = null, subs = null, community = null, posts = null, duels = null, getStream = null, validator, sessions, getConfig, assetDir, log = console, now = Date.now }) {
+function createCanjeServer({ data, gacha = null, games = null, effects = null, pass = null, support = null, profiles = null, live = null, rewards = null, subs = null, community = null, posts = null, duels = null, jobs = null, getStream = null, validator, sessions, getConfig, assetDir, log = console, now = Date.now }) {
   // Modulos opcionales de la pagina: cada uno aporta sus rutas y su manejador.
   const modules = [
     gacha && { routes: GACHA_ROUTES, handle: args => handleGachaApi({ ...args, gacha }) },
@@ -245,6 +252,7 @@ function createCanjeServer({ data, gacha = null, games = null, effects = null, p
     rewards && { routes: REWARDS_ROUTES, handle: args => handleRewardsApi({ ...args, rewards }) },
     posts && { routes: POSTS_ROUTES, handle: args => handlePostsApi({ ...args, posts }) },
     duels && { routes: DUELS_ROUTES, handle: args => handleDuelsApi({ ...args, duels }) },
+    jobs && { routes: JOBS_ROUTES, handle: args => handleJobsApi({ ...args, jobs }) },
   ].filter(Boolean)
   const allowApi = createRateLimiter(API_REQUESTS_PER_MINUTE, now)
   let server = null

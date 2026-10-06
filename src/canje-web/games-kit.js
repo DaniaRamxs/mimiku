@@ -1,5 +1,6 @@
 // Pestana Minijuegos: selector de juegos (Plinko, Rasca y gana, Ruleta,
-// Slots, Alta o baja, Buscaminas) y herramientas comunes para sus
+// Slots, Alta o baja, Buscaminas, Blackjack) y de trabajos (Lavaplatos,
+// Mina, Pesca: ganar puntos sin apostar), y herramientas comunes para sus
 // animaciones: confeti y lluvia de monedas en un canvas, contadores que
 // suben, sacudidas, destellos y el control de apuesta. Celebrar, sacudir y
 // destellar tambien suenan (SoundKit) y vibran en el movil, asi que cada
@@ -19,7 +20,15 @@
     { id: "hilo", name: "Alta o baja", tag: "Multiplica o cobra", accent: "#34d399" },
     { id: "mines", name: "Buscaminas", tag: "Cofres y trampas", accent: "#a855f7" },
     { id: "blackjack", name: "Blackjack", tag: "Contra Hikki", accent: "#ef4444" },
+    { id: "dishes", name: "Lavaplatos", tag: "Frota y cobra", accent: "#38bdf8", group: "work" },
+    { id: "mine", name: "Mina", tag: "Pica y encuentra", accent: "#fb923c", group: "work" },
+    { id: "fish", name: "Pesca", tag: "Lanza y recoge", accent: "#2dd4bf", group: "work" },
   ]
+  var GROUPS = [
+    { id: "play", name: "Juegos", tag: "Apuesta y gana" },
+    { id: "work", name: "Trabajos", tag: "Gratis, sin esperas" },
+  ]
+  var RELOAD_QUIET_MS = 6000
   var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   var CELEBRATE_SOUND = { small: "win-small", big: "win-big", jackpot: "jackpot", coins: "coins" }
   var CELEBRATE_BUZZ = { small: 25, big: [30, 40, 70], jackpot: [40, 40, 40, 40, 140], coins: [20, 30, 20] }
@@ -31,6 +40,9 @@
   var info = null
   var viewer = null
   var fetching = null
+  var lastInGroup = {}
+  var quietReload = null
+  var jobsInfoPromise = null
 
   function $(id) { return document.getElementById(id) }
   function app() { return window.CanjeApp }
@@ -274,7 +286,7 @@
     stage.appendChild(el("span", "game-frame"))
     stage.appendChild(el("span", "game-motes"))
     var side = el("aside", "game-side")
-    side.appendChild(el("p", "brand-kicker", "Minijuego"))
+    side.appendChild(el("p", "brand-kicker", options.kicker || "Minijuego"))
     side.appendChild(el("h2", "game-title", options.title))
     side.appendChild(el("p", "hint", options.hint))
     var wallet = el("div", "plinko-wallet game-wallet")
@@ -291,18 +303,30 @@
     var list = el("ul", "lv-list")
     live.appendChild(list)
     setTimeout(function () { side.appendChild(live) }, 0)
-    window.LiveFeed.list(list, { games: [options.id] })
+    window.LiveFeed.list(list, { games: [options.feed || options.id] })
     return { stage: stage, side: side, points: amount }
   }
 
   // Tras una jugada: saldo nuevo (animado) y recarga del estado del viewer.
-  function afterPlay(result) {
+  // `quiet` (trabajos, que se repiten cada pocos segundos): la recarga se
+  // agrupa en una sola cada RELOAD_QUIET_MS para no gastar peticiones.
+  function afterPlay(result, options) {
     if (result && typeof result.balance === "number") {
       if (viewer) viewer.points = result.balance
       Array.prototype.forEach.call(document.querySelectorAll(".g-points"), function (node) { countUp(node, result.balance, 800) })
     }
+    if (options && options.quiet) {
+      if (!quietReload) quietReload = setTimeout(function () { quietReload = null; window.LiveFeed.nudge(); app().reload().catch(function () {}) }, RELOAD_QUIET_MS)
+      return Promise.resolve()
+    }
     window.LiveFeed.nudge()
     return app().reload().catch(function () {})
+  }
+
+  // Datos de los trabajos (pagos y probabilidades), pedidos una sola vez.
+  function jobsInfo() {
+    if (!jobsInfoPromise) jobsInfoPromise = app().api("/api/jobs").catch(function (error) { jobsInfoPromise = null; throw error })
+    return jobsInfoPromise
   }
 
   function points() { return viewer ? Number(viewer.points) || 0 : 0 }
@@ -310,11 +334,41 @@
   function post(path, body) { return app().api(path, { method: "POST", body: body }) }
 
   // ── Selector ────────────────────────────────────────────────────────────────
+  function groupOf(id) {
+    var game = GAMES.filter(function (item) { return item.id === id })[0]
+    return (game && game.group) || "play"
+  }
+
+  // Juegos / Trabajos: dos pestañas grandes encima del selector.
+  function buildGroups(nav) {
+    var box = el("div", "games-groups")
+    box.setAttribute("role", "tablist")
+    box.setAttribute("aria-label", "Tipo de minijuego")
+    GROUPS.forEach(function (group) {
+      var button = el("button", "games-group is-" + group.id)
+      button.type = "button"
+      button.setAttribute("role", "tab")
+      button.setAttribute("data-group", group.id)
+      button.appendChild(el("strong", "", group.name))
+      button.appendChild(el("span", "", group.tag))
+      button.addEventListener("click", function () {
+        if (groupOf(current) === group.id) return
+        sound("click")
+        var first = GAMES.filter(function (game) { return (game.group || "play") === group.id })[0]
+        select(lastInGroup[group.id] || first.id)
+      })
+      box.appendChild(button)
+    })
+    nav.parentNode.insertBefore(box, nav)
+  }
+
   function buildNav() {
     var nav = $("games-nav")
     nav.textContent = ""
+    if (!document.querySelector(".games-groups")) buildGroups(nav)
     GAMES.forEach(function (game) {
       var button = el("button", "games-nav-btn g-" + game.id)
+      button.setAttribute("data-group", game.group || "play")
       button.type = "button"
       button.setAttribute("role", "tab")
       button.setAttribute("data-game", game.id)
@@ -339,7 +393,7 @@
       strip.appendChild(ticker)
       bar.appendChild(strip)
       nav.parentNode.insertBefore(bar, nav.nextSibling)
-      window.LiveFeed.ticker(ticker, { games: GAMES.map(function (game) { return game.id }) })
+      window.LiveFeed.ticker(ticker, { games: GAMES.map(function (game) { return game.id }).concat("trabajo") })
     }
   }
 
@@ -348,8 +402,17 @@
     var previous = current
     current = id
     storage("set", id)
+    var group = groupOf(id)
+    lastInGroup[group] = id
+    $("games-nav").classList.toggle("is-work", group === "work")
+    Array.prototype.forEach.call(document.querySelectorAll(".games-group"), function (button) {
+      var on = button.getAttribute("data-group") === group
+      button.setAttribute("aria-selected", String(on))
+      button.classList.toggle("is-selected", on)
+    })
     Array.prototype.forEach.call(document.querySelectorAll(".games-nav-btn"), function (button) {
       var on = button.getAttribute("data-game") === id
+      button.hidden = button.getAttribute("data-group") !== group
       button.setAttribute("aria-selected", String(on))
       button.classList.toggle("is-selected", on)
     })
@@ -409,7 +472,7 @@
   window.GameKit = {
     register: function (id, game) { games[id] = game },
     el: el, fmt: fmt, wait: wait, sound: sound, haptic: haptic, celebrate: celebrate, sparks: sparks, floatText: floatText, centerOf: centerOf, shake: shake, flash: flash, restart: restart, countUp: countUp,
-    prizeText: prizeText, cardFace: cardFace, betControl: betControl, layout: layout, afterPlay: afterPlay, post: post,
+    prizeText: prizeText, cardFace: cardFace, betControl: betControl, layout: layout, afterPlay: afterPlay, post: post, jobsInfo: jobsInfo,
     points: points, refreshInfo: refreshInfo, info: function () { return info }, reducedMotion: reducedMotion, RARITY_COLORS: RARITY_COLORS,
   }
   window.GamesHub = { onViewer: onViewer, setVisible: setVisible }

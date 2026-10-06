@@ -46,7 +46,7 @@
     var body = el("div", "pf-card-body")
     body.appendChild(K.avatar(profile, 120))
     var info = el("div", "pf-card-info")
-    info.appendChild(el("h2", "pf-name", profile.display))
+    info.appendChild(K.name(profile.display, profile.nameStyle, "h2", "pf-name"))
     info.appendChild(K.badges(profile))
     if (profile.joinedAt) info.appendChild(el("p", "pf-since", K.sinceText(profile.joinedAt)))
     body.appendChild(info)
@@ -137,6 +137,11 @@
   // ── Personalizar: tienda de perfil ──
   function preview(item) {
     if (item.slot === "banner") return K.banner(item.id)
+    if (item.slot === "name") {
+      var plate = el("div", "pf-shop-stage is-name")
+      plate.appendChild(K.name(profile.display, item.id, "strong", ""))
+      return plate
+    }
     var sample = { display: profile.display, avatar: profile.avatar, frame: item.id }
     var stage = el("div", "pf-shop-stage")
     stage.appendChild(K.avatar(sample, 84))
@@ -264,7 +269,7 @@
 
   // Abre "Personalizar" (desde la Tienda) y, si se pide, señala un cosmetico.
   function openShop(slot, id) {
-    if (slot === "banner" || slot === "frame") shopSlot = slot
+    if (slot === "banner" || slot === "frame" || slot === "name") shopSlot = slot
     shopFilter = "all"
     $("profile-shop").hidden = false
     var edit = document.querySelector(".pf-edit")

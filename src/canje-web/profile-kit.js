@@ -1,5 +1,6 @@
 // Kit visual de los perfiles: banners, foto con marco (estilo Discord),
-// insignias y la tarjeta pequeña de la Comunidad. Lo usan profile-ui.js y
+// nombres con estilo (name-styles.css), insignias y la tarjeta pequeña de
+// la Comunidad. Lo usan profile-ui.js y
 // community-ui.js. Los dibujos fijos estan en profile-decor.js.
 (function () {
   "use strict"
@@ -10,6 +11,11 @@
   var DECOR = window.ProfileDecor || { FRAME_DECOR: {}, FRAME_FX: {}, BANNER_FX: {} }
 
   var BADGES = { streamer: "Streamer", sub: "Sub" }
+  // Estilos de nombre que mueven cada letra (se parte el texto en <span>) y
+  // los que llevan destellos alrededor (cuantos).
+  var LETTER_STYLES = { "name-ola": true, "name-saltarin": true }
+  var SPARKLES = { "name-escarcha": 3, "name-galaxia": 4, "name-realeza": 4, "name-holograma": 2, "name-plasma": 3 }
+  var STYLE_PATTERN = /^name-[a-z]+$/
 
   function el(tag, className, text) {
     var node = document.createElement(tag)
@@ -85,6 +91,47 @@
     return wrap
   }
 
+  // Rellena `node` con `text` y el estilo de nombre `style` (id del cosmetico
+  // o ""). Las letras sueltas van ocultas para lectores de pantalla y el
+  // texto entero va aparte, para que se lea normal.
+  function paintName(node, text, style) {
+    var value = String(text == null ? "" : text)
+    node.textContent = ""
+    Array.prototype.slice.call(node.classList).forEach(function (name) { if (name === "nm" || name.indexOf("is-name-") === 0) node.classList.remove(name) })
+    if (!style || !STYLE_PATTERN.test(style)) { node.textContent = value; return node }
+    node.classList.add("nm", "is-" + style)
+    node.setAttribute("data-text", value)
+    var inner = el("span", "nm-t")
+    if (LETTER_STYLES[style]) {
+      inner.appendChild(el("span", "nm-sr", value))
+      var letters = el("span", "nm-letters")
+      letters.setAttribute("aria-hidden", "true")
+      Array.from(value).forEach(function (char, i) {
+        var letter = el("span", "nm-l", char === " " ? " " : char)
+        letter.style.setProperty("--i", String(i))
+        letters.appendChild(letter)
+      })
+      inner.appendChild(letters)
+    } else {
+      inner.textContent = value
+    }
+    node.appendChild(inner)
+    for (var i = 0; i < (SPARKLES[style] || 0); i++) {
+      var spark = el("span", "nm-spark")
+      spark.setAttribute("aria-hidden", "true")
+      spark.style.setProperty("--x", Math.round(4 + Math.random() * 92) + "%")
+      spark.style.setProperty("--y", Math.round(Math.random() * 100) + "%")
+      spark.style.setProperty("--d", (Math.random() * -2.4).toFixed(2) + "s")
+      spark.style.setProperty("--s", (0.6 + Math.random() * 0.7).toFixed(2))
+      node.appendChild(spark)
+    }
+    return node
+  }
+
+  function name(text, style, tag, className) {
+    return paintName(el(tag || "span", className || ""), text, style)
+  }
+
   function initial(profile) {
     return String(profile.display || profile.login || "?").charAt(0).toUpperCase()
   }
@@ -112,7 +159,7 @@
     card.appendChild(banner(profile.banner))
     var body = el("div", "pf-mini-body")
     body.appendChild(avatar(profile, 64))
-    body.appendChild(el("strong", "pf-mini-name", profile.display || profile.login))
+    body.appendChild(name(profile.display || profile.login, profile.nameStyle, "strong", "pf-mini-name"))
     body.appendChild(el("span", "pf-mini-meta", "Nivel " + (profile.level || 1) + (profile.achievements ? " · " + profile.achievements + (profile.achievements === 1 ? " logro" : " logros") : "") + (profile.showcaseCount ? " · " + profile.showcaseCount + " en vitrina" : "")))
     if (profile.sub) body.appendChild(el("span", "pf-mini-sub", "Sub"))
     card.appendChild(body)
@@ -126,5 +173,5 @@
     return "En la comunidad desde " + date.toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" })
   }
 
-  window.ProfileKit = { banner: banner, avatar: avatar, badges: badges, miniCard: miniCard, sinceText: sinceText, el: el, SVG_NS: SVG_NS }
+  window.ProfileKit = { banner: banner, avatar: avatar, name: name, paintName: paintName, badges: badges, miniCard: miniCard, sinceText: sinceText, el: el, SVG_NS: SVG_NS }
 })()

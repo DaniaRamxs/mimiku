@@ -9,7 +9,8 @@ const SUPPORT_ROUTES = {
   "/api/top": "GET",
 }
 
-function createCanjeSupport({ platform, getChannel }) {
+// `nameStyleOf`: estilo de nombre equipado de un viewer (tienda de perfil).
+function createCanjeSupport({ platform, getChannel, nameStyleOf = () => "" }) {
   const db = platform.db
   const support = createSupport({ platform, getChannel })
 
@@ -18,7 +19,7 @@ function createCanjeSupport({ platform, getChannel }) {
   }
 
   function publicRow(viewerId) {
-    return ({ viewerId: id, ...row }) => ({ ...row, me: id === viewerId })
+    return ({ viewerId: id, ...row }) => ({ ...row, nameStyle: nameStyleOf(id), me: id === viewerId })
   }
 
   function top(twitchId) {

@@ -1069,6 +1069,14 @@ const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_canje_duels_opponent ON canje_duels(channel_id, opponent_id, status);
     `,
   },
+  {
+    version: 27,
+    name: "viewer_profiles_name_style",
+    up: `
+      -- Estilo de nombre equipado (tienda de perfil, ranura "name").
+      ALTER TABLE viewer_profiles ADD COLUMN name_style TEXT NOT NULL DEFAULT '';
+    `,
+  },
 ]
 
 function applyMigrations(db) {

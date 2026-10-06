@@ -187,6 +187,10 @@ async function loadGachaponConfig() {
   document.getElementById("mg-slots").value = games.slotsPrice
   document.getElementById("mg-risk-min").value = games.riskMin
   document.getElementById("mg-risk-max").value = games.riskMax
+  const jobs = await ipcRenderer.invoke("jobs:getConfig")
+  document.getElementById("job-dish-pay").value = jobs.dishPay
+  document.getElementById("job-dish-penalty").value = jobs.dishPenalty
+  document.getElementById("job-dish-break").value = jobs.dishBreakPct
   const rankCosts = await ipcRenderer.invoke("cardRanks:getConfig")
   for (const rank of ["raro", "epico", "legendario", "mitico"]) document.getElementById(`rank-cost-${rank}`).value = rankCosts[rank]
 }
@@ -230,6 +234,14 @@ async function saveGachaponConfig() {
       riskMin: Number(document.getElementById("mg-risk-min").value),
       riskMax: Number(document.getElementById("mg-risk-max").value),
     })
+    const jobs = await ipcRenderer.invoke("jobs:setConfig", {
+      dishPay: Number(document.getElementById("job-dish-pay").value),
+      dishPenalty: Number(document.getElementById("job-dish-penalty").value),
+      dishBreakPct: Number(document.getElementById("job-dish-break").value),
+    })
+    document.getElementById("job-dish-pay").value = jobs.dishPay
+    document.getElementById("job-dish-penalty").value = jobs.dishPenalty
+    document.getElementById("job-dish-break").value = jobs.dishBreakPct
     const savedRanks = await ipcRenderer.invoke("cardRanks:setConfig", rankCosts)
     for (const rank of ["raro", "epico", "legendario", "mitico"]) document.getElementById(`rank-cost-${rank}`).value = savedRanks[rank]
     showToast("Precios y comisión guardados")

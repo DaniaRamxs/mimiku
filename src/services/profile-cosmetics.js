@@ -1,7 +1,9 @@
 // services/profile-cosmetics.js — Catalogo de la tienda de perfil de la
-// pagina de canje: banners (fondo de la tarjeta) y marcos (decoracion
-// alrededor de la foto, como en Discord). Aqui solo hay datos: como se ve
-// cada uno lo dibuja la web (src/canje-web/profile-kit.js + profile.css).
+// pagina de canje: banners (fondo de la tarjeta), marcos (decoracion
+// alrededor de la foto, como en Discord) y estilos de nombre (color y
+// animacion del nombre en todas partes: Comunidad, comentarios, En vivo,
+// Top, Duelos). Aqui solo hay datos: como se ve cada uno lo dibuja la web
+// (src/canje-web/profile-kit.js + profile.css, name-styles.css).
 //
 // `subOnly`: no se vende; lo tiene gratis quien sea sub comprobado del canal.
 
@@ -73,7 +75,29 @@ const COSMETICS = [
   { id: "frame-fenix", slot: "frame", name: "Fénix", rarity: "legendario", price: 350000, description: "Alas de fuego que aletean y sueltan brasas." },
   { id: "frame-diamante", slot: "frame", name: "Diamante", rarity: "legendario", price: 350000, description: "Aro prismático con un diamante que destella." },
   { id: "frame-sub", slot: "frame", name: "Marco Sub", rarity: "epico", price: 0, subOnly: true, description: "Morado y dorado con una estrella en órbita. Gratis mientras seas sub del canal." },
+  // ── Estilos de nombre ──
+  { id: "name-menta", slot: "name", name: "Menta", rarity: "comun", price: 20000, description: "Degradado verde agua, fresco y limpio." },
+  { id: "name-atardecer", slot: "name", name: "Atardecer", rarity: "comun", price: 20000, description: "Del naranja al rosa, como el cielo a última hora." },
+  { id: "name-oceano", slot: "name", name: "Océano", rarity: "comun", price: 20000, description: "Azules profundos que se mezclan." },
+  { id: "name-chicle", slot: "name", name: "Chicle", rarity: "comun", price: 20000, description: "Rosa y lila pastel, dulce a más no poder." },
+  { id: "name-neon", slot: "name", name: "Neón", rarity: "raro", price: 50000, description: "Un letrero de neón que zumba y parpadea de vez en cuando." },
+  { id: "name-oro", slot: "name", name: "Oro", rarity: "raro", price: 50000, description: "Letras de oro con un brillo que las cruza." },
+  { id: "name-escarcha", slot: "name", name: "Escarcha", rarity: "raro", price: 50000, description: "Hielo azul con destellos que aparecen y se van." },
+  { id: "name-ola", slot: "name", name: "Ola", rarity: "raro", price: 50000, description: "Las letras suben y bajan como una ola." },
+  { id: "name-terminal", slot: "name", name: "Terminal", rarity: "raro", price: 50000, description: "Verde de consola con el cursor parpadeando." },
+  { id: "name-arcoiris", slot: "name", name: "Arcoíris", rarity: "epico", price: 110000, description: "Todos los colores corriendo por tu nombre sin parar." },
+  { id: "name-fuego", slot: "name", name: "Fuego", rarity: "epico", price: 110000, description: "Llamas que suben por las letras y un brillo de brasa." },
+  { id: "name-glitch", slot: "name", name: "Glitch", rarity: "epico", price: 110000, description: "Tu nombre falla en rojo y cian como una señal rota." },
+  { id: "name-galaxia", slot: "name", name: "Galaxia", rarity: "epico", price: 110000, description: "Nebulosa morada con estrellitas que parpadean." },
+  { id: "name-saltarin", slot: "name", name: "Saltarín", rarity: "epico", price: 110000, description: "Cada letra da un saltito, una detrás de otra." },
+  { id: "name-holograma", slot: "name", name: "Holograma", rarity: "legendario", price: 250000, description: "Reflejos de holograma que cambian de color con un destello." },
+  { id: "name-realeza", slot: "name", name: "Realeza", rarity: "legendario", price: 250000, description: "Oro brillante, una coronita y destellos alrededor." },
+  { id: "name-plasma", slot: "name", name: "Plasma", rarity: "legendario", price: 250000, description: "Energía eléctrica que recorre el nombre con chispazos." },
+  { id: "name-sub", slot: "name", name: "Nombre Sub", rarity: "epico", price: 0, subOnly: true, description: "Morado y dorado con brillo. Gratis mientras seas sub del canal." },
 ]
+
+// Ranura de cada tipo -> columna de viewer_profiles donde se guarda lo equipado.
+const SLOT_COLUMNS = { banner: "banner", frame: "frame", name: "name_style" }
 
 const BY_ID = new Map(COSMETICS.map(item => [item.id, item]))
 
@@ -81,4 +105,4 @@ function cosmetic(id) {
   return BY_ID.get(String(id || "")) || null
 }
 
-module.exports = { COSMETICS, RARITY_LABELS, cosmetic }
+module.exports = { COSMETICS, RARITY_LABELS, SLOT_COLUMNS, cosmetic }

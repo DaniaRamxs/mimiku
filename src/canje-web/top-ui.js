@@ -36,9 +36,14 @@
     return name && name !== "Canal" ? name : "el canal"
   }
 
+  // Nombre con su estilo de la tienda de perfil (si ProfileKit esta cargado).
+  function styledName(text, style, tag, className) {
+    return window.ProfileKit ? window.ProfileKit.name(text, style, tag, className) : el(tag, className, text)
+  }
+
   function nameBlock(row) {
     var box = el("span", "top-name")
-    box.appendChild(el("strong", "", row.name))
+    box.appendChild(styledName(row.name, row.nameStyle, "strong", ""))
     if (row.me) box.appendChild(el("span", "me-tag", "Tú"))
     if (row.platform && row.platform !== "twitch") box.appendChild(el("span", "platform-tag", PLATFORM_LABELS[row.platform] || row.platform))
     return box

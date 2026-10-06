@@ -75,7 +75,8 @@ function timeOf(value) {
 }
 
 // `isSub(viewerRow)`: sub del canal; `isStreamer(login)`: la cuenta del canal.
-function createCanjePosts({ platform, getChannel, now = Date.now, isSub = () => false, isStreamer = () => false }) {
+// `nameStyleOf`: estilo de nombre equipado de un viewer (tienda de perfil).
+function createCanjePosts({ platform, getChannel, now = Date.now, isSub = () => false, isStreamer = () => false, nameStyleOf = () => "" }) {
   const db = platform.db
   const recentPosts = []
   const recentLikes = new Map() // viewerId -> [tiempos]
@@ -301,7 +302,7 @@ function createCanjePosts({ platform, getChannel, now = Date.now, isSub = () => 
     return {
       id: comment.id, body: comment.body, createdAt: comment.created_at, mine,
       author: {
-        login: author.username || "", display: author.display || author.username || "?",
+        login: author.username || "", display: author.display || author.username || "?", nameStyle: author.id ? nameStyleOf(author.id) : "",
         avatar: /^https:\/\//.test(author.avatar_url || "") ? author.avatar_url : null,
         streamer: !!author.username && author.username.toLowerCase() === streamerLogin,
         muted: me.streamer ? isMuted(comment.viewer_id) : undefined,

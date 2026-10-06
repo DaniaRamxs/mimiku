@@ -22,16 +22,16 @@
   function $(id) { return document.getElementById(id) }
   function app() { return window.CanjeApp }
 
-  // Lo que no tienes y lo mas raro primero, alternando banner y marco.
+  // Lo que no tienes y lo mas raro primero, alternando banner, marco y nombre.
   function pickFeatured(cosmetics) {
     function rank(item) { return (item.owned ? 0 : 10) + (RARITY_ORDER[item.rarity] || 0) }
     var forSale = cosmetics.filter(function (item) { return !item.subOnly })
-    var bySlot = { banner: [], frame: [] }
-    forSale.slice().sort(function (a, b) { return rank(b) - rank(a) }).forEach(function (item) { bySlot[item.slot].push(item) })
+    var order = ["banner", "frame", "name"]
+    var bySlot = { banner: [], frame: [], name: [] }
+    forSale.slice().sort(function (a, b) { return rank(b) - rank(a) }).forEach(function (item) { if (bySlot[item.slot]) bySlot[item.slot].push(item) })
     var out = []
-    while (out.length < MAX_SLIDES && (bySlot.banner.length || bySlot.frame.length)) {
-      if (bySlot.banner.length) out.push(bySlot.banner.shift())
-      if (bySlot.frame.length && out.length < MAX_SLIDES) out.push(bySlot.frame.shift())
+    while (out.length < MAX_SLIDES && order.some(function (slot) { return bySlot[slot].length })) {
+      order.forEach(function (slot) { if (bySlot[slot].length && out.length < MAX_SLIDES) out.push(bySlot[slot].shift()) })
     }
     return out
   }
@@ -53,7 +53,8 @@
     var body = el("div", "spot-body")
     body.appendChild(K.avatar({ display: profile.display, login: profile.login, avatar: profile.avatar, frame: frameId }, item.slot === "frame" ? 132 : 104))
     var info = el("div", "spot-info")
-    info.appendChild(el("span", "spot-kind", (item.slot === "banner" ? "Banner" : "Marco") + " · " + item.rarityLabel))
+    info.appendChild(el("span", "spot-kind", ({ banner: "Banner", frame: "Marco", name: "Estilo de nombre" }[item.slot] || "") + " · " + item.rarityLabel))
+    if (item.slot === "name") info.appendChild(K.name(profile.display, item.id, "strong", "spot-name-preview"))
     info.appendChild(el("h3", "spot-name", item.name))
     info.appendChild(el("p", "spot-desc", item.description))
     var row = el("div", "spot-row")

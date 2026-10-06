@@ -275,7 +275,7 @@
     me.appendChild(el("span", "", game.pieces.mine + " fichas"))
     var them = el("div", "ck-player is-" + (game.mySide === "a" ? "b" : "a") + (!duel.myTurn ? " is-turn" : ""))
     them.appendChild(el("span", "ck-dot", ""))
-    them.appendChild(el("strong", "", rival.display))
+    them.appendChild(window.ProfileKit ? window.ProfileKit.name(rival.display, rival.nameStyle, "strong", "") : el("strong", "", rival.display))
     them.appendChild(el("span", "", game.pieces.rival + " fichas"))
     bar.appendChild(me)
     bar.appendChild(el("span", "ck-pot", "Bote " + fmt(prize(duel.bet)) + " pts"))

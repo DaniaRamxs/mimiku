@@ -2,12 +2,14 @@
 //
 // - Cada viewer que entra en la web tiene un perfil (touch): eso es lo que
 //   lista la seccion Comunidad.
-// - Banners y marcos (profile-cosmetics.js) se compran con puntos y se
-//   equipan; el "Marco Sub" lo tiene gratis quien sea sub comprobado.
+// - Banners, marcos y estilos de nombre (profile-cosmetics.js) se compran
+//   con puntos y se equipan; los "Sub" los tiene gratis quien sea sub
+//   comprobado. El estilo de nombre sale tambien fuera del perfil
+//   (nameStyleOf: comentarios, En vivo, Top, Duelos).
 // - La vitrina guarda hasta 6 cartas del viewer (cada una con su rango y
 //   funda); al mostrarla se quitan las que ya no tenga (vendidas, robadas...).
 // - El perfil publico nunca lleva puntos ni banco: eso solo lo ve su dueño.
-const { COSMETICS, RARITY_LABELS, cosmetic } = require("./profile-cosmetics.js")
+const { COSMETICS, RARITY_LABELS, SLOT_COLUMNS, cosmetic } = require("./profile-cosmetics.js")
 const { publicImage, normalizeRarity } = require("./canje-data.js")
 
 const SHOWCASE_MAX = 6
@@ -46,7 +48,19 @@ function createViewerProfiles({ platform, getChannel, now = Date.now, isSub = ()
   function equipped(channelId, viewerId, row) {
     const owned = ownedCosmetics(channelId, viewerId)
     const keep = id => (id && owned.has(id) ? id : "")
-    return { banner: keep(row?.banner), frame: keep(row?.frame) }
+    return { banner: keep(row?.banner), frame: keep(row?.frame), name: keep(row?.name_style) }
+  }
+
+  // Estilo de nombre equipado de cualquier viewer ("" si no lleva o ya no lo tiene).
+  function nameStyleOf(viewerId) {
+    if (!viewerId) return ""
+    const channelId = activeChannel()
+    const row = db.prepare("SELECT name_style FROM viewer_profiles WHERE channel_id=? AND viewer_id=?").get(channelId, viewerId)
+    if (!row || !row.name_style) return ""
+    const item = cosmetic(row.name_style)
+    if (!item) return ""
+    if (item.subOnly) return isSub(viewerId) ? item.id : ""
+    return db.prepare("SELECT 1 FROM viewer_cosmetics WHERE channel_id=? AND viewer_id=? AND cosmetic_id=?").get(channelId, viewerId, item.id) ? item.id : ""
   }
 
   // ── Cartas ──
@@ -121,7 +135,7 @@ function createViewerProfiles({ platform, getChannel, now = Date.now, isSub = ()
     return {
       login: identity.username, display: identity.display || identity.username,
       avatar: /^https:\/\//.test(identity.avatar_url || "") ? identity.avatar_url : null,
-      banner: gear.banner, frame: gear.frame, badges,
+      banner: gear.banner, frame: gear.frame, nameStyle: gear.name, badges,
       ...levelOf(channelId, identity.id),
       stats: collectionStats(channelId, identity.id),
       joinedAt: row?.joined_at || null,
@@ -148,13 +162,13 @@ function createViewerProfiles({ platform, getChannel, now = Date.now, isSub = ()
     const wallet = platform.economy.getBalance(channelId, viewerId)
     return {
       ...view, points: wallet.balance, bank: wallet.bank_balance,
-      cosmetics: catalogFor(channelId, viewerId, { banner: view.banner, frame: view.frame }),
+      cosmetics: catalogFor(channelId, viewerId, { banner: view.banner, frame: view.frame, name: view.nameStyle }),
       showcaseMax: SHOWCASE_MAX,
     }
   }
 
   function equip(viewerId, slot, cosmeticId) {
-    if (slot !== "banner" && slot !== "frame") return { ok: false, reason: "bad-request" }
+    if (!Object.prototype.hasOwnProperty.call(SLOT_COLUMNS, slot)) return { ok: false, reason: "bad-request" }
     const channelId = activeChannel()
     const id = String(cosmeticId || "")
     if (id) {
@@ -163,7 +177,7 @@ function createViewerProfiles({ platform, getChannel, now = Date.now, isSub = ()
       if (!ownedCosmetics(channelId, viewerId).has(id)) return { ok: false, reason: "not-owned" }
     }
     touch(viewerId)
-    db.prepare(`UPDATE viewer_profiles SET ${slot === "banner" ? "banner" : "frame"}=? WHERE channel_id=? AND viewer_id=?`).run(id, channelId, viewerId)
+    db.prepare(`UPDATE viewer_profiles SET ${SLOT_COLUMNS[slot]}=? WHERE channel_id=? AND viewer_id=?`).run(id, channelId, viewerId)
     return { ok: true, slot, id }
   }
 
@@ -219,7 +233,7 @@ function createViewerProfiles({ platform, getChannel, now = Date.now, isSub = ()
     return {
       login: identity.username, display: identity.display || identity.username,
       avatar: /^https:\/\//.test(identity.avatar_url || "") ? identity.avatar_url : null,
-      banner: gear.banner, frame: gear.frame, ...levelOf(channelId, identity.id),
+      banner: gear.banner, frame: gear.frame, nameStyle: gear.name, ...levelOf(channelId, identity.id),
       showcaseCount: parseShowcase(row?.showcase).length, achievements,
       sub: isSub(identity.id), hasProfile: !!row,
     }
@@ -308,7 +322,7 @@ function createViewerProfiles({ platform, getChannel, now = Date.now, isSub = ()
     return row ? publicView(channelId, identity, row) : null
   }
 
-  return { touch, me, equip, buy, setShowcase, search, newcomers, miniOf, factsOf, viewerIdOf, publicProfile, SHOWCASE_MAX }
+  return { touch, me, equip, buy, setShowcase, search, newcomers, miniOf, factsOf, viewerIdOf, publicProfile, nameStyleOf, SHOWCASE_MAX }
 }
 
 module.exports = { createViewerProfiles, SHOWCASE_MAX, SEARCH_PAGE }

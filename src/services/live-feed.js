@@ -7,12 +7,13 @@
 // marcar "es tuyo"; hacia fuera salen el nombre a mostrar y el resultado.
 const MAX_EVENTS = 80
 const MAX_LIST = 40
-const GAMES = ["plinko", "scratch", "wheel", "slots", "hilo", "mines", "blackjack", "gacha", "robar", "regalo", "duelo"]
+const GAMES = ["plinko", "scratch", "wheel", "slots", "hilo", "mines", "blackjack", "gacha", "robar", "regalo", "duelo", "trabajo"]
 const KINDS = ["play", "steal", "rob", "rob-fail", "gift"]
 
 function createLiveFeed({ now = Date.now } = {}) {
   const channels = new Map() // canal -> { events: [], next }
   const listeners = new Map() // nombre -> funcion; reciben cada evento tal cual llega (con viewerId), p. ej. los logros
+  let nameStyleOf = () => "" // estilo de nombre equipado del autor (tienda de perfil)
 
   function channelOf(channelId) {
     const key = String(channelId || "local").toLowerCase()
@@ -35,6 +36,7 @@ function createLiveFeed({ now = Date.now } = {}) {
       kind: KINDS.includes(event.kind) ? event.kind : "play", ref: event.ref || null, owner: event.owner ? String(event.owner).slice(0, 40) : null, ownerId: event.ownerId || null,
       stealUntil: Number.isFinite(event.stealUntil) ? event.stealUntil : 0, shielded: !!event.shielded,
       item: event.item ? String(event.item).slice(0, 60) : null,
+      nameStyle: styleOf(event.viewerId),
     }
     channel.events = [...channel.events, stored].slice(-MAX_EVENTS)
     for (const listener of listeners.values()) {
@@ -55,10 +57,16 @@ function createLiveFeed({ now = Date.now } = {}) {
     }
   }
 
+  function styleOf(viewerId) {
+    try { return viewerId ? String(nameStyleOf(viewerId) || "") : "" } catch (error) { return "" /* el estilo nunca debe romper el tablon */ }
+  }
+
+  function setNameStyles(lookup) { nameStyleOf = typeof lookup === "function" ? lookup : () => "" }
+
   // Volver a suscribir con el mismo nombre reemplaza al anterior (no cuenta doble).
   function subscribe(name, listener) { listeners.set(String(name), listener) }
 
-  return { record, list, subscribe }
+  return { record, list, subscribe, setNameStyles }
 }
 
 let defaultFeed = null

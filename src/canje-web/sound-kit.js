@@ -2,7 +2,8 @@
 // Web Audio: sin archivos. Cadena: voces -> panoramica -> master -> compresor,
 // con un envio a una reverberacion corta generada al vuelo. Cada efecto varia
 // un poco de tono para no repetirse. Hay sonidos sueltos (play) y bucles con
-// control (loop: rodillos, latido, zumbido de tension, rascado).
+// control (loop: rodillos, latido, zumbido de tension, rascado, agua y
+// frotado de los trabajos; ratchet: carrete de la caña).
 // Volumen y silencio se guardan en el navegador y valen para toda la pagina.
 // Expone window.SoundKit.
 (function () {
@@ -254,6 +255,42 @@
     },
     upgrade: function () { tone(880, { type: "triangle", dur: 0.26, gain: 0.36, slide: 1320 }) },
     burst: function () { noise({ dur: 0.6, gain: 0.65, freq: 4000, to: 200, wet: 0.5 }); tone(90, { dur: 0.5, gain: 0.8, slide: 40 }) },
+    // Trabajos: lavaplatos
+    bubble: function (o) { tone(700 + Math.random() * 900, { dur: 0.05, gain: 0.07, slide: 1800 + Math.random() * 800, pan: o && o.pan, vary: 40, wet: 0.5 }) },
+    clink: function (o) {
+      var pan = o && o.pan
+      ;[2093, 3136, 4186].forEach(function (freq, i) { tone(freq, { type: "triangle", dur: 0.5 - i * 0.12, gain: 0.12 - i * 0.03, pan: pan, wet: 0.7, vary: 8 }) })
+      noise({ dur: 0.03, gain: 0.12, kind: "highpass", freq: 5000, pan: pan })
+    },
+    shine: function () { arpeggio([1568, 2093, 2637, 3136], { type: "sine", dur: 0.35, gain: 0.08, step: 0.05, wet: 0.8 }); noise({ dur: 0.5, gain: 0.06, freq: 7000, to: 11000, q: 2 }) },
+    shatter: function () {
+      noise({ dur: 0.5, gain: 0.7, kind: "highpass", freq: 1800, to: 5000, attack: 0.002, wet: 0.5 })
+      tone(110, { dur: 0.25, gain: 0.5, slide: 60, wet: 0.2 })
+      for (var i = 0; i < 16; i++) tone(2400 + Math.random() * 3600, { type: "triangle", dur: 0.08 + Math.random() * 0.2, gain: 0.07, delay: 0.03 + Math.random() * 0.45, pan: Math.random() * 1.6 - 0.8, vary: 0, wet: 0.6 })
+    },
+    whoosh: function () { noise({ dur: 0.35, gain: 0.18, freq: 500, to: 2600, q: 0.8 }) },
+    // Trabajos: mina
+    pick: function (o) {
+      var power = (o && o.power) || 0.5
+      tone(1900 + Math.random() * 500, { type: "triangle", dur: 0.12, gain: 0.16 + power * 0.08, vary: 30, wet: 0.5 })
+      tone(2860, { dur: 0.08, gain: 0.06, wet: 0.5 })
+      noise({ dur: 0.09, gain: 0.35, freq: 1500, q: 1.2 })
+      tone(90, { dur: 0.18, gain: 0.35 + power * 0.2, slide: 50, wet: 0.2 })
+    },
+    crumble: function () {
+      for (var i = 0; i < 9; i++) noise({ dur: 0.08 + Math.random() * 0.1, gain: 0.3 - i * 0.025, kind: "lowpass", freq: 900 - i * 60, delay: i * 0.05 + Math.random() * 0.03, wet: 0.4 })
+      tone(70, { dur: 0.6, gain: 0.5, slide: 35, wet: 0.4 })
+    },
+    // Trabajos: pesca
+    cast: function () { noise({ dur: 0.45, gain: 0.16, freq: 1800, to: 600, q: 1.5 }); tone(900, { dur: 0.4, gain: 0.04, slide: 400 }) },
+    plop: function () { tone(420, { dur: 0.16, gain: 0.3, slide: 120, wet: 0.5 }); noise({ dur: 0.12, gain: 0.2, kind: "lowpass", freq: 1200 }) },
+    splash: function (o) {
+      var big = o && o.big
+      noise({ dur: big ? 0.9 : 0.5, gain: big ? 0.55 : 0.35, kind: "lowpass", freq: 3200, to: 400, attack: 0.004, wet: 0.5 })
+      for (var i = 0; i < (big ? 10 : 5); i++) SOUNDS.bubble({ pan: Math.random() - 0.5 })
+    },
+    bite: function () { tone(330, { dur: 0.1, gain: 0.3, slide: 160 }); tone(330, { dur: 0.1, gain: 0.3, slide: 160, delay: 0.14 }); noise({ dur: 0.1, gain: 0.25, kind: "lowpass", freq: 900 }) },
+    snap: function () { noise({ dur: 0.06, gain: 0.5, kind: "highpass", freq: 2500 }); tone(1400, { dur: 0.25, gain: 0.12, slide: 300 }) },
     chime: function (o) {
       var rarity = (o && o.rarity) || "comun"
       ;(CHIMES[rarity] || CHIMES.comun).forEach(function (freq, i) {
@@ -350,6 +387,69 @@
     },
   }
 
+  // Agua del grifo de fondo y frotado humedo (lavaplatos).
+  LOOPS.water = function (c) {
+    var src = noiseSource(c)
+    var lp = c.createBiquadFilter()
+    lp.type = "bandpass"
+    lp.frequency.value = 900
+    lp.Q.value = 0.5
+    var amp = c.createGain()
+    amp.gain.value = 0.0001
+    var lfo = c.createOscillator()
+    lfo.frequency.value = 0.35
+    var depth = c.createGain()
+    depth.gain.value = 0.012
+    lfo.connect(depth)
+    depth.connect(amp.gain)
+    src.connect(lp)
+    lp.connect(amp)
+    amp.connect(output(c, 0.2, 0.6))
+    amp.gain.setTargetAtTime(0.035, c.currentTime, 0.4)
+    src.start(); lfo.start()
+    return { nodes: [src, lfo], gain: amp, set: function (level) { amp.gain.setTargetAtTime(0.0001 + Math.max(0, Math.min(1, level)) * 0.05, c.currentTime, 0.3) } }
+  }
+  LOOPS.scrub = function (c) {
+    var src = noiseSource(c)
+    var bp = c.createBiquadFilter()
+    bp.type = "bandpass"
+    bp.frequency.value = 1100
+    bp.Q.value = 1.1
+    var amp = c.createGain()
+    amp.gain.value = 0.0001
+    src.connect(bp)
+    bp.connect(amp)
+    amp.connect(output(c, 0, 0.35))
+    src.start()
+    return {
+      nodes: [src], gain: amp,
+      set: function (speed) {
+        var v = Math.max(0, Math.min(1, speed))
+        amp.gain.setTargetAtTime(0.0001 + v * 0.38, c.currentTime, 0.03)
+        bp.frequency.setTargetAtTime(800 + v * 1400 + Math.random() * 200, c.currentTime, 0.04)
+      },
+    }
+  }
+
+  // Carrete de la caña: clics cuyo ritmo sigue `set(0..1)`.
+  function ratchet() {
+    if (!audio()) return SILENT
+    var speed = 0
+    var stopped = false
+    var timer = null
+    function click() {
+      if (stopped) return
+      if (speed > 0.02) { noise({ dur: 0.015, gain: 0.18 + speed * 0.12, freq: 3800, q: 2, wet: 0.1 }); tone(1600, { dur: 0.012, gain: 0.04, wet: 0 }) }
+      timer = setTimeout(click, speed > 0.02 ? 140 - speed * 105 : 120)
+    }
+    click()
+    var handle = {
+      set: function (value) { speed = Math.max(0, Math.min(1, value)) },
+      stop: function () { stopped = true; clearTimeout(timer); loops = loops.filter(function (item) { return item !== handle }) },
+    }
+    return track(handle)
+  }
+
   function loop(name) {
     var c = audio()
     if (!c || !LOOPS[name]) return SILENT
@@ -430,6 +530,7 @@
     play: function (name, options) { if (SOUNDS[name] && audio()) SOUNDS[name](options || {}) },
     loop: loop,
     heartbeat: heartbeat,
+    ratchet: ratchet,
     haptic: haptic,
     control: control,
     stopLoops: stopLoops,

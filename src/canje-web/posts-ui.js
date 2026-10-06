@@ -328,6 +328,7 @@
     var main = el("div", "ps-comment-main")
     var head = el("div", "ps-comment-head")
     var name = el("button", "ps-comment-name", comment.author.display)
+    if (window.ProfileKit) window.ProfileKit.paintName(name, comment.author.display, comment.author.nameStyle)
     name.type = "button"
     name.title = "Ver su perfil"
     name.addEventListener("click", function () {

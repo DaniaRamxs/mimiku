@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="plinko.css">
 <link rel="stylesheet" href="games.css">
 <link rel="stylesheet" href="blackjack.css">
+<link rel="stylesheet" href="jobs.css">
 <link rel="stylesheet" href="sleeves.css">
 <link rel="stylesheet" href="ranks.css">
 <link rel="stylesheet" href="pass.css">
@@ -25,6 +26,7 @@
 <link rel="stylesheet" href="duels.css">
 <link rel="stylesheet" href="profile-cosmetics.css">
 <link rel="stylesheet" href="profile-cosmetics-2.css">
+<link rel="stylesheet" href="name-styles.css">
 <link rel="stylesheet" href="spotlight.css">
 <link rel="stylesheet" href="gacha-machine.css">
 <link rel="stylesheet" href="live.css">
@@ -148,6 +150,7 @@
           <div class="pf-shop-tabs" role="tablist" aria-label="Tipo de decoración">
             <button class="pf-shop-tab" type="button" role="tab" data-slot="banner" aria-selected="true">Banners</button>
             <button class="pf-shop-tab" type="button" role="tab" data-slot="frame" aria-selected="false">Marcos</button>
+            <button class="pf-shop-tab" type="button" role="tab" data-slot="name" aria-selected="false">Nombres</button>
           </div>
         </div>
         <p class="hint pf-hint">Se compran una vez con tus puntos y son tuyos para siempre. Cámbialos cuando quieras.</p>
@@ -231,8 +234,8 @@
         <h2 id="spot-title">Decora tu perfil</h2>
         <button id="spot-more" class="btn btn-quiet spot-more" type="button">Ver más</button>
       </div>
-      <p class="hint pf-hint">Banners y marcos destacados. Así se vería tu tarjeta con cada uno.</p>
-      <div id="spot" class="spot-carousel" role="region" aria-roledescription="carrusel" aria-label="Banners y marcos destacados" tabindex="0">
+      <p class="hint pf-hint">Banners, marcos y estilos de nombre destacados. Así se vería tu perfil con cada uno.</p>
+      <div id="spot" class="spot-carousel" role="region" aria-roledescription="carrusel" aria-label="Decoraciones de perfil destacadas" tabindex="0">
         <div id="spot-stage" class="spot-stage"></div>
         <button id="spot-prev" class="spot-arrow is-prev" type="button" aria-label="Anterior">&#8249;</button>
         <button id="spot-next" class="spot-arrow is-next" type="button" aria-label="Siguiente">&#8250;</button>
@@ -413,6 +416,9 @@
       <section id="game-hilo" class="game" hidden></section>
       <section id="game-mines" class="game" hidden></section>
       <section id="game-blackjack" class="game" hidden></section>
+      <section id="game-dishes" class="game" hidden></section>
+      <section id="game-mine" class="game" hidden></section>
+      <section id="game-fish" class="game" hidden></section>
     </div>
 
     <div id="panel-pass" role="tabpanel" aria-labelledby="tab-pass" hidden>
@@ -570,6 +576,10 @@
 <script src="game-hilo.js"></script>
 <script src="game-mines.js"></script>
 <script src="game-blackjack.js"></script>
+<script src="jobs-kit.js"></script>
+<script src="job-dishes.js"></script>
+<script src="job-mine.js"></script>
+<script src="job-fish.js"></script>
 <script src="effects-ui.js"></script>
 <script src="pass-ui.js"></script>
 <script src="sub-pass-ui.js"></script>

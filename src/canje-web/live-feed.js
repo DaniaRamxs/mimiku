@@ -16,7 +16,7 @@
   var BACKOFF_MS = 15000
   var BANNER_MS = 4200
   var KEEP = 60
-  var GAME_NAMES = { plinko: "Plinko", scratch: "Rasca y gana", wheel: "Ruleta", slots: "Slots", hilo: "Alta o baja", mines: "Buscaminas", blackjack: "Blackjack", duelo: "Duelo", gacha: "Gachapon" }
+  var GAME_NAMES = { plinko: "Plinko", scratch: "Rasca y gana", wheel: "Ruleta", slots: "Slots", hilo: "Alta o baja", mines: "Buscaminas", blackjack: "Blackjack", duelo: "Duelo", gacha: "Gachapon", trabajo: "Trabajos" }
   var RARITY_LABELS = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" }
 
   var scopes = {}
@@ -87,12 +87,18 @@
     return withGame ? GAME_NAMES[event.game] + " · " + label : label
   }
 
+  // Autor con su estilo de nombre (tienda de perfil); "Tú" va sin estilo.
+  function whoNode(event) {
+    if (event.mine || !event.nameStyle || !window.ProfileKit) return el("span", "lv-who", event.mine ? "Tú" : event.who)
+    return window.ProfileKit.name(event.who, event.nameStyle, "span", "lv-who")
+  }
+
   function row(event, withGame, isNew) {
     var amount = amountOf(event)
     var thief = stolenBy[event.id]
     var item = el("li", "lv-row o-" + event.outcome + (event.rarity ? " r-" + event.rarity : "") + (event.mine ? " is-mine" : "") + (event.big ? " is-big" : "") + (thief ? " is-stolen" : "") + (isNew ? " is-new" : ""))
     item.appendChild(el("span", "lv-dot"))
-    item.appendChild(el("span", "lv-who", event.mine ? "Tú" : event.who))
+    item.appendChild(whoNode(event))
     item.appendChild(el("span", "lv-what", whatOf(event, withGame) + (thief ? " · robado por " + thief : "")))
     item.appendChild(el("b", "lv-amt " + amount.tone, amount.text))
     var time = el("span", "lv-time", ago(event.at))
@@ -148,6 +154,7 @@
       if (event.ownerMine) return event.who + " te robó " + event.label
       return event.who + " le robó " + event.label + " a " + event.owner
     }
+    if (event.game === "trabajo") return event.who + " sacó " + event.label + " (+" + fmt(event.net) + " pts)"
     if (event.game === "gacha") return event.who + " sacó " + event.label + " (" + (RARITY_LABELS[event.rarity] || "") + ") en el gachapon"
     if (event.item) return event.who + " ganó " + event.item + " (Legendario) en " + GAME_NAMES[event.game]
     return event.who + (event.net > 0 ? " ganó +" + fmt(event.net) + " pts" : " ganó " + event.label) + " en " + GAME_NAMES[event.game]

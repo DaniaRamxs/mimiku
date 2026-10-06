@@ -141,13 +141,19 @@ function getDefaultCanje() {
         feed.subscribe("community", (channelId, event) => community.track(channelId, event))
         const broadcasterLogin = () => String(require("./app-config.js").getAppConfig().streamer.twitchChannel || getChannel() || "").toLowerCase()
         const duelLimits = require("./minigames.js").createMinigames({ platform, getChannel })
+        // Estilo de nombre de la tienda de perfil: sale tambien en En vivo, comentarios, Top y Duelos.
+        const nameStyleOf = require("./viewer-profiles.js").createViewerProfiles({
+          platform, getChannel,
+          isSub: viewerId => require("./twitch-subs.js").subStatus(platform, String(getChannel() || "local").toLowerCase(), viewerId).sub,
+        }).nameStyleOf
+        feed.setNameStyles(nameStyleOf)
         return createCanjeServer({
           community,
-          duels: require("./canje-duels.js").createCanjeDuels({ platform, getChannel, feed, getLimits: () => duelLimits.getConfig() }),
+          duels: require("./canje-duels.js").createCanjeDuels({ platform, getChannel, feed, nameStyleOf, getLimits: () => duelLimits.getConfig() }),
           getStream: () => require("./twitch-live-status.js").getDefaultLiveStatus().get(),
           // Posts, Novedades y Buzon: publica solo la cuenta de Twitch del canal.
           posts: require("./canje-posts.js").createCanjePosts({
-            platform, getChannel,
+            platform, getChannel, nameStyleOf,
             isStreamer: login => !!login && String(login).toLowerCase() === broadcasterLogin(),
             isSub: viewer => require("./twitch-subs.js").subStatus(platform, String(getChannel() || "local").toLowerCase(), viewer.id).sub
               || require("./seen-badges.js").getDefaultSeenBadges().get(viewer.platform_user_id).isSubscriber,
@@ -155,6 +161,7 @@ function getDefaultCanje() {
           data: createCanjeData({ platform, getChannel }),
           gacha: createCanjeGacha({ platform, getChannel, gachapon: require("./gachapon.js").getDefaultGachapon() }),
           games: createCanjeGames({ platform, getChannel, feed, gachapon: require("./gachapon.js").getDefaultGachapon() }),
+          jobs: require("./canje-jobs.js").createCanjeJobs({ platform, getChannel, feed }),
           rewards: createCanjeRewards({
             platform, getChannel,
             economy: require("./economy.js"),
@@ -181,7 +188,7 @@ function getDefaultCanje() {
           }),
           effects: createCanjeEffects({ platform, getChannel }),
           pass: createCanjePass({ platform, getChannel }),
-          support: createCanjeSupport({ platform, getChannel }),
+          support: createCanjeSupport({ platform, getChannel, nameStyleOf }),
           profiles: createCanjeProfiles({
             platform, getChannel, community,
             fetchAvatar: login => require("./twitch-avatars.js").getDefaultTwitchAvatars().getAvatar(login),

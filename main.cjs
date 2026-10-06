@@ -366,6 +366,13 @@ const minigamesConfig = () => require("./src/services/minigames.js").createMinig
 })
 ipcMain.handle("minigames:getConfig", () => minigamesConfig().getConfig())
 ipcMain.handle("minigames:setConfig", (_, input) => minigamesConfig().setConfig(input))
+// Trabajos de la pagina de canje (lavaplatos: pago, castigo y probabilidad de romper)
+const jobsConfig = () => require("./src/services/jobs.js").createJobs({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("jobs:getConfig", () => jobsConfig().getConfig())
+ipcMain.handle("jobs:setConfig", (_, input) => jobsConfig().setConfig(input))
 // Tienda de efectos de la pagina de canje (precio y duracion de cada efecto)
 const effectsShop = () => require("./src/services/effects-shop.js").createEffectsShop({
   platform: require("./src/services/local-runtime.js").getLocalPlatform(),

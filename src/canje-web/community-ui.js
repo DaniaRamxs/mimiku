@@ -71,7 +71,7 @@
       face.appendChild(dot)
     }
     node.appendChild(face)
-    node.appendChild(el("strong", "cm-name", person.display))
+    node.appendChild(K.name(person.display, person.nameStyle, "strong", "cm-name"))
     node.appendChild(el("span", "cm-sub", extra))
     return node
   }
@@ -126,7 +126,7 @@
           who.addEventListener("click", function () { openProfile(person.login) })
         }
         who.appendChild(K.avatar(person, i === 0 ? 44 : 34))
-        who.appendChild(el("strong", "", person.display))
+        who.appendChild(K.name(person.display, person.nameStyle, "strong", ""))
         li.appendChild(who)
         li.appendChild(el("span", "cm-hl-value", (HIGHLIGHT_VALUE[group.id] || fmt)(person.value)))
         ol.appendChild(li)
@@ -169,7 +169,7 @@
     var body = el("div", "pf-card-body")
     body.appendChild(K.avatar(profile, 120))
     var info = el("div", "pf-card-info")
-    info.appendChild(el("h2", "pf-name", profile.display))
+    info.appendChild(K.name(profile.display, profile.nameStyle, "h2", "pf-name"))
     info.appendChild(K.badges(profile))
     if (profile.joinedAt) info.appendChild(el("p", "pf-since", K.sinceText(profile.joinedAt)))
     body.appendChild(info)

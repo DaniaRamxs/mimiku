@@ -827,6 +827,10 @@
               <label>Alta o baja y Buscaminas: apuesta mínima<input id="mg-risk-min" type="number" min="1" step="1" placeholder="100"></label>
               <label>Alta o baja y Buscaminas: apuesta máxima<input id="mg-risk-max" type="number" min="1" step="1" placeholder="100000"></label>
               <p class="field-hint">Minijuegos de la página de canje. Los premios con cofre regalan el cofre elegido para el Pase Sub.</p>
+              <label>Trabajos, lavaplatos: puntos por plato limpio<input id="job-dish-pay" type="number" min="1" step="1" placeholder="1000"></label>
+              <label>Trabajos, lavaplatos: puntos que quita un plato roto<input id="job-dish-penalty" type="number" min="0" step="1" placeholder="500"></label>
+              <label>Trabajos, lavaplatos: probabilidad de romper un plato (%)<input id="job-dish-break" type="number" min="0" max="90" step="1" placeholder="12"></label>
+              <p class="field-hint">Trabajos de la página de canje (Minijuegos &gt; Trabajos): no cuestan nada y no tienen espera, pero cada plato tarda al menos 2 segundos. Un plato roto nunca deja el saldo por debajo de 0. La mina y la pesca pagan según lo que salga (de 200 a 20.000 puntos).</p>
               <label>Inmunidad a robos: precio (puntos)<input id="shield-price" type="number" min="1" step="1" placeholder="50000"></label>
               <label>Inmunidad a robos: duración (minutos)<input id="shield-minutes" type="number" min="1" max="1440" step="1" placeholder="15"></label>
               <p class="field-hint">Se compra en la Tienda de efectos de la página de canje. Mientras dura, nadie puede robarle personajes con !robarpj. Comprarla otra vez suma el tiempo.</p>
