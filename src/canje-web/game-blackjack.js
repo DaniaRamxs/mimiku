@@ -3,11 +3,16 @@
 // plantas. Aqui las cartas salen volando del mazo y se voltean, Hikki revela
 // su carta y pide de una en una, y comenta cada jugada en su bocadillo
 // (se burla cuando ganas poco y se enfada cuando le ganas).
+// Si ganas, Hikki te ofrece doble o nada: carta mas alta contra ella con el
+// premio entero en juego. El servidor saca las cartas; aqui se voltean con
+// tension, el bote se duplica y ella vuelve a picarte (o se rie si pierdes).
 (function () {
   "use strict"
 
   var DEAL_MS = 300
   var DEALER_STEP_MS = 650
+  var DUEL_FLIP_MS = 650
+  var DUEL_RESET_MS = 1300
   var SUITS = {
     S: { color: "black", path: "M12 2C9 7 3 9 3 14a4.5 4.5 0 0 0 7.6 3.2L9 22h6l-1.6-4.8A4.5 4.5 0 0 0 21 14c0-5-6-7-9-12z" },
     H: { color: "red", path: "M12 21C5 15.5 2 12.3 2 8.5A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 10 2.5c0 3.8-3 7-10 12.5z" },
@@ -28,6 +33,13 @@
     "dealer-bust": ["Grr... me pasé.", "¡No mires! Fue un accidente.", "Esto no cuenta..."],
     blackjack: ["¡IMPOSIBLE! ¿Blackjack?", "¿¡Me has hecho trampa!?", "No... no puede ser..."],
     push: ["Empate... por ahora.", "Tablas. Aburrido.", "Me salvé por poco."],
+    offer: ["¿Doble o nada? Seguro que no te atreves ~", "Te dejo recuperármelo... ¿o te da miedo?", "Apuesto a que lo pierdes todo.", "Una carta. Tú contra mí. ¿Te animas?"],
+    again: ["Grr... ¿Otra? Esta vez gano yo.", "¿Doble o nada otra vez? No tientes a la suerte ~", "Seguro que ahora te rajas."],
+    "gamble-win": ["¡¿Otra vez?! Imposible...", "Hmph. Has tenido suerte.", "Esto no se queda así..."],
+    "gamble-lose": ["¡JA! Todo para mí ~", "La avaricia rompe el saco.", "Gracias por el regalo ~", "Te lo dije."],
+    "gamble-tie": ["Empate... otra carta.", "Ni tú ni yo. Otra vez."],
+    take: ["Cobarde... pero lista.", "Huye mientras puedas ~", "Hmph. Te lo llevas por ahora."],
+    "gamble-max": ["¡Basta! Me dejas sin fichas.", "¡No pienso jugar más contigo!"],
   }
   var RESULTS = {
     blackjack: { title: "¡BLACKJACK!", tone: "is-gold" }, win: { title: "¡GANASTE!", tone: "is-win" }, "dealer-bust": { title: "¡HIKKI SE PASÓ!", tone: "is-win" },
@@ -49,6 +61,9 @@
   var game = null
   var busy = false
   var bet = null
+
+  // La mano termino: cerrada, o esperando la decision del doble o nada.
+  function handOver(state) { return state.status !== "active" || !!state.offering }
 
   function el(tag, className, text) { return kit.el(tag, className, text) }
   function pick(list) { return list[Math.floor(Math.random() * list.length)] }
@@ -167,7 +182,7 @@
 
   function paintTotals() {
     if (!game) { ui.slots.forEach(function (slot) { slot.total.hidden = true }); ui.dealerTotal.hidden = true; return }
-    var active = game.status === "active"
+    var active = !handOver(game)
     var hands = handsOf(game)
     hands.forEach(function (hand, i) {
       var slot = ui.slots[i]
@@ -208,9 +223,18 @@
     var info = kit.info()
     if (!ui || !info) return
     var active = game && game.status === "active"
+    var offering = !!(game && game.offering)
     ui.betBox.hidden = !!active
     ui.deal.hidden = !!active
-    ui.actions.hidden = !active
+    ui.actions.hidden = !active || offering
+    ui.offer.hidden = !offering
+    if (offering) {
+      ui.take.disabled = busy
+      ui.take.textContent = "Cobrar · " + kit.fmt(game.gamble.pot) + " pts"
+      ui.gamble.disabled = busy || !game.gamble.canGamble
+      ui.gamble.textContent = "Doble o nada · " + kit.fmt(game.gamble.next) + " pts"
+      return
+    }
     ui.deal.disabled = busy || kit.points() < (bet ? bet.value() : 0)
     ui.deal.textContent = busy ? "Repartiendo…" : "Repartir · " + kit.fmt(bet ? bet.value() : info.risk.min) + " pts"
     if (active) {
@@ -238,6 +262,7 @@
     game.dealer.forEach(function (card) { ui.dealerRow.appendChild(cardNode(card)) })
     paintTotals()
     paintChips()
+    if (game.offering) showOffer(game, true)
     paintButtons()
   }
 
@@ -271,9 +296,145 @@
       kit.flash("#e11d48", "lose")
       kit.shake(ui.table)
     }
-    if (next.payout > next.bet) kit.floatText(hand, "+" + kit.fmt(next.payout - next.bet) + " pts", "#fde68a")
-    else if (next.payout < next.bet) kit.floatText(hand, "-" + kit.fmt(next.bet - next.payout) + " pts", "#fb7185")
+    var won = next.offering ? next.gamble.pot : next.payout
+    if (won > next.bet) kit.floatText(hand, "+" + kit.fmt(won - next.bet) + " pts", "#fde68a")
+    else if (won < next.bet) kit.floatText(hand, "-" + kit.fmt(next.bet - won) + " pts", "#fb7185")
     ui.table.classList.add("is-" + (result.tone === "is-lose" ? "lost" : "won"))
+    if (next.offering) setTimeout(function () { if (game && game.id === next.id && game.offering) showOffer(next) }, kit.reducedMotion ? 0 : 1500)
+  }
+
+  // ── Doble o nada ────────────────────────────────────────────────────────────
+  function duelBacks() {
+    ;[ui.duelMine, ui.duelHers].forEach(function (slot) {
+      slot.textContent = ""
+      slot.appendChild(cardNode({ hidden: true }))
+    })
+  }
+
+  function paintDuel(state) {
+    var gamble = state.gamble
+    ui.duelPot.setAttribute("data-value", String(gamble.pot))
+    ui.duelPot.textContent = kit.fmt(gamble.pot)
+    ui.duelNext.textContent = gamble.canGamble ? "Si ganas: " + kit.fmt(gamble.next) : ""
+    ui.duelRound.textContent = "Ronda " + Math.min(gamble.round + 1, gamble.maxRounds) + " de " + gamble.maxRounds
+    ui.duelPips.textContent = ""
+    for (var i = 0; i < gamble.maxRounds; i++) ui.duelPips.appendChild(el("span", "bj-pip" + (i < gamble.round ? " is-won" : "")))
+  }
+
+  // Abre el panel de doble o nada (sin animar si se retoma tras recargar).
+  function showOffer(state, quiet) {
+    ui.duel.hidden = false
+    ui.duel.className = "bj-duel"
+    duelBacks()
+    paintDuel(state)
+    if (!quiet) {
+      kit.restart(ui.duel, "is-in")
+      say(state.gamble.round ? "again" : "offer", "smug")
+      kit.sound("chip")
+    }
+    paintButtons()
+  }
+
+  function hideDuel() { ui.duel.hidden = true; ui.duel.className = "bj-duel" }
+
+  // Voltea una carta del duelo.
+  function flipDuel(slot, card) {
+    var node = slot.firstChild
+    if (!node) { node = cardNode({ hidden: true }); slot.appendChild(node) }
+    paintFace(node, card)
+    node.classList.remove("is-down")
+    kit.restart(node, "is-reveal")
+    kit.sound("flip")
+  }
+
+  // Tu carta y luego la de Hikki; los empates se ensenan y se vuelve a sacar.
+  function revealDuel(draw) {
+    var pairs = (draw.ties || []).concat([{ mine: draw.mine, hers: draw.hers }])
+    var chain = Promise.resolve()
+    pairs.forEach(function (pair, i) {
+      var tie = i < pairs.length - 1
+      chain = chain.then(function () {
+        duelBacks()
+        return wait(250)
+      }).then(function () {
+        flipDuel(ui.duelMine, pair.mine)
+        return wait(DUEL_FLIP_MS)
+      }).then(function () {
+        kit.sound("riser", { dur: 0.6 })
+        return wait(DUEL_FLIP_MS)
+      }).then(function () {
+        flipDuel(ui.duelHers, pair.hers)
+        if (!tie) return
+        say("gamble-tie", "")
+        kit.sound("tap")
+        kit.restart(ui.duel, "is-tie")
+        return wait(900)
+      })
+    })
+    return chain
+  }
+
+  function gamble() {
+    if (busy || !game || !game.offering) return
+    busy = true
+    paintButtons()
+    ui.duel.className = "bj-duel is-tense"
+    var tension = window.SoundKit.heartbeat(120)
+    request("gamble", { id: game.id }).then(function (result) {
+      var next = result.game
+      return revealDuel(next.gamble.last).then(function () {
+        tension.stop()
+        game = next
+        var center = kit.centerOf(ui.duel)
+        if (result.outcome === "lose") {
+          ui.duel.className = "bj-duel is-lost"
+          ui.duelPot.textContent = "0"
+          ui.duelNext.textContent = "Lo perdiste todo"
+          say("gamble-lose", "smug")
+          kit.sound("lose")
+          kit.flash("#e11d48", "lose")
+          kit.shake(ui.table)
+          banner("¡LO PERDISTE TODO!", "is-lose")
+          kit.afterPlay(result)
+          return
+        }
+        ui.duel.className = "bj-duel is-won"
+        kit.countUp(ui.duelPot, next.gamble.pot, 700)
+        kit.floatText(center, "x2", "#fde68a")
+        paintDuel(next)
+        kit.celebrate(next.gamble.round >= 3 ? "jackpot" : "big", "#fbbf24", center)
+        if (next.status !== "active") {
+          say("gamble-max", "angry")
+          banner("¡COBRADO! " + kit.fmt(next.payout) + " pts", "is-gold")
+          kit.afterPlay(result)
+          return
+        }
+        say("gamble-win", "angry")
+        return wait(DUEL_RESET_MS).then(function () {
+          if (game === next) showOffer(next)
+        })
+      })
+    }).catch(function (error) { tension.stop(); window.CanjeApp.toast(error.message) }).then(function () { busy = false; paintButtons() })
+  }
+
+  function take() {
+    if (busy || !game || !game.offering) return
+    busy = true
+    paintButtons()
+    request("take", { id: game.id }).then(function (result) {
+      game = result.game
+      say("take", "angry")
+      kit.celebrate("coins", "#fbbf24", kit.centerOf(ui.duel))
+      banner("¡COBRADO! " + kit.fmt(result.game.payout) + " pts", "is-gold")
+      setTimeout(hideDuel, 900)
+      kit.afterPlay(result)
+    }).catch(function (error) { window.CanjeApp.toast(error.message) }).then(function () { busy = false; paintButtons() })
+  }
+
+  function banner(text, tone) {
+    ui.banner.textContent = text
+    ui.banner.className = "bj-banner " + tone
+    kit.restart(ui.banner, "is-on")
   }
 
   // Al dividir, la segunda carta se desliza a su propia mano.
@@ -308,7 +469,7 @@
         return inner
       })
     })
-    var finished = next.status !== "active"
+    var finished = handOver(next)
     chain = chain.then(function () {
       game = next
       paintTotals()
@@ -334,6 +495,7 @@
     paintButtons()
     ui.table.classList.remove("is-lost", "is-won")
     ui.banner.className = "bj-banner"
+    hideDuel()
     request("start", { key: window.CanjeApp.randomKey(), bet: bet.value() }).then(function (result) {
       if (typeof result.balance === "number") kit.countUp(ui.points, result.balance, 500)
       game = { status: "active", bet: result.game.bet, player: [], dealer: [], playerTotal: 0, dealerTotal: 0 }
@@ -351,13 +513,13 @@
       return chain.then(function () {
         game = next
         paintTotals()
-        if (next.status !== "active") { showResult(next); kit.afterPlay(result) }
+        if (handOver(next)) { showResult(next); if (next.status !== "active") kit.afterPlay(result) }
       })
     }).catch(function (error) { window.CanjeApp.toast(error.message) }).then(function () { busy = false; paintButtons() })
   }
 
   function act(path, line, mood) {
-    if (busy || !game || game.status !== "active") return
+    if (busy || !game || game.status !== "active" || game.offering) return
     busy = true
     paintButtons()
     if (path === "double" || path === "split") { kit.sound("chip"); kit.restart(ui.chips, "is-double") }
@@ -402,8 +564,8 @@
     felt.appendChild(el("span", "bj-felt-big", "BLACKJACK PAGA 3 A 2"))
     felt.appendChild(el("span", "bj-felt-small", "Hikki pide hasta 17 · Doblar y dividir"))
     table.appendChild(felt)
-    var banner = el("div", "bj-banner")
-    felt.appendChild(banner)
+    var bannerNode = el("div", "bj-banner")
+    felt.appendChild(bannerNode)
 
     var hands = el("div", "bj-hands")
     table.appendChild(hands)
@@ -416,7 +578,39 @@
     shoe.appendChild(el("span", "bj-shoe-card"))
     table.appendChild(shoe)
     parts.stage.appendChild(table)
-    Object.assign(ui, { table: table, dealer: dealer, bubble: bubble, dealerRow: dealerRow, dealerTotal: dealerTotal, hands: hands, slots: [], banner: banner, chips: chips, shoe: shoe })
+    // Doble o nada: tu carta, el bote y la carta de Hikki.
+    var duel = el("div", "bj-duel")
+    duel.hidden = true
+    var duelHead = el("div", "bj-duel-head")
+    duelHead.appendChild(el("strong", "", "DOBLE O NADA"))
+    var duelRound = el("span", "bj-duel-round", "")
+    duelHead.appendChild(duelRound)
+    duel.appendChild(duelHead)
+    var duelCards = el("div", "bj-duel-cards")
+    var mineSide = el("div", "bj-duel-side")
+    mineSide.appendChild(el("span", "bj-duel-who", "Tú"))
+    var duelMine = el("div", "bj-duel-slot")
+    mineSide.appendChild(duelMine)
+    var potBox = el("div", "bj-duel-potbox")
+    potBox.appendChild(el("small", "", "Bote"))
+    var duelPot = el("b", "bj-duel-pot", "0")
+    potBox.appendChild(duelPot)
+    var duelNext = el("span", "bj-duel-next", "")
+    potBox.appendChild(duelNext)
+    var hersSide = el("div", "bj-duel-side")
+    hersSide.appendChild(el("span", "bj-duel-who", "Hikki"))
+    var duelHers = el("div", "bj-duel-slot")
+    hersSide.appendChild(duelHers)
+    duelCards.appendChild(mineSide)
+    duelCards.appendChild(potBox)
+    duelCards.appendChild(hersSide)
+    duel.appendChild(duelCards)
+    var duelPips = el("div", "bj-duel-pips")
+    duel.appendChild(duelPips)
+    duel.appendChild(el("p", "bj-duel-rule", "Carta más alta gana · El As es la más alta · Empate: otra carta"))
+    table.appendChild(duel)
+    Object.assign(ui, { table: table, dealer: dealer, bubble: bubble, dealerRow: dealerRow, dealerTotal: dealerTotal, hands: hands, slots: [], banner: bannerNode, chips: chips, shoe: shoe,
+      duel: duel, duelRound: duelRound, duelMine: duelMine, duelHers: duelHers, duelPot: duelPot, duelNext: duelNext, duelPips: duelPips })
 
     bet = kit.betControl({ min: info.risk.min, max: info.risk.max, value: Math.max(info.risk.min, 500), onChange: paintButtons })
     ui.betBox = bet.node
@@ -440,7 +634,21 @@
     ui.split.hidden = true
     actions.hidden = true
     parts.side.appendChild(actions)
-    parts.side.appendChild(el("p", "hint bj-rules", "Las figuras valen 10 y el As 1 u 11. Si empatas, recuperas la apuesta. Con dos cartas del mismo valor puedes dividir y jugar dos manos (otra apuesta igual)."))
+    var offer = el("div", "bj-offer")
+    offer.hidden = true
+    var takeButton = el("button", "bj-btn is-take", "Cobrar")
+    takeButton.type = "button"
+    takeButton.addEventListener("click", take)
+    var gambleButton = el("button", "bj-btn is-gamble", "Doble o nada")
+    gambleButton.type = "button"
+    gambleButton.addEventListener("click", gamble)
+    offer.appendChild(takeButton)
+    offer.appendChild(gambleButton)
+    parts.side.appendChild(offer)
+    ui.offer = offer
+    ui.take = takeButton
+    ui.gamble = gambleButton
+    parts.side.appendChild(el("p", "hint bj-rules", "Las figuras valen 10 y el As 1 u 11. Si empatas, recuperas la apuesta. Con dos cartas del mismo valor puedes dividir y jugar dos manos (otra apuesta igual). Si ganas, Hikki te ofrece doble o nada a carta más alta (hasta 5 veces)."))
     ui.deal = deal
     ui.actions = actions
     resetSlots()

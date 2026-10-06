@@ -3,12 +3,20 @@
 // en directo) y el reproductor de Twitch dentro de la pagina, en grande o en
 // una ventana pequena en la esquina para seguir jugando mientras se ve.
 // El reproductor es un solo iframe que cambia de tamano (no se recarga).
+// En grande puede llevar al lado el chat de Twitch (embed oficial).
+// Al empezar el directo con la pagina abierta: aviso con sonido, y la pestana
+// cambia de titulo e icono mientras dure.
 // Datos: `stream` de /api/state (twitch-live-status.js, cada minuto).
 (function () {
   "use strict"
 
   var HIDDEN_KEY = "mimiku_stream_hidden"
+  var CHAT_KEY = "mimiku_stream_chat"
+  var START_NOTICE_MS = 20000
   var current = null
+  var known = false // ya llego al menos un estado (para no avisar al cargar la pagina)
+  var baseTitle = ""
+  var noticeTimer = null
   var mode = "closed" // closed | full | mini
   var uptimeTimer = null
 
@@ -20,10 +28,10 @@
     return node
   }
   function fmt(value) { return Number(value || 0).toLocaleString("es") }
-  function storage(action, value) {
+  function storage(action, value, key) {
     try {
-      if (action === "get") return localStorage.getItem(HIDDEN_KEY)
-      localStorage.setItem(HIDDEN_KEY, value)
+      if (action === "get") return localStorage.getItem(key || HIDDEN_KEY)
+      localStorage.setItem(key || HIDDEN_KEY, value)
     } catch (error) { /* sin almacenamiento: la tarjeta vuelve a salir */ }
     return null
   }
@@ -102,6 +110,93 @@
     if (!pill.hidden) pill.title = (current.title || "En directo") + " · " + fmt(current.viewers) + " espectadores"
   }
 
+  // ── Chat de Twitch al lado del reproductor (solo en grande) ────────────────
+  function chatWanted() { return storage("get", null, CHAT_KEY) !== "off" }
+
+  function paintChat() {
+    var box = $("stream-chat")
+    var show = mode === "full" && chatWanted()
+    box.hidden = !show
+    $("stream-player").classList.toggle("has-chat", show)
+    $("stream-chat-btn").hidden = mode !== "full"
+    $("stream-chat-btn").textContent = show ? "Ocultar chat" : "Chat"
+    $("stream-chat-btn").setAttribute("aria-pressed", String(show))
+    if (show && !box.querySelector("iframe") && current) {
+      var frame = document.createElement("iframe")
+      var params = new URLSearchParams({ parent: location.hostname })
+      frame.src = "https://www.twitch.tv/embed/" + encodeURIComponent(current.login) + "/chat?" + params.toString() + "&darkpopout"
+      frame.title = "Chat de " + current.display + " en Twitch"
+      box.appendChild(frame)
+    }
+  }
+
+  function toggleChat() {
+    storage("set", chatWanted() ? "off" : "on", CHAT_KEY)
+    paintChat()
+  }
+
+  // ── Aviso de inicio, titulo e icono de la pestana ──────────────────────────
+  function favicon(live) {
+    var link = $("favicon")
+    var canvas = document.createElement("canvas")
+    canvas.width = canvas.height = 64
+    var ctx = canvas.getContext("2d")
+    if (!ctx || !link) return
+    ctx.fillStyle = "#9146ff"
+    ctx.beginPath()
+    ctx.arc(32, 32, 28, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = "#fff"
+    ctx.font = "bold 34px sans-serif"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillText("M", 32, 35)
+    if (live) {
+      ctx.fillStyle = "#e11d48"
+      ctx.beginPath()
+      ctx.arc(50, 14, 13, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = "#120d20"
+      ctx.lineWidth = 4
+      ctx.stroke()
+    }
+    link.href = canvas.toDataURL("image/png")
+  }
+
+  function paintTab() {
+    var live = !!(current && current.live)
+    if (!baseTitle || document.title.indexOf("(EN DIRECTO) ") !== 0) baseTitle = document.title
+    document.title = live ? "(EN DIRECTO) " + baseTitle : baseTitle
+    favicon(live)
+  }
+
+  function hideNotice() {
+    clearTimeout(noticeTimer)
+    $("live-start").hidden = true
+  }
+
+  function announce() {
+    var box = $("live-start")
+    box.textContent = ""
+    box.appendChild(el("span", "live-pill-dot", ""))
+    var text = el("div", "ls-text")
+    text.appendChild(el("strong", "", current.display + " empezó el directo"))
+    if (current.title) text.appendChild(el("span", "", current.title))
+    box.appendChild(text)
+    var watch = el("button", "btn btn-twitch", "Ver aquí")
+    watch.type = "button"
+    watch.addEventListener("click", function () { hideNotice(); open("full") })
+    var close = el("button", "ls-close", "Cerrar")
+    close.type = "button"
+    close.addEventListener("click", hideNotice)
+    box.appendChild(watch)
+    box.appendChild(close)
+    box.hidden = false
+    if (window.SoundKit) window.SoundKit.play("shine")
+    clearTimeout(noticeTimer)
+    noticeTimer = setTimeout(hideNotice, START_NOTICE_MS)
+  }
+
   // ── Reproductor ─────────────────────────────────────────────────────────────
   function open(nextMode) {
     if (!current || !current.live) return
@@ -120,24 +215,35 @@
     $("stream-backdrop").hidden = mode !== "full"
     $("stream-size").textContent = mode === "full" ? "Ventana pequeña" : "Agrandar"
     document.body.classList.toggle("st-theater", mode === "full")
+    paintChat()
     paintCard()
+    if (window.StreamExtras) window.StreamExtras.refresh()
   }
 
   function close() {
     var box = $("stream-player")
     $("stream-frame").textContent = "" // quitar el iframe para el sonido
+    $("stream-chat").textContent = ""
     box.hidden = true
     $("stream-backdrop").hidden = true
     document.body.classList.remove("st-theater")
     mode = "closed"
+    paintChat()
     paintCard()
+    if (window.StreamExtras) window.StreamExtras.refresh()
   }
 
   function onState(stream) {
     var wasLive = !!(current && current.live)
+    // Solo se avisa si antes se sabia que NO habia directo (no al abrir la pagina).
+    var wasOffline = known && !!current && !current.live
     current = stream || null
+    known = known || stream !== undefined
     paintPill()
     paintCard()
+    paintTab()
+    if (wasOffline && current && current.live) announce()
+    if (!(current && current.live)) hideNotice()
     if (wasLive && !(current && current.live) && mode !== "closed") {
       close()
       if (window.CanjeApp) window.CanjeApp.toast("El directo ha terminado")
@@ -156,9 +262,15 @@
     })
     $("stream-size").addEventListener("click", function () { open(mode === "full" ? "mini" : "full") })
     $("stream-close").addEventListener("click", close)
+    $("stream-chat-btn").addEventListener("click", toggleChat)
+    favicon(false)
     $("stream-backdrop").addEventListener("click", function () { open("mini") })
     document.addEventListener("keydown", function (event) { if (event.key === "Escape" && mode === "full") open("mini") })
   })
 
-  window.StreamUI = { onState: onState, close: close }
+  window.StreamUI = {
+    onState: onState, close: close, open: open,
+    // Reproductor abierto (grande o pequeno): cuenta para los puntos por ver.
+    isWatching: function () { return mode !== "closed" && !!(current && current.live) },
+  }
 })()

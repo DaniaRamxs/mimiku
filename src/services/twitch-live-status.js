@@ -16,8 +16,18 @@ function createTwitchLiveStatus({ getToken, getChannel, fetchImpl, helix = null,
   let timer = null
   let state = null      // { live, streamId, startedAt, checkedAt, title, game, viewers, thumbnail, login, display }
   let warned = false
+  const listeners = []
+
+  // Cada consulta que sale bien avisa con (nuevo, anterior): el resumen del
+  // directo (stream-recap.js) sabe asi cuando empieza y cuando termina uno.
+  function notify(next, previous) {
+    for (const listener of listeners) {
+      try { listener(next, previous) } catch (error) { log.error("[twitch-live-status]", error.message) }
+    }
+  }
 
   async function check() {
+    const previous = state
     try {
       const channel = String(getChannel() || "").trim().toLowerCase()
       if (!channel || !api.hasToken()) { state = null; return state }
@@ -33,6 +43,7 @@ function createTwitchLiveStatus({ getToken, getChannel, fetchImpl, helix = null,
         }
         : { live: false, streamId: null, startedAt: null, checkedAt: now(), login: channel }
       warned = false
+      notify(state, previous)
     } catch (error) {
       state = null
       if (!warned) {
@@ -61,7 +72,9 @@ function createTwitchLiveStatus({ getToken, getChannel, fetchImpl, helix = null,
     return state
   }
 
-  return { start, stop, check, get }
+  function onUpdate(listener) { if (typeof listener === "function") listeners.push(listener) }
+
+  return { start, stop, check, get, onUpdate }
 }
 
 let defaultStatus = null

@@ -1812,6 +1812,51 @@
       </div>
 
       <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Directo en la página de canje</span></div>
+        <p class="desc">Lo que pasa en la página mientras estás en directo. Mimiku sabe que estás en directo gracias a Twitch (necesita el token del chat).</p>
+        <div class="form-group live-form">
+          <label>Puntos cada 5 minutos viendo el directo desde la página<input id="live-watch-points" type="number" min="0" max="100000" step="1" placeholder="250"></label>
+          <span class="field-hint">Cuenta solo con el reproductor de la página abierto y la pestaña a la vista. También suma la experiencia por tiempo, como escribir en el chat. 0 = solo experiencia.</span>
+          <label class="is-check"><input id="live-drops-enabled" type="checkbox"> Cofres del directo</label>
+          <span class="field-hint">Cada cierto tiempo aparece un cofre en la página durante 90 segundos. Lo abren los primeros que hacen clic: puntos o, a veces, una tirada gratis del gachapon.</span>
+          <label>Puntos de cada cofre<input id="live-drop-points" type="number" min="1" max="1000000" step="1" placeholder="2500"></label>
+          <label>Minutos entre cofres (aproximado)<input id="live-drop-every" type="number" min="3" max="120" step="1" placeholder="12"></label>
+          <label>Viewers que pueden abrir cada cofre<input id="live-drop-slots" type="number" min="1" max="100" step="1" placeholder="5"></label>
+          <label>Bonus de directo en minijuegos y trabajos (%)<input id="live-bonus" type="number" min="0" max="300" step="1" placeholder="50"></label>
+          <span class="field-hint">Extra sobre lo que se gana mientras estás en directo (50 = un 50 % más). Perder no cambia. 0 = sin bonus.</span>
+          <button class="btn-primary" style="width:auto;padding:10px 18px" onclick="window.liveStreamPage.saveLiveConfig()">Guardar</button>
+        </div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">Predicciones</span></div>
+        <p class="desc">Haz una pregunta con 2 a 4 respuestas. Los viewers apuestan puntos en la página de canje mientras dura el tiempo. Cuando elijas la respuesta ganadora, quienes acertaron se reparten todo lo apostado, en proporción a lo que puso cada uno. Si nadie acierta o la cancelas, se devuelve todo (y también si pasan 24 horas sin resultado).</p>
+        <p class="desc" style="margin-top:8px"><strong>Comandos del chat de Twitch</strong> (solo tú y tus mods):</p>
+        <div class="pred-commands">
+          <code>!prediccion ¿Gano la partida? | Sí | No</code> crea la predicción (hasta 4 respuestas separadas con <code>|</code>; dura 120 segundos).<br>
+          <code>!prediccion 300 ¿Cuántas muertes? | Menos de 5 | 5 o más</code> igual, pero con los segundos que quieras (de 30 a 900).<br>
+          <code>!op1</code>, <code>!op2</code>, <code>!op3</code>, <code>!op4</code> eligen la respuesta ganadora (<code>!op1</code> = la primera) y reparten los puntos. Funcionan con las apuestas ya cerradas.<br>
+          <code>!cerrarpred</code> cierra las apuestas antes de tiempo.<br>
+          <code>!cancelarpred</code> cancela la predicción y devuelve los puntos.<br>
+          También se llaman <code>!pred</code> y <code>!predicción</code>. Puedes desactivarlos en Comandos.
+        </div>
+        <div id="pred-current" class="pred-current">Cargando…</div>
+        <div id="pred-actions" class="pred-panel-actions" hidden>
+          <button class="btn-ghost" style="width:auto;padding:8px 14px" onclick="window.liveStreamPage.lockPrediction()">Cerrar apuestas</button>
+          <button class="btn-ghost" style="width:auto;padding:8px 14px" onclick="window.liveStreamPage.cancelPrediction()">Cancelar y devolver</button>
+        </div>
+        <div id="pred-form" class="form-group live-form">
+          <label>Pregunta<input id="pred-question" type="text" maxlength="120" placeholder="¿Gano la partida?"></label>
+          <label>Respuesta 1 (!op1)<input id="pred-op1" type="text" maxlength="40" placeholder="Sí"></label>
+          <label>Respuesta 2 (!op2)<input id="pred-op2" type="text" maxlength="40" placeholder="No"></label>
+          <label>Respuesta 3 (!op3, opcional)<input id="pred-op3" type="text" maxlength="40"></label>
+          <label>Respuesta 4 (!op4, opcional)<input id="pred-op4" type="text" maxlength="40"></label>
+          <label>Segundos para apostar<input id="pred-seconds" type="number" min="30" max="900" step="10" placeholder="120"></label>
+          <button class="btn-primary" style="width:auto;padding:10px 18px" onclick="window.liveStreamPage.createPrediction()">Crear predicción</button>
+        </div>
+      </div>
+
+      <div class="panel" style="max-width:620px;margin-top:1rem">
         <div class="panel-header"><span class="panel-title">Apoyo al proyecto y top de donadores</span></div>
         <p class="desc">La pestaña Top de la página de canje muestra a los viewers con más puntos (se actualiza sola), un botón para apoyar con tu enlace de propinas y el top de donadores. Con StreamElements conectado (abajo) las propinas se apuntan solas; si no, apúntalas a mano y el viewer recibe sus puntos al momento.</p>
         <div class="form-group">

@@ -34,7 +34,7 @@ function statsOf(event) {
   if (kind === "play" && event.game === "gacha") inc("pulls", Math.max(1, Math.trunc(Number(event.count) || 1)))
   if (kind === "play" && event.rarity === "legendario") inc("legendaries")
   if (event.game === "blackjack") {
-    if (net > 0) inc("hikki_wins")
+    if (net > 0 || event.handWon) inc("hikki_wins")
     if (event.result === "blackjack") inc("naturals")
   }
   if (kind === "steal" || kind === "rob") inc("steals")

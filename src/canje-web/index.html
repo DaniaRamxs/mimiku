@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canje de Mimics</title>
 <meta name="description" content="Canjea tus Mimics y mira tu colección del canal.">
+<link id="favicon" rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
@@ -23,9 +24,11 @@
 <link rel="stylesheet" href="community.css">
 <link rel="stylesheet" href="posts.css">
 <link rel="stylesheet" href="stream.css">
+<link rel="stylesheet" href="stream-extras.css">
 <link rel="stylesheet" href="duels.css">
 <link rel="stylesheet" href="profile-cosmetics.css">
 <link rel="stylesheet" href="profile-cosmetics-2.css">
+<link rel="stylesheet" href="profile-cosmetics-3.css">
 <link rel="stylesheet" href="name-styles.css">
 <link rel="stylesheet" href="spotlight.css">
 <link rel="stylesheet" href="gacha-machine.css">
@@ -68,11 +71,19 @@
 <div id="stream-player" class="stream-player" hidden>
   <div class="stream-bar">
     <span class="stream-bar-title"><span class="live-pill-dot" aria-hidden="true"></span> En directo</span>
+    <button id="stream-chat-btn" class="stream-btn" type="button" aria-pressed="false" hidden>Chat</button>
     <button id="stream-size" class="stream-btn" type="button">Ventana pequeña</button>
     <button id="stream-close" class="stream-btn" type="button" aria-label="Cerrar el directo">Cerrar</button>
   </div>
-  <div id="stream-frame" class="stream-frame"></div>
+  <div class="stream-body">
+    <div id="stream-frame" class="stream-frame"></div>
+    <div id="stream-chat" class="stream-chat" hidden></div>
+  </div>
 </div>
+
+<div id="live-start" class="live-start" role="status" hidden></div>
+<div id="live-drop" class="live-drop" hidden></div>
+<div id="bonus-pop" class="bonus-pop" aria-live="polite" hidden></div>
 
 <dialog id="drawer" class="drawer" aria-labelledby="drawer-title">
   <div class="drawer-head">
@@ -96,6 +107,9 @@
 
   <div id="content" hidden>
     <section id="stream-card" class="stream-card" aria-label="Directo en Twitch" hidden></section>
+    <section id="live-strip" class="live-strip" aria-label="Ventajas del directo" hidden></section>
+    <section id="prediction-card" class="pred-card" aria-label="Predicción" hidden></section>
+    <section id="offline-card" class="offline-card" aria-label="Último directo y clips" hidden></section>
     <nav class="tabs" role="tablist" aria-label="Secciones">
       <button class="tab" type="button" role="tab" id="tab-profile" data-tab="profile" aria-controls="panel-profile" aria-selected="true">Perfil</button>
       <button class="tab" type="button" role="tab" id="tab-home" data-tab="home" aria-controls="panel-home" aria-selected="false">Tienda</button>
@@ -598,6 +612,9 @@
 <script src="community-ui.js"></script>
 <script src="posts-ui.js"></script>
 <script src="stream-ui.js"></script>
+<script src="stream-extras.js"></script>
+<script src="stream-predict.js"></script>
+<script src="stream-offline.js"></script>
 <script src="duels-ui.js"></script>
 <script src="cosmetic-spotlight.js"></script>
 <script src="rewards-ui.js"></script>

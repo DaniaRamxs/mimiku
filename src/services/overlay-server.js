@@ -79,6 +79,8 @@ function start() {
     broadcast({ type: "chat_top", ...snapshot })
     require("../integrations/twitch/twitch-adapter.js").sendToRenderer("chatTop:update", snapshot)
   })
+  // Resumen del ultimo directo (pagina de canje): pico, top 3, legendarios, puntos.
+  require("./stream-recap.js").startStreamRecap()
   eventEngine.subscribe("chat_message", event => {
     try { chatTop.recordMessage(event) } catch (error) {
       console.warn("[chat-top] no se pudo contar el mensaje:", error.message)

@@ -120,6 +120,46 @@
 
 .nm.is-name-sub { --nm-g: linear-gradient(100deg, #7c3aed 0%, #a855f7 25%, #fde68a 45%, #fff 50%, #fde68a 55%, #a855f7 75%, #7c3aed 100%); --nm-size: 250% 100%; }
 
+/* ══ Coleccion 3 ══ */
+.nm.is-name-lima { --nm-g: linear-gradient(95deg, #bef264, #a3e635 40%, #fde047); }
+.nm.is-name-lavanda { --nm-g: linear-gradient(95deg, #e9d5ff, #c4b5fd 45%, #f5d0fe); }
+
+.nm.is-name-retro .nm-t { background: none; color: #fef08a; overflow: visible; text-shadow: .03em .03em 0 #f472b6, .06em .06em 0 #f472b6, .09em .09em 0 #22d3ee, .12em .12em 0 #22d3ee; }
+.nm.is-name-burbuja .nm-t {
+  background: none; color: #e0f2fe; overflow: visible; -webkit-text-stroke: .045em #38bdf8;
+  text-shadow: 0 .06em 0 #0369a1, 0 0 .3em rgba(56, 189, 248, .55); animation: nm-bob 2.4s ease-in-out infinite;
+}
+@keyframes nm-bob { 50% { translate: 0 -.07em; } }
+.nm.is-name-sombra .nm-t { background: none; color: #fff; overflow: visible; text-shadow: .03em .03em 0 #6d28d9, .06em .06em 0 #5b21b6, .09em .09em 0 #4c1d95, .12em .12em 0 #3b0764, .15em .15em 0 #2e1065, .18em .18em .05em rgba(0, 0, 0, .4); }
+
+.nm.is-name-aurora { --nm-g: linear-gradient(180deg, #6ee7b7, #22d3ee 30%, #a78bfa 60%, #6ee7b7); --nm-size: 100% 300%; }
+.nm.is-name-aurora .nm-t { animation: nm-aurora 4s ease-in-out infinite alternate; filter: drop-shadow(0 0 .25em rgba(52, 211, 153, .55)); }
+@keyframes nm-aurora { to { background-position: 0 100%; } }
+.nm.is-name-latido { --nm-g: linear-gradient(95deg, #fda4af, #fb7185 50%, #f43f5e); }
+.nm.is-name-latido .nm-t { overflow: visible; animation: nm-beat 1.3s ease-in-out infinite; }
+@keyframes nm-beat {
+  0%, 100% { scale: 1; filter: drop-shadow(0 0 .1em rgba(244, 63, 94, .4)); }
+  14% { scale: 1.08; filter: drop-shadow(0 0 .35em rgba(244, 63, 94, .9)); } 28% { scale: 1; } 42% { scale: 1.05; filter: drop-shadow(0 0 .3em rgba(244, 63, 94, .8)); }
+}
+.nm.is-name-caramelo { --nm-g: repeating-linear-gradient(-45deg, #f43f5e 0 .22em, #fff 0 .44em); --nm-size: auto; }
+.nm.is-name-caramelo .nm-t { animation: nm-candy 1.2s linear infinite; filter: drop-shadow(0 .04em 0 rgba(190, 18, 60, .6)); }
+@keyframes nm-candy { to { background-position: .622em 0; } }
+
+.nm.is-name-cosmos {
+  --nm-g: radial-gradient(circle at 20% 30%, #fff 0 .03em, transparent .05em) 0 0 / .5em .5em, radial-gradient(circle at 70% 70%, #fef9c3 0 .025em, transparent .045em) 0 0 / .7em .7em,
+    linear-gradient(110deg, #93c5fd, #c4b5fd 35%, #f0abfc 60%, #93c5fd);
+  --nm-spark: #e0e7ff;
+}
+.nm.is-name-cosmos .nm-t { background-size: .5em .5em, .7em .7em, 250% 100%; animation: nm-cosmos 8s linear infinite; filter: drop-shadow(0 0 .2em rgba(167, 139, 250, .6)); }
+@keyframes nm-cosmos { to { background-position: 1em .5em, -1.4em .7em, 250% 0; } }
+.nm.is-name-diamante {
+  --nm-g: linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, .95) 50%, transparent 60%) 0 0 / 250% 100%,
+    repeating-linear-gradient(60deg, #ecfeff 0 .14em, #22d3ee .14em .26em, #fff .26em .36em, #67e8f9 .36em .5em, #0ea5e9 .5em .58em);
+  --nm-spark: #fff;
+}
+.nm.is-name-diamante .nm-t { background-size: 250% 100%, auto; animation: nm-diamond 2.8s ease-in-out infinite; filter: drop-shadow(0 0 .18em rgba(165, 243, 252, .7)); }
+@keyframes nm-diamond { 0% { background-position: 100% 0, 0 0; } 60%, 100% { background-position: -50% 0, 0 0; } }
+
 /* Vista previa en la tienda de perfil */
 .pf-shop-stage.is-name { min-height: 110px; padding: 18px 14px; display: grid; place-items: center; background: radial-gradient(260px 110px at 50% 50%, rgba(182, 156, 255, .16), transparent 70%), #150f29; }
 .pf-shop-stage.is-name .nm, .pf-shop-stage.is-name .pf-name-plain { font-family: var(--font-display); font-size: 30px; line-height: 1.15; }

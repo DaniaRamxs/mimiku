@@ -25,6 +25,7 @@ const { handleRewardsApi, REWARDS_ROUTES } = require("./canje-rewards.js")
 const { handlePostsApi, POSTS_ROUTES } = require("./canje-posts.js")
 const { handleDuelsApi, DUELS_ROUTES } = require("./canje-duels.js")
 const { handleJobsApi, JOBS_ROUTES } = require("./canje-jobs.js")
+const { handleStreamApi, STREAM_ROUTES } = require("./canje-stream.js")
 
 const WEB_DIR = path.join(__dirname, "..", "canje-web")
 const STATIC_FILES = {
@@ -84,6 +85,10 @@ const STATIC_FILES = {
   "/posts.css": ["posts.css", "text/css; charset=utf-8"],
   "/stream-ui.js": ["stream-ui.js", "text/javascript; charset=utf-8"],
   "/stream.css": ["stream.css", "text/css; charset=utf-8"],
+  "/stream-extras.js": ["stream-extras.js", "text/javascript; charset=utf-8"],
+  "/stream-extras.css": ["stream-extras.css", "text/css; charset=utf-8"],
+  "/stream-predict.js": ["stream-predict.js", "text/javascript; charset=utf-8"],
+  "/stream-offline.js": ["stream-offline.js", "text/javascript; charset=utf-8"],
   "/duels-ui.js": ["duels-ui.js", "text/javascript; charset=utf-8"],
   "/duels.css": ["duels.css", "text/css; charset=utf-8"],
   "/community.css": ["community.css", "text/css; charset=utf-8"],
@@ -92,6 +97,7 @@ const STATIC_FILES = {
   "/profile.css": ["profile.css", "text/css; charset=utf-8"],
   "/profile-cosmetics.css": ["profile-cosmetics.css", "text/css; charset=utf-8"],
   "/profile-cosmetics-2.css": ["profile-cosmetics-2.css", "text/css; charset=utf-8"],
+  "/profile-cosmetics-3.css": ["profile-cosmetics-3.css", "text/css; charset=utf-8"],
 }
 const IMAGE_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" }
 const MAX_BODY_BYTES = 2048
@@ -106,7 +112,7 @@ const SESSION_MS = SESSION_DAYS * 24 * 60 * 60 * 1000
 const SESSION_PREFIX = "v1"
 
 const SECURITY_HEADERS = {
-  "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src 'self'; frame-src https://player.twitch.tv; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'",
+  "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src 'self'; frame-src https://player.twitch.tv https://www.twitch.tv; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'",
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "no-referrer",
@@ -197,6 +203,7 @@ function createRateLimiter(limit, now = Date.now) {
 const REDEEM_MESSAGES = {
   "unknown-viewer": "Mimiku todavía no te conoce: escribe algo en el chat del canal.",
   unavailable: "Ya no tienes ese Mimic.",
+  offline: "Los Mimics solo se canjean durante el directo: así los ve todo el mundo en pantalla.",
   "rate-limit": "Vas muy rápido, espera un minuto.",
 }
 
@@ -239,7 +246,7 @@ function requestKey(body) {
 }
 
 // `data`: canje-data.js. `assetDir`: carpeta de imagenes de Mimiku.
-function createCanjeServer({ data, gacha = null, games = null, effects = null, pass = null, support = null, profiles = null, live = null, rewards = null, subs = null, community = null, posts = null, duels = null, jobs = null, getStream = null, validator, sessions, getConfig, assetDir, log = console, now = Date.now }) {
+function createCanjeServer({ data, gacha = null, games = null, effects = null, pass = null, support = null, profiles = null, live = null, rewards = null, subs = null, community = null, posts = null, duels = null, jobs = null, stream = null, getStream = null, validator, sessions, getConfig, assetDir, log = console, now = Date.now }) {
   // Modulos opcionales de la pagina: cada uno aporta sus rutas y su manejador.
   const modules = [
     gacha && { routes: GACHA_ROUTES, handle: args => handleGachaApi({ ...args, gacha }) },
@@ -253,6 +260,7 @@ function createCanjeServer({ data, gacha = null, games = null, effects = null, p
     posts && { routes: POSTS_ROUTES, handle: args => handlePostsApi({ ...args, posts }) },
     duels && { routes: DUELS_ROUTES, handle: args => handleDuelsApi({ ...args, duels }) },
     jobs && { routes: JOBS_ROUTES, handle: args => handleJobsApi({ ...args, jobs }) },
+    stream && { routes: STREAM_ROUTES, handle: args => handleStreamApi({ ...args, stream }) },
   ].filter(Boolean)
   const allowApi = createRateLimiter(API_REQUESTS_PER_MINUTE, now)
   let server = null
@@ -353,6 +361,8 @@ function createCanjeServer({ data, gacha = null, games = null, effects = null, p
       if (community) { try { body.achievements = community.takeFresh(user.twitchId) } catch (error) { log.error("[comunidad]", error.message) } }
       // Directo del canal (aviso, miniatura y reproductor de la pagina).
       if (getStream) { try { body.stream = publicStream(getStream()) } catch (error) { log.error("[directo]", error.message) } }
+      // Extras del directo: puntos por verlo aqui, cofres, bonus, predicciones, resumen y clips.
+      if (stream) { try { body.live = stream.state(user.twitchId) } catch (error) { log.error("[directo]", error.message) } }
       // Buzon: sin leer y regalos por reclamar (para la cabecera).
       if (posts) { try { body.mailbox = posts.summary(user.twitchId, user.login) } catch (error) { log.error("[buzon]", error.message) } }
       // Duelos: retos por contestar, turnos pendientes y resultados sin ver.

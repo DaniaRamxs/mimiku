@@ -57,7 +57,8 @@ function boxPrice(box) {
   return Number.isSafeInteger(price) && price > 0 ? price : 0
 }
 
-function createCanjeData({ platform, getChannel, now = Date.now, random = Math.random }) {
+// `isLive()`: true/false si se sabe si hay directo, null si no (sin token de Twitch).
+function createCanjeData({ platform, getChannel, isLive = () => null, now = Date.now, random = Math.random }) {
   const db = platform.db
   const boxes = createBoxService({ platform, getChannel, random })
   const recentRedeems = new Map() // twitchId -> [timestamps]
@@ -172,6 +173,8 @@ function createCanjeData({ platform, getChannel, now = Date.now, random = Math.r
     if (!viewer) return { ok: false, reason: "unknown-viewer" }
     const mimic = platform.mimics.get(String(mimicId))
     if (!mimic) return { ok: false, reason: "unavailable" }
+    // Un Mimic sale en pantalla: sin directo no lo veria nadie.
+    if (isLive() === false) return { ok: false, reason: "offline" }
     if (!underRateLimit(recentRedeems, MAX_REDEEMS_PER_MINUTE, String(twitchId))) return { ok: false, reason: "rate-limit" }
     try {
       platform.mimics.use(activeChannel(), viewer.id, mimic.id, `canje:${twitchId}:${requestKey}`)

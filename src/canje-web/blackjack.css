@@ -170,3 +170,68 @@
   .bj-portrait, .bj-bubble.is-on, .bj-card.is-dealing, .bj-card.is-dealing .bj-card-inner, .bj-card.is-reveal .bj-card-inner, .bj-chip, .bj-chips.is-double, .bj-card.is-sliding, .bj-hands .bj-hand { animation: none !important; }
   .bj-banner.is-on { animation: none; opacity: 1; transform: translate(-50%, -50%); }
 }
+
+/* ── Doble o nada: carta más alta contra Hikki ── */
+.bj-duel {
+  position: absolute; left: 50%; top: 54%; z-index: 6; width: min(440px, 94%); translate: -50% -50%;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 18px 12px; border-radius: 22px;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(251, 191, 36, .2), transparent 60%), linear-gradient(170deg, rgba(30, 10, 12, .96), rgba(12, 4, 6, .96));
+  border: 2px solid rgba(251, 191, 36, .65); box-shadow: 0 24px 60px rgba(0, 0, 0, .65), 0 0 40px rgba(251, 191, 36, .25), inset 0 1px 0 rgba(255, 255, 255, .08);
+  backdrop-filter: blur(6px);
+}
+.bj-duel[hidden] { display: none; }
+.bj-duel.is-in { animation: bj-duel-in .5s cubic-bezier(.2, .8, .3, 1.3) both; }
+@keyframes bj-duel-in { from { opacity: 0; transform: scale(.7) translateY(20px); } }
+.bj-duel-head { display: flex; align-items: baseline; gap: 12px; }
+.bj-duel-head strong {
+  font-family: var(--font-display); font-size: 26px; letter-spacing: .08em; line-height: 1;
+  background: linear-gradient(100deg, #fde68a, #f59e0b 40%, #fff7cc 50%, #f59e0b 60%, #fde68a) 0 0 / 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: bj-gold 2.6s ease-in-out infinite;
+}
+@keyframes bj-gold { 0% { background-position: 100% 0; } 60%, 100% { background-position: 0 0; } }
+.bj-duel-round { font-size: 12px; font-weight: 800; color: rgba(253, 230, 138, .7); text-transform: uppercase; letter-spacing: .06em; }
+.bj-duel-cards { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; width: 100%; }
+.bj-duel-side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.bj-duel-who { font-size: 12px; font-weight: 800; color: #fecaca; text-transform: uppercase; letter-spacing: .08em; }
+.bj-duel-slot { width: 80px; height: 114px; }
+.bj-duel-slot .bj-card { margin: 0; }
+.bj-duel-potbox { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.bj-duel-potbox small { font-size: 11px; font-weight: 800; color: rgba(253, 230, 138, .65); text-transform: uppercase; letter-spacing: .1em; }
+.bj-duel-pot { font-family: var(--font-display); font-size: clamp(26px, 4vw, 36px); line-height: 1; color: #fde68a; text-shadow: 0 0 18px rgba(251, 191, 36, .6); font-variant-numeric: tabular-nums; }
+.bj-duel-next { min-height: 16px; font-size: 12px; font-weight: 800; color: #86efac; }
+.bj-duel-pips { display: flex; gap: 6px; }
+.bj-pip { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, .12); border: 1px solid rgba(253, 230, 138, .35); }
+.bj-pip.is-won { background: radial-gradient(circle at 35% 30%, #fff7cc, #f59e0b); border-color: #fde68a; box-shadow: 0 0 10px rgba(251, 191, 36, .8); }
+.bj-duel-rule { margin: 0; font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, .45); text-align: center; }
+/* Tension mientras se voltean, y como termina */
+.bj-duel.is-tense { animation: bj-duel-pulse .5s ease-in-out infinite alternate; }
+@keyframes bj-duel-pulse { to { box-shadow: 0 24px 60px rgba(0, 0, 0, .65), 0 0 70px rgba(239, 68, 68, .55), inset 0 1px 0 rgba(255, 255, 255, .08); border-color: #f87171; } }
+.bj-duel.is-tie { animation: bj-angry .4s linear; }
+.bj-duel.is-won { border-color: #34d399; box-shadow: 0 24px 60px rgba(0, 0, 0, .65), 0 0 60px rgba(52, 211, 153, .55); }
+.bj-duel.is-won .bj-duel-pot { animation: bj-pot-pop .6s cubic-bezier(.2, .8, .3, 1.5); color: #bbf7d0; }
+@keyframes bj-pot-pop { 40% { transform: scale(1.35); } }
+.bj-duel.is-lost { border-color: #ef4444; filter: saturate(.7); }
+.bj-duel.is-lost .bj-duel-pot { color: #fca5a5; text-shadow: 0 0 18px rgba(239, 68, 68, .6); }
+.bj-duel.is-lost .bj-duel-next { color: #fca5a5; }
+
+/* Botones de la oferta */
+.bj-offer { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.bj-offer[hidden] { display: none; }
+.bj-btn.is-take { background: linear-gradient(180deg, #10b981, #047857); box-shadow: 0 4px 0 #064e3b; }
+.bj-btn.is-gamble {
+  position: relative; overflow: hidden; color: #1c0a00; font-size: 18px; padding: 16px 10px;
+  background: linear-gradient(180deg, #fde68a, #f59e0b 55%, #d97706); box-shadow: 0 4px 0 #78350f, 0 0 26px rgba(251, 191, 36, .45);
+}
+.bj-btn.is-gamble::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .6) 50%, transparent 65%) no-repeat; background-size: 250% 100%;
+  animation: bj-gold 2.2s ease-in-out infinite;
+}
+@media (max-width: 600px) {
+  .bj-duel { padding: 12px 10px 10px; }
+  .bj-duel-slot { width: 62px; height: 88px; }
+  .bj-duel-head strong { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bj-duel.is-in, .bj-duel.is-tense, .bj-duel-head strong, .bj-btn.is-gamble::after { animation: none; }
+}

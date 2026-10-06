@@ -147,10 +147,34 @@ function getDefaultCanje() {
           isSub: viewerId => require("./twitch-subs.js").subStatus(platform, String(getChannel() || "local").toLowerCase(), viewerId).sub,
         }).nameStyleOf
         feed.setNameStyles(nameStyleOf)
+        // Directo: estado de Twitch, ajustes del panel y extras de la pagina.
+        const liveStatus = require("./twitch-live-status.js").getDefaultLiveStatus()
+        const getStream = () => liveStatus.get()
+        const isLive = () => { const state = getStream(); return state ? state.live : null }
+        const liveConfig = require("./live-config.js").createLiveConfig({ platform, getChannel })
+        const recap = require("./stream-recap.js").getDefaultStreamRecap()
+        const liveBonus = require("./live-bonus.js").createLiveBonus({
+          platform, getChannel, isLive, getStream, getPercent: () => liveConfig.getConfig().bonusPercent, onGrant: amount => recap.bump("bonusPoints", amount),
+        })
+        const stream = require("./canje-stream.js").createCanjeStream({
+          platform, getStream, bonus: liveBonus, recap,
+          watch: require("./live-watch.js").createLiveWatch({
+            platform, getChannel, getStream, getPoints: () => liveConfig.getConfig().watchPoints,
+            // Cuenta como "viendo" para la experiencia por tiempo, igual que escribir en el chat.
+            noteWatcher: viewer => require("./levels.js").noteWatcher(viewer.username, viewer.platform_user_id, "twitch"),
+            onFirstWatch: () => recap.bump("webWatchers"),
+          }),
+          drops: require("./live-drops.js").createLiveDrops({
+            platform, getChannel, getStream, getConfig: () => liveConfig.getConfig(), onClaim: () => recap.bump("drops"),
+          }),
+          predictions: require("./predictions.js").getDefaultPredictions(),
+          clips: require("./twitch-clips.js").getDefaultTwitchClips(),
+        })
         return createCanjeServer({
+          stream,
           community,
           duels: require("./canje-duels.js").createCanjeDuels({ platform, getChannel, feed, nameStyleOf, getLimits: () => duelLimits.getConfig() }),
-          getStream: () => require("./twitch-live-status.js").getDefaultLiveStatus().get(),
+          getStream,
           // Posts, Novedades y Buzon: publica solo la cuenta de Twitch del canal.
           posts: require("./canje-posts.js").createCanjePosts({
             platform, getChannel, nameStyleOf,
@@ -158,10 +182,10 @@ function getDefaultCanje() {
             isSub: viewer => require("./twitch-subs.js").subStatus(platform, String(getChannel() || "local").toLowerCase(), viewer.id).sub
               || require("./seen-badges.js").getDefaultSeenBadges().get(viewer.platform_user_id).isSubscriber,
           }),
-          data: createCanjeData({ platform, getChannel }),
+          data: createCanjeData({ platform, getChannel, isLive }),
           gacha: createCanjeGacha({ platform, getChannel, gachapon: require("./gachapon.js").getDefaultGachapon() }),
-          games: createCanjeGames({ platform, getChannel, feed, gachapon: require("./gachapon.js").getDefaultGachapon() }),
-          jobs: require("./canje-jobs.js").createCanjeJobs({ platform, getChannel, feed }),
+          games: createCanjeGames({ platform, getChannel, feed, liveBonus, gachapon: require("./gachapon.js").getDefaultGachapon() }),
+          jobs: require("./canje-jobs.js").createCanjeJobs({ platform, getChannel, feed, liveBonus }),
           rewards: createCanjeRewards({
             platform, getChannel,
             economy: require("./economy.js"),

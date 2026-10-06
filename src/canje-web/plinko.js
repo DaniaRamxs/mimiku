@@ -366,6 +366,7 @@
         if (jackpot) app().toast("Premio mayor: " + jackpot.prize.name + "!")
         else if (won.length === 1) app().toast("Ganaste " + won[0].prize.name)
         else if (won.length > 1) app().toast("Ganaste " + won.length + " premios")
+        if (result.liveBonus > 0 && window.StreamExtras) window.StreamExtras.bonusNotice(result.liveBonus)
         window.LiveFeed.nudge()
         return app().reload().catch(function () {})
       })

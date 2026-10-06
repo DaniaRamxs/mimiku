@@ -24,6 +24,7 @@ const subathonPage = require("./pages/subathon.js")
 const commandsPage = require("./pages/commands.js")
 const overlayDiagnosticsPage = require("./pages/overlay-diagnostics.js")
 const canjePage = require("./pages/canje.js")
+const liveStreamPage = require("./pages/live-stream.js")
 
 const windowControls = {
   minimize: () => ipcRenderer.invoke("app:minimize"),
@@ -57,6 +58,7 @@ function showPage(id) {
   if (id === "commands") commandsPage.initCommands()
   if (id === "settings") overlayDiagnosticsPage.refreshOverlayDiagnostics().catch(error => console.error("[OverlayDiagnostics]", error))
   if (id === "settings") canjePage.refreshCanje().catch(error => console.error("[Canje]", error))
+  if (id === "settings") liveStreamPage.refreshLiveStream().catch(error => console.error("[Directo]", error))
 }
 function showToast(msg) {
   const t = document.getElementById("toast")
@@ -94,6 +96,7 @@ const rendererApi = {
   commandsPage,
   overlayDiagnosticsPage,
   canjePage,
+  liveStreamPage,
   ...windowControls,
   showPage,
   showToast,

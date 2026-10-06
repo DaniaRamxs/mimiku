@@ -24,8 +24,8 @@ const MESSAGES = {
 
 const JOB_NAMES = { mine: "la mina", fish: "la pesca" }
 
-// `feed`: tablon "En vivo" (live-feed.js).
-function createCanjeJobs({ platform, getChannel, feed = null, now = Date.now, random = Math.random }) {
+// `feed`: tablon "En vivo" (live-feed.js). `liveBonus`: extra de directo (live-bonus.js).
+function createCanjeJobs({ platform, getChannel, feed = null, liveBonus = null, now = Date.now, random = Math.random }) {
   const db = platform.db
   const jobs = createJobs({ platform, getChannel, now, random })
   const recent = new Map()
@@ -69,8 +69,10 @@ function createCanjeJobs({ platform, getChannel, feed = null, now = Date.now, ra
       const result = jobs.finish(viewer.id, taskId)
       if (!result.ok) return result
       report(viewer, result)
+      let bonus = 0
+      try { bonus = liveBonus ? liveBonus.grant(viewer.id, result.delta, `trabajo:${viewer.id}:${taskId}`, "trabajo") : 0 } catch (error) { console.error("[bonus directo]", error.message) }
       const following = next ? jobs.start(viewer.id, result.job).task : null
-      return { ...result, balance: platform.economy.getBalance(channelId(), viewer.id).balance, next: following }
+      return { ...result, liveBonus: bonus, balance: platform.economy.getBalance(channelId(), viewer.id).balance, next: following }
     })
   }
 

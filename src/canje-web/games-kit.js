@@ -311,6 +311,8 @@
   // `quiet` (trabajos, que se repiten cada pocos segundos): la recarga se
   // agrupa en una sola cada RELOAD_QUIET_MS para no gastar peticiones.
   function afterPlay(result, options) {
+    // Bonus de directo: el extra llega aparte, con su propio aviso.
+    if (result && result.liveBonus > 0 && window.StreamExtras) window.StreamExtras.bonusNotice(result.liveBonus)
     if (result && typeof result.balance === "number") {
       if (viewer) viewer.points = result.balance
       Array.prototype.forEach.call(document.querySelectorAll(".g-points"), function (node) { countUp(node, result.balance, 800) })

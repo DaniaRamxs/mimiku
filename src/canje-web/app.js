@@ -10,6 +10,7 @@
   var STATE_KEY = "canje_oauth_state"
   var POLL_MS = 15000
   var POLL_ACTIVE_MS = 3000
+  var POLL_HIDDEN_MS = 60000 // pestana oculta: sigue mirando, mas despacio (aviso de inicio del directo)
   var RARITIES = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" }
   var RARITY_ORDER = { legendario: 0, epico: 1, raro: 2, comun: 3 }
   var USE_LABELS = { pending: "En cola", playing: "En pantalla", done: "Lanzado", cancelled: "Devuelto" }
@@ -27,6 +28,7 @@
   var buyQty = {} // id del cofre -> opcion elegida en la tienda ("1", "5", "10", "all")
   var confirmTimer = null
   var lastState = null
+  var useStatus = null // id del canje -> estado, para avisar cuando tu Mimic sale en pantalla
 
   function $(id) { return document.getElementById(id) }
   function show(id, visible) { $(id).hidden = !visible }
@@ -138,6 +140,8 @@
     show("account", false)
     if (window.PostsUI) window.PostsUI.hide()
     if (window.StreamUI) { window.StreamUI.close(); window.StreamUI.onState(null) }
+    if (window.StreamExtras) window.StreamExtras.onState(null, null)
+    useStatus = null
     show("content", false)
     show("empty", false)
     show("login", true)
@@ -239,9 +243,12 @@
       card.appendChild(el("span", "rarity", RARITIES[rarity]))
       card.appendChild(el("h3", "", mimic.name))
       if (mimic.description) card.appendChild(el("p", "desc", mimic.description))
-      var button = el("button", "btn btn-redeem", busy[mimic.id] ? "Enviando..." : "Canjear")
+      // Sin directo no hay pantalla donde salga: se canjea cuando empiece.
+      var offline = !!(lastState && lastState.stream && lastState.stream.live === false)
+      var button = el("button", "btn btn-redeem", busy[mimic.id] ? "Enviando..." : offline ? "Solo en directo" : "Canjear")
       button.type = "button"
-      button.disabled = !!busy[mimic.id] || mimic.quantity <= 0
+      button.disabled = !!busy[mimic.id] || mimic.quantity <= 0 || offline
+      if (offline) button.title = "Los Mimics salen en la pantalla del directo: se canjean mientras hay directo."
       button.addEventListener("click", function () { redeem(mimic) })
       card.appendChild(button)
       grid.appendChild(card)
@@ -309,7 +316,22 @@
     })
   }
 
+  // Aviso cuando un Mimic tuyo pasa a "En pantalla" (no al cargar la pagina).
+  function noticeOnScreen(uses) {
+    var previous = useStatus
+    useStatus = {}
+    uses.forEach(function (use) { useStatus[use.id] = use.status })
+    if (!previous) return
+    uses.forEach(function (use) {
+      if (use.status !== "playing" || previous[use.id] === "playing") return
+      var watching = window.StreamUI && window.StreamUI.isWatching()
+      toast(use.name + " está en la pantalla del directo ahora mismo" + (watching ? "" : ". Ábrelo arriba para verlo."))
+      if (window.SoundKit) window.SoundKit.play("upgrade")
+    })
+  }
+
   function renderUses(uses) {
+    noticeOnScreen(uses)
     var list = $("requests")
     list.textContent = ""
     show("requests-wrap", uses.length > 0)
@@ -355,8 +377,9 @@
     if (window.DuelsUI) window.DuelsUI.onState(state.duels)
     window.PostsUI.onState(state)
     if (state.stream !== undefined) window.StreamUI.onState(state.stream)
+    window.StreamExtras.onState(state.live, state.stream)
     $("updated").textContent = "Actualizado a las " + new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })
-    return (viewer.uses || []).some(function (use) { return use.status === "pending" || use.status === "playing" })
+    return (viewer.uses || []).some(function (use) { return use.status === "pending" || use.status === "playing" }) || window.StreamExtras.wantsFastPoll()
   }
 
   // ── Ciclo ───────────────────────────────────────────────────────────────────
@@ -371,10 +394,14 @@
   function schedule(delay) {
     clearTimeout(pollTimer)
     pollTimer = setTimeout(function () {
-      if (document.hidden) { schedule(delay); return }
       load().catch(function (error) { toast(error.message); schedule(POLL_MS) })
-    }, delay)
+    }, document.hidden ? Math.max(delay, POLL_HIDDEN_MS) : delay)
   }
+
+  // Al volver a la pestana se refresca en el momento (con la pestana oculta se espera mas).
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && pollTimer && savedSession()) schedule(0)
+  })
 
   function redeem(mimic) {
     if (busy[mimic.id]) return

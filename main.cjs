@@ -442,6 +442,27 @@ ipcMain.handle("canje:saveSettings", (_, input = {}) => canje().saveSettings({
 }))
 // Abre la página en el navegador del streamer; la URL la arma main, no el renderer.
 ipcMain.handle("canje:openLocal", () => require("electron").shell.openExternal(`http://127.0.0.1:${canje().getSettings().port}/`))
+// Directo en la página de canje: puntos por verlo, cofres y bonus de minijuegos.
+const liveConfig = () => require("./src/services/live-config.js").createLiveConfig({
+  platform: require("./src/services/local-runtime.js").getLocalPlatform(),
+  getChannel: () => require("./src/services/currentChannel.js").get() || require("./src/services/app-config.js").getAppConfig().streamer.twitchChannel,
+})
+ipcMain.handle("liveConfig:get", () => liveConfig().getConfig())
+ipcMain.handle("liveConfig:set", (_, input = {}) => liveConfig().setConfig({
+  watchPoints: Number(input.watchPoints), dropsEnabled: input.dropsEnabled === true, dropPoints: Number(input.dropPoints),
+  dropEveryMin: Number(input.dropEveryMin), dropSlots: Number(input.dropSlots), bonusPercent: Number(input.bonusPercent),
+}))
+// Predicciones con puntos (también con !prediccion y !op1... en el chat de Twitch).
+const predictions = () => require("./src/services/predictions.js").getDefaultPredictions()
+ipcMain.handle("predictions:summary", () => predictions().summary())
+ipcMain.handle("predictions:create", (_, input = {}) => predictions().create({
+  question: validate.text(input.question, { name: "Pregunta", max: 120, required: true }),
+  options: (Array.isArray(input.options) ? input.options.slice(0, 4) : []).map(option => validate.text(option, { name: "Respuesta", max: 40 })),
+  seconds: Number(input.seconds),
+}))
+ipcMain.handle("predictions:lock", (_, id) => predictions().lock(validate.text(id, { name: "Predicción", max: 64, required: true })))
+ipcMain.handle("predictions:resolve", (_, input = {}) => predictions().resolve(validate.text(input.id, { name: "Predicción", max: 64, required: true }), Number(input.winner)))
+ipcMain.handle("predictions:cancel", (_, id) => predictions().cancel(validate.text(id, { name: "Predicción", max: 64, required: true })))
 
 // ── IPC: Top 3 del chat ──────────────────────────────────────────────────────
 function chatTop() { return require("./src/services/chat-top.js").getDefaultChatTopService() }

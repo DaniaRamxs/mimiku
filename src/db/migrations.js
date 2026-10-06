@@ -1077,6 +1077,37 @@ const MIGRATIONS = [
       ALTER TABLE viewer_profiles ADD COLUMN name_style TEXT NOT NULL DEFAULT '';
     `,
   },
+  {
+    version: 28,
+    name: "predictions",
+    up: `
+      -- Predicciones con puntos (predictions.js). status: open (se apuesta),
+      -- locked (cerrada, esperando resultado), resolved, cancelled (devuelta).
+      -- options_json: ["opcion 1", "opcion 2", ...]; winner: indice ganador.
+      CREATE TABLE IF NOT EXISTS predictions (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        question TEXT NOT NULL,
+        options_json TEXT NOT NULL,
+        status TEXT NOT NULL,
+        winner INTEGER,
+        created_at TEXT NOT NULL,
+        locks_at TEXT NOT NULL,
+        resolved_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_predictions_channel ON predictions(channel_id, created_at);
+      -- Una apuesta por viewer y prediccion (se puede subir, en la misma opcion).
+      CREATE TABLE IF NOT EXISTS prediction_bets (
+        prediction_id TEXT NOT NULL REFERENCES predictions(id),
+        viewer_id TEXT NOT NULL,
+        option_index INTEGER NOT NULL,
+        amount INTEGER NOT NULL,
+        payout INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (prediction_id, viewer_id)
+      );
+    `,
+  },
 ]
 
 function applyMigrations(db) {

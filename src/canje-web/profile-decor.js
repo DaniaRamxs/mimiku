@@ -164,5 +164,51 @@
     "banner-diamante": { bits: 10, html: '<i class="pf-prism"></i><svg class="pf-art is-gem" viewBox="0 0 100 100"><polygon points="20,36 34,18 66,18 80,36 50,92" fill="#bae6fd" stroke="#e0f2fe" stroke-width="1.2" stroke-linejoin="round"/><polygon points="20,36 34,18 42,36" fill="#f0f9ff"/><polygon points="42,36 50,18 58,36" fill="#e0f2fe"/><polygon points="58,36 66,18 80,36" fill="#7dd3fc"/><polygon points="20,36 42,36 50,92" fill="#7dd3fc"/><polygon points="42,36 58,36 50,92" fill="#f0f9ff"/><polygon points="58,36 80,36 50,92" fill="#38bdf8"/><path d="M34 18 L42 36 L50 18 L58 36 L66 18" fill="none" stroke="#fff" stroke-width=".8"/></svg><i class="pf-sheen"></i>' },
   })
 
+
+  // ── Coleccion 3 ──
+
+  // Nube esponjosa (circulos) centrada en (x, y).
+  function cloud(x, y, k, extra) {
+    return '<g class="pf-cloudlet' + (extra || "") + '" transform="translate(' + x + " " + y + ") scale(" + k + ')"><path d="M-14 6 A7 7 0 0 1 -9 -4 A9 9 0 0 1 7 -7 A8 8 0 0 1 16 2 A6 6 0 0 1 14 10 L-10 10 A6 6 0 0 1 -14 6 Z" fill="#fff" stroke="#bfdbfe" stroke-width="1.4"/><path d="M-8 2 A6 6 0 0 1 2 -3" fill="none" stroke="#e0f2fe" stroke-width="2" stroke-linecap="round"/></g>'
+  }
+
+  var BUTTERFLY_WING = "M17 50 C8 30 -16 18 -26 30 C-34 42 -18 54 -2 56 C-18 60 -26 74 -16 82 C-6 88 8 74 17 60 Z"
+  var NOTE = '<svg viewBox="0 0 14 18"><ellipse cx="4.5" cy="14.5" rx="4" ry="3" transform="rotate(-20 4.5 14.5)"/><rect x="7.4" y="1" width="1.8" height="13.5"/><path d="M9 1 C12 2 14 5 12.5 8 C12.6 5.6 11 4.2 9 3.8 Z"/></svg>'
+  var PETALS = new Array(9).join('<i></i>')
+
+  Object.assign(FRAME_DECOR, {
+    "frame-nubes": '<svg viewBox="0 0 100 100">' + cloud(14, 26, 0.9) + cloud(86, 84, 1.1, " c2") + cloud(80, 14, 0.62, " c3") + "</svg>",
+    "frame-panda": '<svg viewBox="0 0 100 100"><g class="pf-ear-l"><circle cx="27" cy="24" r="12" fill="#111827"/><circle cx="25" cy="22" r="5.5" fill="#4b5563"/></g><g class="pf-ear-r"><circle cx="73" cy="24" r="12" fill="#111827"/><circle cx="75" cy="22" r="5.5" fill="#4b5563"/></g>' +
+      '<g class="pf-bamboo"><rect x="88" y="48" width="5" height="44" rx="2" fill="#65a30d" stroke="#365314" stroke-width="1"/><path d="M88 62 h5 M88 77 h5" stroke="#365314" stroke-width="1.4"/><path d="M92 58 C100 52 106 54 108 50 C102 58 98 60 92 60 Z M90 72 C98 70 104 74 107 72 C100 78 96 76 90 74 Z" fill="#84cc16" stroke="#365314" stroke-width=".8"/></g></svg>',
+    "frame-tormenta": '<svg viewBox="0 0 100 100"><g class="pf-storm"><path d="M24 14 A10 10 0 0 1 36 2 A14 14 0 0 1 62 0 A11 11 0 0 1 78 10 A8 8 0 0 1 76 24 L28 24 A8 8 0 0 1 24 14 Z" fill="#334155" stroke="#0f172a" stroke-width="2"/><path d="M34 8 A10 10 0 0 1 50 4" fill="none" stroke="#64748b" stroke-width="2.4" stroke-linecap="round"/></g>' +
+      '<path class="pf-storm-bolt" d="M56 22 L48 36 L54 36 L46 50 L62 32 L55 32 L62 22 Z" fill="#fde047" stroke="#fef9c3" stroke-width="1"/>' +
+      '<g class="pf-storm-rain" stroke="#7dd3fc" stroke-width="1.6" stroke-linecap="round"><path d="M32 28 l-2 6"/><path d="M42 30 l-2 6"/><path d="M68 28 l-2 6"/><path d="M74 31 l-2 6"/></g></svg>',
+    "frame-mariposa": '<svg viewBox="0 0 100 100"><defs><linearGradient id="pf-bfly" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a5f3fc"/><stop offset=".45" stop-color="#c084fc"/><stop offset="1" stop-color="#f472b6"/></linearGradient></defs>' +
+      '<g class="pf-wing"><path d="' + BUTTERFLY_WING + '" fill="url(#pf-bfly)" stroke="#4c1d95" stroke-width="1.6" stroke-linejoin="round"/><circle cx="-12" cy="34" r="4" fill="#fff" opacity=".7"/><circle cx="-8" cy="72" r="3" fill="#fff" opacity=".6"/></g>' +
+      '<g transform="matrix(-1 0 0 1 100 0)"><g class="pf-wing"><path d="' + BUTTERFLY_WING + '" fill="url(#pf-bfly)" stroke="#4c1d95" stroke-width="1.6" stroke-linejoin="round"/><circle cx="-12" cy="34" r="4" fill="#fff" opacity=".7"/><circle cx="-8" cy="72" r="3" fill="#fff" opacity=".6"/></g></g></svg>',
+  })
+
+  Object.assign(FRAME_FX, {
+    "frame-hojas": { bits: 7 },
+    "frame-notas": { html: "<i>" + NOTE + "</i><i>" + NOTE + "</i><i>" + NOTE + "</i><i>" + NOTE + "</i>" },
+    "frame-sakura": { html: '<span class="pf-petals">' + PETALS + "</span>" },
+    "frame-reloj": { html: '<i class="pf-ticks"></i><i class="pf-hand"></i>' },
+    "frame-mariposa": { bits: 6 },
+    "frame-sol": { html: '<i class="pf-sunrays"></i><i class="pf-sunrays r2"></i><i class="pf-corona"></i>' },
+  })
+
+  var TOKIO_SIGNS = '<b class="pf-sign s1">東京</b><b class="pf-sign s2">ラーメン</b><b class="pf-sign s3">カラオケ</b><b class="pf-sign s4">夜</b>'
+
+  Object.assign(BANNER_FX, {
+    "banner-lluvia": { bits: 16, html: '<i class="pf-bokeh"></i><i class="pf-window"></i>' },
+    "banner-pradera": { bits: 7, html: '<i class="pf-sun"></i><svg class="pf-art" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M0 100 L0 52 C70 30 140 36 210 54 C280 72 340 40 400 46 L400 100 Z" fill="#4ade80"/><path d="M0 100 L0 72 C90 56 170 66 250 80 C320 92 360 70 400 74 L400 100 Z" fill="#16a34a"/></svg>' },
+    "banner-acuarela": { bits: 0, html: '<i class="pf-blot b1"></i><i class="pf-blot b2"></i><i class="pf-blot b3"></i><i class="pf-blot b4"></i><i class="pf-paper"></i>' },
+    "banner-caramelo": { bits: 18, html: '<i class="pf-candy-stripes"></i><i class="pf-lolly l1"><b></b></i><i class="pf-lolly l2"><b></b></i><i class="pf-lolly l3"><b></b></i>' },
+    "banner-fuegos": { bits: 7, html: '<svg class="pf-art" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M0 100 L0 70 L20 70 L20 52 L34 52 L34 64 L52 64 L52 40 L62 40 L62 30 L72 30 L72 62 L96 62 L96 50 L118 50 L118 72 L150 72 L150 46 L170 46 L170 58 L196 58 L196 34 L212 34 L212 66 L240 66 L240 54 L262 54 L262 70 L290 70 L290 42 L306 42 L306 60 L330 60 L330 48 L352 48 L352 68 L380 68 L380 56 L400 56 L400 100 Z" fill="#0b0a1a"/></svg>' },
+    "banner-volcan": { bits: 14, html: '<i class="pf-glowsky"></i><svg class="pf-art is-volcano" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M60 100 L172 30 L228 30 L340 100 Z" fill="#1c1210"/><path d="M180 30 L220 30 L214 40 L206 36 L200 52 L194 38 L186 44 Z" fill="#f97316"/><path class="pf-flow" d="M200 40 C196 60 214 70 206 100" fill="none" stroke="#fb923c" stroke-width="5" stroke-linecap="round"/></svg>' },
+    "banner-tokio": { bits: 24, html: '<svg class="pf-art is-city" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M0 100 L0 30 L40 30 L40 10 L70 10 L70 40 L110 40 L110 0 L150 0 L150 26 L190 26 L190 14 L230 14 L230 44 L270 44 L270 6 L310 6 L310 34 L350 34 L350 18 L400 18 L400 100 Z" fill="#14082b"/></svg>' + TOKIO_SIGNS },
+    "banner-hiperespacio": { bits: 40, html: '<i class="pf-warpcore"></i>' },
+  })
+
   window.ProfileDecor = { FRAME_DECOR: FRAME_DECOR, FRAME_FX: FRAME_FX, BANNER_FX: BANNER_FX }
 })()

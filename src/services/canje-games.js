@@ -35,6 +35,8 @@ const GAMES_ROUTES = {
   "/api/games/blackjack/stand": "POST",
   "/api/games/blackjack/double": "POST",
   "/api/games/blackjack/split": "POST",
+  "/api/games/blackjack/take": "POST",
+  "/api/games/blackjack/gamble": "POST",
 }
 
 const MESSAGES = {
@@ -49,12 +51,14 @@ const MESSAGES = {
   "bad-move": "Esa jugada no es válida.",
   "no-game": "Esa partida ya terminó.",
   active: "Ya tienes una partida empezada.",
+  offer: "¡Ganaste la mano! Recarga la página para cobrar o jugar el doble o nada.",
 }
 
 // `feed`: tablon "En vivo" (live-feed.js); cada jugada terminada se apunta ahi.
 // `gachapon`: para que los personajes legendarios de Plinko se puedan robar
 // desde el aviso en vivo (solo web; ver gachapon.openWebDrop).
-function createCanjeGames({ platform, getChannel, feed = null, gachapon = null, now = Date.now, random = Math.random }) {
+// `liveBonus`: extra sobre lo ganado mientras hay directo (live-bonus.js).
+function createCanjeGames({ platform, getChannel, feed = null, gachapon = null, liveBonus = null, now = Date.now, random = Math.random }) {
   const db = platform.db
   const plinko = createPlinko({ platform, getChannel, random })
   const minigames = createMinigames({ platform, getChannel, now, random })
@@ -135,13 +139,23 @@ function createCanjeGames({ platform, getChannel, feed = null, gachapon = null, 
     if (!actionAllowed(String(twitchId))) return { ok: false, reason: "rate-limit" }
     const before = balanceOf(viewer)
     const raw = run(viewer, `${twitchId}:${requestKey}`)
-    const result = raw.ok ? { ...raw, balance: balanceOf(viewer) } : raw
-    if (result.ok && (name === "wheel" || name === "slots" || name === "scratch")) reportInstant(name, viewer, before, result)
+    const played = raw.ok ? { ...raw, balance: balanceOf(viewer) } : raw
+    if (played.ok && (name === "wheel" || name === "slots" || name === "scratch")) reportInstant(name, viewer, before, played)
     // Blackjack con natural al repartir: la partida termina al empezar y tambien va al tablon.
-    if (result.ok && name === "blackjack" && result.game && result.game.status !== "active") reportRisk("blackjack", viewer, result)
+    if (played.ok && name === "blackjack" && played.game && played.game.status !== "active") reportRisk("blackjack", viewer, played)
+    // Empezar alta o baja / buscaminas cobra la apuesta (net < 0): no hay bonus.
+    const result = played.ok ? withBonus(viewer, played, played.balance - before, cacheKey, name) : played
     if (results.size >= RESULTS_KEPT) results.delete(results.keys().next().value)
     results.set(cacheKey, result)
     return result
+  }
+
+  // Bonus de directo sobre lo ganado (`net` > 0); el saldo devuelto ya lo incluye.
+  function withBonus(viewer, result, net, key, source) {
+    if (!liveBonus) return result
+    let bonus = 0
+    try { bonus = liveBonus.grant(viewer.id, net, key, source) } catch (error) { console.error("[bonus directo]", error.message) }
+    return bonus ? { ...result, liveBonus: bonus, balance: balanceOf(viewer) } : result
   }
 
   // Paso de una partida (sin clave: cada paso cambia el estado una sola vez).
@@ -153,7 +167,9 @@ function createCanjeGames({ platform, getChannel, feed = null, gachapon = null, 
     const raw = run(viewer)
     const result = raw.ok ? { ...raw, balance: balanceOf(viewer) } : raw
     if (result.ok && name) reportRisk(name, viewer, result)
-    return result
+    const game = result.ok && result.game
+    if (!game || game.status !== "cashed" || !game.id) return result
+    return withBonus(viewer, result, game.payout - game.bet, `${name}:${twitchId}:${game.id}`, name)
   }
 
   function instant(name, play) {
@@ -240,8 +256,13 @@ function createCanjeGames({ platform, getChannel, feed = null, gachapon = null, 
     if (!game || (game.status !== "lost" && game.status !== "cashed")) return
     if (name === "blackjack") {
       const net = game.status === "cashed" ? game.payout - game.bet : -game.bet
-      const label = game.result === "split" ? splitLabel(game.hands) : BLACKJACK_LABELS[game.result] || "Blackjack"
-      return report(viewer, { game: "blackjack", label, net, outcome: net > 0 ? "win" : net < 0 ? "lose" : "even", big: game.result === "blackjack" && game.bet >= 5000, result: game.result })
+      const gamble = game.gamble
+      const label = gamble && gamble.lost ? "Lo perdió todo en el doble o nada"
+        : gamble && gamble.round ? `Doble o nada ganado ${gamble.round} ${gamble.round === 1 ? "vez" : "veces"}`
+          : game.result === "split" ? splitLabel(game.hands) : BLACKJACK_LABELS[game.result] || "Blackjack"
+      const big = (game.result === "blackjack" && game.bet >= 5000) || (!!gamble && gamble.round >= 3)
+      // `handWon`: gano la mano a Hikki aunque luego perdiera el doble o nada (logro "Rival de Hikki").
+      return report(viewer, { game: "blackjack", label, net, outcome: net > 0 ? "win" : net < 0 ? "lose" : "even", big, result: game.result, handWon: !!gamble })
     }
     if (game.status === "lost") return report(viewer, { game: name, label: "Perdió la apuesta", net: -game.bet, outcome: "lose" })
     const multiplier = game.bet ? game.payout / game.bet : 1
@@ -277,9 +298,10 @@ function createCanjeGames({ platform, getChannel, feed = null, gachapon = null, 
       ? { ok: true, requested: balls, price, balls: played, balance: balanceOf(viewer) }
       : stop
     if (result.ok) reportPlinko(viewer, before, result, legendaryCard)
+    const final = result.ok ? withBonus(viewer, result, result.balance - before, `plinko:${cacheKey}`, "plinko") : result
     if (results.size >= RESULTS_KEPT) results.delete(results.keys().next().value)
-    results.set(cacheKey, result)
-    return result
+    results.set(cacheKey, final)
+    return final
   }
 
   function getChannelId() {
@@ -303,6 +325,8 @@ function createCanjeGames({ platform, getChannel, feed = null, gachapon = null, 
     blackjackStand: (twitchId, id) => step(twitchId, viewer => risk.bjStand(viewer.id, id), "blackjack"),
     blackjackDouble: (twitchId, id) => step(twitchId, viewer => risk.bjDouble(viewer.id, id), "blackjack"),
     blackjackSplit: (twitchId, id) => step(twitchId, viewer => risk.bjSplit(viewer.id, id), "blackjack"),
+    blackjackTake: (twitchId, id) => step(twitchId, viewer => risk.bjTake(viewer.id, id), "blackjack"),
+    blackjackGamble: (twitchId, id) => step(twitchId, viewer => risk.bjGamble(viewer.id, id), "blackjack"),
   }
 }
 
@@ -328,6 +352,8 @@ async function handleGamesApi({ pathname, readJson, user, games }) {
     "/api/games/blackjack/stand": () => games.blackjackStand(user.twitchId, id),
     "/api/games/blackjack/double": () => games.blackjackDouble(user.twitchId, id),
     "/api/games/blackjack/split": () => games.blackjackSplit(user.twitchId, id),
+    "/api/games/blackjack/take": () => games.blackjackTake(user.twitchId, id),
+    "/api/games/blackjack/gamble": () => games.blackjackGamble(user.twitchId, id),
   }
   if (!routes[pathname]) return [404, { error: "No encontrado" }]
   const result = routes[pathname]()

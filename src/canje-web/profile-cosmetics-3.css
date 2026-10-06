@@ -1,0 +1,240 @@
+/* Cosmeticos de perfil, coleccion 3. Mismas reglas que profile-cosmetics.css
+   (un bloque por is-<id>) y reutiliza sus animaciones compartidas
+   (pf-spin, pf-rot, pf-sparkle, pf-neon, pf-rain, pf-flap, pf-float-up...).
+   Las piezas fijas estan en profile-decor.js (bloque "Coleccion 3"). */
+
+/* ═══════════════ Banners ═══════════════ */
+
+/* Lluvia en la ventana */
+.pf-banner.is-banner-lluvia { background: linear-gradient(180deg, #0f172a, #1e3a5f 70%, #172554); }
+.is-banner-lluvia .pf-bokeh {
+  inset: -10%; filter: blur(10px); opacity: .85; animation: pf-bokeh 5s ease-in-out infinite alternate;
+  background:
+    radial-gradient(9cqh 9cqh at 14% 62%, #fbbf24, transparent 70%), radial-gradient(12cqh 12cqh at 32% 78%, #f472b6, transparent 70%),
+    radial-gradient(8cqh 8cqh at 52% 58%, #fde68a, transparent 70%), radial-gradient(14cqh 14cqh at 70% 74%, #60a5fa, transparent 70%),
+    radial-gradient(9cqh 9cqh at 88% 60%, #fb923c, transparent 70%), radial-gradient(7cqh 7cqh at 42% 88%, #a78bfa, transparent 70%);
+}
+@keyframes pf-bokeh { from { opacity: .6; transform: scale(1); } to { opacity: .95; transform: scale(1.05); } }
+.is-banner-lluvia .pf-window {
+  inset: 0; z-index: 3;
+  background: linear-gradient(90deg, transparent calc(50% - 1.2cqh), #0b1220 calc(50% - 1.2cqh) calc(50% + 1.2cqh), transparent calc(50% + 1.2cqh)),
+    linear-gradient(180deg, rgba(255, 255, 255, .07), transparent 40%);
+  box-shadow: inset 0 0 0 2.4cqh #0b1220;
+}
+.is-banner-lluvia .pf-bit {
+  z-index: 2; left: var(--x); top: -8%; width: calc(2.4cqh + 3px); height: calc(3.6cqh + 4px); border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .95) 0 18%, rgba(186, 230, 253, .45) 30%, rgba(186, 230, 253, .15) 70%);
+  box-shadow: 0 0 2px rgba(255, 255, 255, .4); animation: pf-drop calc(5s / var(--s)) cubic-bezier(.6, 0, .8, .7) infinite; animation-delay: var(--d);
+}
+.is-banner-lluvia .pf-bit::after { content: ""; position: absolute; left: 30%; bottom: 100%; width: 40%; height: 10cqh; background: linear-gradient(transparent, rgba(186, 230, 253, .35)); border-radius: 2px; }
+@keyframes pf-drop { 0% { transform: translateY(0); } 30% { transform: translateY(24cqh); } 42% { transform: translateY(27cqh); } 100% { transform: translateY(125cqh); } }
+
+/* Pradera */
+.pf-banner.is-banner-pradera { background: linear-gradient(180deg, #7dd3fc, #bae6fd 55%, #fef9c3); }
+.is-banner-pradera .pf-sun { left: 14%; top: 10%; width: 30cqh; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, #fffbeb 30%, #fde047 50%, transparent 70%); animation: pf-sun-rise 5s ease-in-out infinite alternate; }
+.is-banner-pradera .pf-art { height: 55%; }
+.is-banner-pradera .pf-bit {
+  z-index: 2; left: var(--x); top: calc(var(--s) * 30% + 18%); width: calc(9cqh + 6px); height: calc(7cqh + 5px);
+  background: radial-gradient(ellipse 48% 50% at 26% 50%, hsl(var(--h) 90% 72%) 70%, transparent 72%), radial-gradient(ellipse 48% 50% at 74% 50%, hsl(var(--h) 90% 72%) 70%, transparent 72%),
+    linear-gradient(90deg, transparent 46%, #1f2937 46% 54%, transparent 54%);
+  animation: pf-wander calc(9s / var(--s)) ease-in-out infinite alternate, pf-flutter .28s ease-in-out infinite alternate; animation-delay: var(--d);
+}
+@keyframes pf-flutter { from { scale: 1 1; } to { scale: .3 1; } }
+
+/* Acuarela */
+.pf-banner.is-banner-acuarela { background: #fdf6ec; }
+.is-banner-acuarela .pf-blot { width: 70cqh; aspect-ratio: 1; filter: blur(14px); opacity: .75; mix-blend-mode: multiply; animation: pf-blot 14s ease-in-out infinite alternate; }
+.is-banner-acuarela .b1 { left: 2%; top: -30%; background: #f9a8d4; border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+.is-banner-acuarela .b2 { left: 28%; top: 20%; background: #93c5fd; border-radius: 63% 37% 41% 59% / 52% 61% 39% 48%; animation-duration: 17s; animation-direction: alternate-reverse; }
+.is-banner-acuarela .b3 { left: 55%; top: -40%; background: #fcd34d; border-radius: 37% 63% 51% 49% / 60% 38% 62% 40%; animation-duration: 12s; }
+.is-banner-acuarela .b4 { left: 76%; top: 30%; background: #86efac; border-radius: 55% 45% 38% 62% / 44% 58% 42% 56%; animation-duration: 19s; }
+@keyframes pf-blot { from { transform: translate(0, 0) rotate(0) scale(1); } to { transform: translate(8cqw, 6cqh) rotate(40deg) scale(1.15); } }
+.is-banner-acuarela .pf-paper { inset: 0; z-index: 2; opacity: .5; background: repeating-radial-gradient(circle at 30% 40%, rgba(120, 90, 50, .05) 0 1px, transparent 1px 3px); }
+
+/* Dulceria: rayas de baston que se deslizan, piruletas que giran y virutas */
+.pf-banner.is-banner-caramelo { background: radial-gradient(70cqw 90cqh at 50% 100%, #fff1f7, transparent 70%), linear-gradient(180deg, #fbcfe8, #fce7f3 60%, #fdf2f8); }
+.is-banner-caramelo .pf-candy-stripes {
+  inset: 0; opacity: .35; animation: pf-candy-slide 6s linear infinite;
+  background: repeating-linear-gradient(-45deg, #f9a8d4 0 3.5cqh, transparent 3.5cqh 7cqh, #a5f3fc 7cqh 10.5cqh, transparent 10.5cqh 14cqh);
+  background-size: calc(14cqh * 1.4142) calc(14cqh * 1.4142);
+}
+@keyframes pf-candy-slide { to { background-position: calc(14cqh * 1.4142) 0; } }
+.is-banner-caramelo .pf-lolly { z-index: 1; width: 34cqh; aspect-ratio: 1; animation: pf-lolly-float 4s ease-in-out infinite alternate; }
+.is-banner-caramelo .pf-lolly::before {
+  content: ""; position: absolute; left: 46%; top: 70%; width: 8%; height: 75%; border-radius: 2px;
+  background: linear-gradient(90deg, #f8fafc, #e2e8f0); box-shadow: inset -1px 0 0 rgba(0, 0, 0, .12);
+}
+.is-banner-caramelo .pf-lolly b {
+  position: absolute; inset: 0; border-radius: 50%; animation: pf-rot 5s linear infinite;
+  background: repeating-conic-gradient(from 0deg, var(--c1) 0 30deg, #fff 30deg 60deg);
+  -webkit-mask: radial-gradient(circle, #000 69%, transparent 70%); mask: radial-gradient(circle, #000 69%, transparent 70%);
+  box-shadow: inset 0 0 0 .8cqh rgba(255, 255, 255, .6);
+}
+.is-banner-caramelo .pf-lolly b::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .85) 0 10%, transparent 30%), radial-gradient(circle, transparent 55%, rgba(0, 0, 0, .12) 70%); }
+.is-banner-caramelo .l1 { --c1: #f472b6; left: 8%; top: 8%; }
+.is-banner-caramelo .l2 { --c1: #38bdf8; left: 44%; top: 26%; width: 42cqh; animation-delay: -1.6s; }
+.is-banner-caramelo .l2 b { animation-direction: reverse; animation-duration: 7s; }
+.is-banner-caramelo .l3 { --c1: #a78bfa; left: 80%; top: 14%; width: 28cqh; animation-delay: -2.8s; }
+@keyframes pf-lolly-float { from { transform: translateY(0) rotate(-6deg); } to { transform: translateY(-4cqh) rotate(6deg); } }
+.is-banner-caramelo .pf-bit {
+  z-index: 2; left: var(--x); top: -8%; width: calc(1.2cqh + 2px); height: calc(4cqh + 4px); border-radius: 99px;
+  background: hsl(var(--h) 90% 62%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5);
+  animation: pf-sprinkle calc(5s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+@keyframes pf-sprinkle { from { transform: translateY(0) rotate(var(--a)); } to { transform: translateY(125cqh) rotate(calc(var(--a) + 540deg)); } }
+
+/* Fuegos artificiales */
+.pf-banner.is-banner-fuegos { background: radial-gradient(80cqw 60cqh at 50% 110%, #312e81, transparent 70%), linear-gradient(180deg, #020617, #1e1b4b); }
+.is-banner-fuegos .pf-art { z-index: 3; height: 34%; }
+.is-banner-fuegos .pf-bit {
+  z-index: 1; left: var(--x); top: calc(var(--s) * 34% - 8%); width: 62cqh; aspect-ratio: 1; margin: -31cqh 0 0 -31cqh; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 4%, hsl(var(--h) 100% 70%) 5% 9%, transparent 10% 30%, hsl(var(--h) 100% 65%) 32% 36%, transparent 38% 58%, hsl(calc(var(--h) + 40) 100% 70%) 60% 63%, transparent 65%);
+  -webkit-mask: repeating-conic-gradient(#000 0 5deg, transparent 5deg 18deg); mask: repeating-conic-gradient(#000 0 5deg, transparent 5deg 18deg);
+  filter: drop-shadow(0 0 4px hsl(var(--h) 100% 70%)); opacity: 0;
+  animation: pf-burst calc(3.4s / var(--s)) ease-out infinite; animation-delay: var(--d);
+}
+@keyframes pf-burst { 0%, 10% { transform: scale(.05) rotate(0); opacity: 0; } 12% { opacity: 1; } 55% { transform: scale(1) rotate(10deg); opacity: .9; } 80%, 100% { transform: scale(1.1) translateY(4cqh) rotate(14deg); opacity: 0; } }
+
+/* Volcan */
+.pf-banner.is-banner-volcan { background: linear-gradient(180deg, #1c0a05, #7c2d12 60%, #ea580c); }
+.is-banner-volcan .pf-glowsky { left: 30%; right: 30%; top: 0; height: 90%; background: radial-gradient(50% 60% at 50% 70%, rgba(251, 146, 60, .75), transparent 70%); filter: blur(6px); animation: pf-glow-pulse 1.6s ease-in-out infinite alternate; }
+.is-banner-volcan .pf-art { height: 70%; z-index: 2; }
+.is-banner-volcan .pf-flow { stroke-dasharray: 8 6; animation: pf-lava-flow 1.4s linear infinite; }
+@keyframes pf-lava-flow { to { stroke-dashoffset: -28; } }
+.is-banner-volcan .pf-bit {
+  z-index: 1; left: 50%; top: 48%; width: calc(2.4cqh + 2px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fef08a, #f97316 55%, #b91c1c); box-shadow: 0 0 8px #f97316;
+  animation: pf-eject calc(2.8s / var(--s)) cubic-bezier(.2, .6, .5, 1) infinite; animation-delay: var(--d);
+}
+@keyframes pf-eject {
+  0% { transform: translate(0, 0) scale(.6); opacity: 0; } 8% { opacity: 1; }
+  45% { transform: translate(calc((var(--s) - 1) * 70cqw), -42cqh) scale(1); }
+  100% { transform: translate(calc((var(--s) - 1) * 110cqw), 30cqh) scale(.5); opacity: 0; }
+}
+
+/* Neon de Tokio */
+.pf-banner.is-banner-tokio { background: linear-gradient(180deg, #1e0b3a, #3b0764 60%, #0f0520); }
+.is-banner-tokio .pf-art { height: 80%; z-index: 1; }
+.is-banner-tokio .pf-sign {
+  position: absolute; z-index: 2; writing-mode: vertical-rl; font: 800 12cqh/1 var(--font-body); letter-spacing: .1em; padding: 1.5cqh .8cqh; border-radius: 1cqh;
+  border: .5cqh solid currentColor; text-shadow: 0 0 1.5cqh currentColor, 0 0 3cqh currentColor; box-shadow: 0 0 2cqh currentColor, inset 0 0 1.5cqh currentColor;
+  animation: pf-neon 4s steps(1) infinite;
+}
+.is-banner-tokio .s1 { left: 9%; top: 18%; color: #f472b6; }
+.is-banner-tokio .s2 { left: 34%; top: 24%; color: #22d3ee; animation-delay: -1.3s; font-size: 9cqh; }
+.is-banner-tokio .s3 { left: 62%; top: 10%; color: #fde047; animation-delay: -2.2s; font-size: 9cqh; }
+.is-banner-tokio .s4 { left: 86%; top: 34%; color: #a78bfa; animation-delay: -.6s; }
+.is-banner-tokio .pf-bit {
+  z-index: 3; left: var(--x); top: -20%; width: 1px; height: 9cqh; background: linear-gradient(transparent, rgba(186, 230, 253, .7));
+  animation: pf-rain calc(1.1s / var(--s)) linear infinite; animation-delay: var(--d);
+}
+
+/* Hiperespacio */
+.pf-banner.is-banner-hiperespacio { background: radial-gradient(circle at 50% 50%, #0c1445, #000 70%); }
+.is-banner-hiperespacio .pf-warpcore { left: 50%; top: 50%; width: 40cqh; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, #fff, #93c5fd 25%, rgba(59, 130, 246, .35) 50%, transparent 70%); animation: pf-glow-pulse 1.2s ease-in-out infinite alternate; }
+.is-banner-hiperespacio .pf-bit {
+  left: 50%; top: 50%; width: 30cqw; height: 2px; transform-origin: 0 50%; rotate: var(--a); border-radius: 2px;
+  background: linear-gradient(90deg, transparent, hsl(calc(200 + var(--h) / 6) 100% 85%)); opacity: 0;
+  animation: pf-warp calc(1.4s / var(--s)) cubic-bezier(.6, 0, 1, 1) infinite; animation-delay: var(--d);
+}
+@keyframes pf-warp { 0% { transform: translateX(2cqw) scaleX(.05); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateX(60cqw) scaleX(1); opacity: 0; } }
+
+/* ═══════════════ Marcos ═══════════════ */
+
+/* Hojas de otoño */
+.pf-avatar.is-frame-hojas { --ring: conic-gradient(from var(--pf-spin), #f97316, #dc2626, #facc15, #ea580c, #f97316); --glow: rgba(249, 115, 22, .6); }
+.is-frame-hojas .pf-ring { animation: pf-spin 8s linear infinite; }
+.is-frame-hojas .pf-fbit {
+  --r: 58%; width: calc(var(--size) * .14); height: calc(var(--size) * .09); margin: calc(var(--size) * -.045) 0 0 calc(var(--size) * -.07);
+  border-radius: 0 85% 0 85%; background: hsl(calc(10 + var(--h) / 8) 88% 50%); box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .15);
+  animation: pf-leaf-fall calc(3.4s / var(--s)) ease-in infinite; animation-delay: var(--d);
+}
+@keyframes pf-leaf-fall { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(calc(var(--size) * .12), calc(var(--size) * .5)) rotate(260deg); opacity: 0; } }
+
+/* Nubecitas */
+.pf-avatar.is-frame-nubes { --ring: linear-gradient(135deg, #bae6fd, #e0f2fe 50%, #c7d2fe); --glow: rgba(186, 230, 253, .8); }
+.is-frame-nubes .pf-cloudlet { animation: pf-cloud-bob 4s ease-in-out infinite alternate; }
+.is-frame-nubes .pf-cloudlet.c2 { animation-duration: 5s; animation-delay: -2s; }
+.is-frame-nubes .pf-cloudlet.c3 { animation-duration: 3.4s; animation-delay: -1s; }
+@keyframes pf-cloud-bob { to { translate: 3px -3px; } }
+
+/* Panda */
+.pf-avatar.is-frame-panda { --ring: conic-gradient(#111827 0 10%, #f8fafc 0 40%, #111827 0 60%, #f8fafc 0 90%, #111827 0); --glow: rgba(248, 250, 252, .4); }
+.is-frame-panda .pf-bamboo { transform-origin: 90px 92px; animation: pf-sway 3s ease-in-out infinite alternate; }
+
+/* Melodia */
+.pf-avatar.is-frame-notas { --ring: conic-gradient(from var(--pf-spin), #a855f7, #22d3ee, #f472b6, #a855f7); --glow: rgba(168, 85, 247, .7); }
+.is-frame-notas .pf-ring { animation: pf-spin 4s linear infinite; }
+.is-frame-notas .pf-fx i { position: absolute; z-index: 4; width: calc(var(--size) * .16); height: calc(var(--size) * .2); fill: #f0abfc; filter: drop-shadow(0 0 3px #a855f7); animation: pf-float-up 3s ease-out infinite; }
+.is-frame-notas .pf-fx i svg { width: 100%; height: 100%; display: block; }
+.is-frame-notas .pf-fx i:nth-child(1) { left: -6%; top: 40%; }
+.is-frame-notas .pf-fx i:nth-child(2) { right: -6%; top: 26%; animation-delay: -.75s; fill: #67e8f9; }
+.is-frame-notas .pf-fx i:nth-child(3) { left: 4%; top: 10%; animation-delay: -1.5s; fill: #fde68a; }
+.is-frame-notas .pf-fx i:nth-child(4) { right: 2%; top: 58%; animation-delay: -2.25s; }
+
+/* Petalos */
+.pf-avatar.is-frame-sakura { --ring: conic-gradient(from var(--pf-spin), #fbcfe8, #f472b6, #fff1f2, #f9a8d4, #fbcfe8); --glow: rgba(244, 114, 182, .7); }
+.is-frame-sakura .pf-ring { animation: pf-spin 5s linear infinite; }
+.is-frame-sakura .pf-petals { position: absolute; inset: -22%; animation: pf-rot 9s linear infinite; }
+.is-frame-sakura .pf-petals i {
+  position: absolute; left: 50%; top: 50%; width: calc(var(--size) * .12); height: calc(var(--size) * .08); margin: calc(var(--size) * -.04) 0 0 calc(var(--size) * -.06);
+  border-radius: 80% 0 80% 0; background: linear-gradient(135deg, #fff1f2, #f9a8d4); box-shadow: 0 0 4px rgba(244, 114, 182, .6);
+}
+.is-frame-sakura .pf-petals i:nth-child(1) { transform: rotate(0deg) translateX(calc(var(--size) * .78)) rotate(20deg); }
+.is-frame-sakura .pf-petals i:nth-child(2) { transform: rotate(45deg) translateX(calc(var(--size) * .72)) rotate(80deg); }
+.is-frame-sakura .pf-petals i:nth-child(3) { transform: rotate(90deg) translateX(calc(var(--size) * .78)) rotate(140deg); }
+.is-frame-sakura .pf-petals i:nth-child(4) { transform: rotate(135deg) translateX(calc(var(--size) * .7)) rotate(200deg); }
+.is-frame-sakura .pf-petals i:nth-child(5) { transform: rotate(180deg) translateX(calc(var(--size) * .78)) rotate(260deg); }
+.is-frame-sakura .pf-petals i:nth-child(6) { transform: rotate(225deg) translateX(calc(var(--size) * .72)) rotate(320deg); }
+.is-frame-sakura .pf-petals i:nth-child(7) { transform: rotate(270deg) translateX(calc(var(--size) * .78)) rotate(10deg); }
+.is-frame-sakura .pf-petals i:nth-child(8) { transform: rotate(315deg) translateX(calc(var(--size) * .7)) rotate(70deg); }
+
+/* Nube de tormenta */
+.pf-avatar.is-frame-tormenta { --ring: linear-gradient(160deg, #64748b, #1e293b 60%, #7dd3fc); --glow: rgba(125, 211, 252, .5); }
+.is-frame-tormenta .pf-ring { animation: pf-storm-flash 5s steps(1) infinite; }
+@keyframes pf-storm-flash { 0%, 78%, 100% { filter: drop-shadow(0 0 4px rgba(125, 211, 252, .5)); } 80%, 84% { filter: drop-shadow(0 0 14px #fef9c3) brightness(1.8); } }
+.is-frame-tormenta .pf-storm { animation: pf-cloud-bob 3s ease-in-out infinite alternate; }
+.is-frame-tormenta .pf-storm-bolt { animation: pf-bolt 5s linear infinite; }
+.is-frame-tormenta .pf-storm-rain path { animation: pf-drizzle .7s linear infinite; }
+.is-frame-tormenta .pf-storm-rain path:nth-child(2) { animation-delay: -.2s; }
+.is-frame-tormenta .pf-storm-rain path:nth-child(3) { animation-delay: -.45s; }
+.is-frame-tormenta .pf-storm-rain path:nth-child(4) { animation-delay: -.3s; }
+@keyframes pf-drizzle { from { transform: translateY(0); opacity: 1; } to { transform: translateY(10px); opacity: 0; } }
+
+/* Reloj */
+.pf-avatar.is-frame-reloj { --ring: linear-gradient(145deg, #fde68a, #b45309 45%, #fef3c7 60%, #92400e); --glow: rgba(217, 119, 6, .6); }
+.is-frame-reloj .pf-ticks {
+  position: absolute; inset: -18%; border-radius: 50%;
+  background: repeating-conic-gradient(#fde68a 0 1.6deg, transparent 1.6deg 30deg), repeating-conic-gradient(rgba(253, 230, 138, .5) 0 .8deg, transparent .8deg 6deg);
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 61% 68%, transparent 69%); mask: radial-gradient(circle, transparent 60%, #000 61% 68%, transparent 69%);
+}
+.is-frame-reloj .pf-hand { position: absolute; inset: -22%; animation: pf-rot 6s steps(60) infinite; }
+.is-frame-reloj .pf-hand::before {
+  content: ""; position: absolute; left: 50%; top: 0; width: calc(var(--size) * .08); height: calc(var(--size) * .14); translate: -50% 0;
+  background: linear-gradient(180deg, #fef3c7, #d97706); clip-path: polygon(50% 0, 100% 100%, 0 100%); filter: drop-shadow(0 0 3px #f59e0b);
+}
+
+/* Alas de mariposa */
+.pf-avatar.is-frame-mariposa { --ring: conic-gradient(from var(--pf-spin), #a5f3fc, #c084fc, #f472b6, #fde68a, #a5f3fc); --glow: rgba(192, 132, 252, .8); }
+.is-frame-mariposa .pf-ring { animation: pf-spin 3s linear infinite; }
+.is-frame-mariposa .pf-wing { transform-origin: 17px 56px; animation: pf-flap 1.3s ease-in-out infinite; }
+.is-frame-mariposa .pf-fbit {
+  --r: 64%; width: calc(var(--size) * .09 * var(--s)); aspect-ratio: 1; margin: calc(var(--size) * -.045); background: hsl(var(--h) 90% 85%); clip-path: var(--pf-star4);
+  animation: pf-sparkle 2.4s ease-in-out infinite; animation-delay: var(--d);
+}
+
+/* Sol radiante */
+.pf-avatar.is-frame-sol { --ring: conic-gradient(from var(--pf-spin), #fef3c7, #f59e0b, #fde047, #ea580c, #fef3c7); --glow: rgba(251, 191, 36, .9); }
+.is-frame-sol .pf-ring { animation: pf-spin 4s linear infinite; }
+.is-frame-sol .pf-sunrays {
+  position: absolute; z-index: 0; inset: -42%; border-radius: 50%; animation: pf-rot 16s linear infinite;
+  background: repeating-conic-gradient(rgba(253, 224, 71, .95) 0 6deg, transparent 6deg 22.5deg);
+  -webkit-mask: radial-gradient(circle, transparent 34%, #000 36%, transparent 70%); mask: radial-gradient(circle, transparent 34%, #000 36%, transparent 70%);
+}
+.is-frame-sol .pf-sunrays.r2 { inset: -32%; animation-duration: 10s; animation-direction: reverse; background: repeating-conic-gradient(from 11deg, rgba(249, 115, 22, .85) 0 4deg, transparent 4deg 22.5deg); }
+.is-frame-sol .pf-corona { position: absolute; z-index: 0; inset: -20%; border-radius: 50%; background: radial-gradient(circle, rgba(254, 240, 138, .7) 45%, transparent 70%); animation: pf-glow-pulse 1.8s ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="is-banner-"] .pf-bit, [class*="is-banner-"] > i, .is-frame-sakura .pf-petals, .is-frame-reloj .pf-hand, .is-frame-sol .pf-sunrays,
+  .is-frame-mariposa .pf-wing, .is-frame-notas .pf-fx i, .is-frame-hojas .pf-fbit { animation: none !important; }
+}

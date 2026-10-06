@@ -102,11 +102,17 @@ async function setLevelConfig(channelId, updates) {
 async function getLeaderboard(channelId, limit = 20) { return getLocalPlatform().levels.leaderboard(channelId, limit) }
 async function saveTitles(channelId, titles) { return getLocalPlatform().levels.saveTitles(channelId, titles) }
 
+// Quien ve el directo desde la pagina de canje (live-watch.js): cuenta para la
+// experiencia por tiempo como si hubiera escrito en el chat.
+function noteWatcher(username, platformUserId = "", platformName = "twitch") {
+  if (username) watchTime().note(username, platformUserId, platformName)
+}
+
 // Quien ha escrito en el chat hace poco (Comunidad: "Ahora en el canal").
 function activeChatters() { return _watch ? _watch.active() : [] }
 
 module.exports = {
-  init, addXp, onMessage, grantWatchXp, activeChatters,
+  init, addXp, onMessage, noteWatcher, grantWatchXp, activeChatters,
   getViewerLevel, getLevelConfig, setLevelConfig, getLeaderboard, getTitles, saveTitles,
   xpForLevel, levelFromXp, levelProgress, titleForLevel,
 }

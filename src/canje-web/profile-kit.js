@@ -14,7 +14,7 @@
   // Estilos de nombre que mueven cada letra (se parte el texto en <span>) y
   // los que llevan destellos alrededor (cuantos).
   var LETTER_STYLES = { "name-ola": true, "name-saltarin": true }
-  var SPARKLES = { "name-escarcha": 3, "name-galaxia": 4, "name-realeza": 4, "name-holograma": 2, "name-plasma": 3 }
+  var SPARKLES = { "name-escarcha": 3, "name-galaxia": 4, "name-realeza": 4, "name-holograma": 2, "name-plasma": 3, "name-cosmos": 4, "name-diamante": 4 }
   var STYLE_PATTERN = /^name-[a-z]+$/
 
   function el(tag, className, text) {

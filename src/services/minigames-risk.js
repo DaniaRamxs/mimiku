@@ -24,9 +24,22 @@ const LABELS = { hilo: "Alta o baja", mines: "Buscaminas de cofres", blackjack: 
 // primeras cartas, dobla la apuesta, recibe una carta y se planta. Dividir:
 // con dos cartas del mismo valor se juegan dos manos (una apuesta mas); 21
 // tras dividir no es blackjack, y los ases divididos reciben una carta cada uno.
+//
+// Doble o nada: si la mano deja ganancia, el premio no se cobra todavia; Hikki
+// ofrece arriesgarlo entero a carta mas alta (cada uno saca una de una baraja
+// nueva; el As es la mas alta y los empates se repiten). Ganar duplica el bote
+// y vuelve a ofrecer; perder lo deja en nada. Como mucho GAMBLE_MAX_ROUNDS
+// veces y sin pasar de GAMBLE_CAP_TIMES veces la apuesta maxima del panel: al
+// llegar al limite se cobra solo. La partida sigue "active" mientras se
+// decide, asi que la oferta sobrevive a recargar la pagina o reiniciar.
 const BJ_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
 const BJ_SUITS = ["S", "H", "D", "C"]
 const BJ_PAYS = { blackjack: 2.5, win: 2, "dealer-bust": 2, push: 1 }
+const GAMBLE_MAX_ROUNDS = 5
+const GAMBLE_CAP_TIMES = 10
+const HIGH_VALUES = { A: 14, K: 13, Q: 12, J: 11 }
+
+function highValue(rank) { return HIGH_VALUES[rank] || Number(rank) }
 
 function cardPoints(rank) {
   if (rank === "A") return 11
@@ -269,12 +282,27 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
     return cardPoints(a.rank) === cardPoints(b.rank)
   }
 
+  // ── Doble o nada ──
+  function gambleCap() { return base.getConfig().riskMax * GAMBLE_CAP_TIMES }
+  function canGamble(offer) { return offer.round < GAMBLE_MAX_ROUNDS && offer.pot * 2 <= gambleCap() }
+
+  function gamblePublic(session) {
+    const offer = session.state.offer
+    if (!offer) return null
+    const open = session.status === "active"
+    return {
+      pot: offer.pot, round: offer.round, maxRounds: GAMBLE_MAX_ROUNDS, next: offer.pot * 2,
+      canGamble: open && canGamble(offer), last: offer.last || null, lost: !!offer.lost,
+    }
+  }
+
   // La carta tapada de Hikki y la baraja nunca salen mientras se juega.
   // `player`/`playerTotal` son la mano que se esta jugando (o la unica).
+  // Con la oferta de doble o nada la mano ya termino: se ensena todo.
   function bjPublic(session) {
     const state = session.state
     const hands = bjHands(session)
-    const done = session.status !== "active"
+    const done = session.status !== "active" || !!state.offer
     const current = Math.min(state.current || 0, hands.length - 1)
     const hand = hands[current]
     const player = handTotal(hand.cards)
@@ -289,15 +317,23 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
       doubled: !!hand.doubled, result: hands.length > 1 ? (done ? "split" : null) : hand.result || null,
       canDouble: !done && hand.cards.length === 2 && !hand.doubled && !hand.splitAce,
       canSplit: !done && bjCanSplit(session),
+      offering: session.status === "active" && !!state.offer,
+      gamble: gamblePublic(session),
     }
   }
 
-  // Cierra la partida: paga lo que sumen las manos o queda perdida.
+  // Cierra la mano: si deja ganancia, ofrece doble o nada (sin pagar aun);
+  // si no, paga lo que sumen las manos o queda perdida.
   function bjSettle(viewerId, session) {
     const payout = bjHands(session).reduce((sum, hand) => sum + Math.floor(hand.bet * (BJ_PAYS[hand.result] || 0)), 0)
     if (!payout) {
       save(session, "lost")
       return { ...session, status: "lost", payout: 0 }
+    }
+    if (payout > session.bet && canGamble({ round: 0, pot: payout })) {
+      session.state.offer = { pot: payout, round: 0, last: null }
+      save(session)
+      return session
     }
     save(session)
     return { ...session, status: "cashed", payout: payAmount(viewerId, session, payout) }
@@ -361,9 +397,19 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
     return session
   }
 
-  function bjHit(viewerId, id) {
+  // Mano que aun se esta jugando. Con la oferta de doble o nada abierta la
+  // mano ya termino: pedir, plantarse, doblar o dividir no valen (una pagina
+  // vieja que no conoce la oferta podria intentarlo y perder lo ganado).
+  function bjPlaying(viewerId, id) {
     const session = bjActive(viewerId, id)
-    if (!session) return { ok: false, reason: "no-game" }
+    if (!session) return { error: "no-game" }
+    if (session.state.offer) return { error: "offer" }
+    return { session }
+  }
+
+  function bjHit(viewerId, id) {
+    const { session, error } = bjPlaying(viewerId, id)
+    if (error) return { ok: false, reason: error }
     const hand = session.state.hands[session.state.current]
     if (hand.splitAce) return { ok: false, reason: "bad-move" }
     hand.cards.push(session.state.deck.pop())
@@ -375,8 +421,8 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
   }
 
   function bjStand(viewerId, id) {
-    const session = bjActive(viewerId, id)
-    if (!session) return { ok: false, reason: "no-game" }
+    const { session, error } = bjPlaying(viewerId, id)
+    if (error) return { ok: false, reason: error }
     return { ok: true, game: bjAdvance(viewerId, session) }
   }
 
@@ -397,8 +443,8 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
 
   // Doblar: cobra otra apuesta igual (la de esa mano), una carta y se planta.
   function bjDouble(viewerId, id) {
-    const session = bjActive(viewerId, id)
-    if (!session) return { ok: false, reason: "no-game" }
+    const { session, error } = bjPlaying(viewerId, id)
+    if (error) return { ok: false, reason: error }
     const index = session.state.current
     const hand = session.state.hands[index]
     if (hand.cards.length !== 2 || hand.doubled || hand.splitAce) return { ok: false, reason: "bad-move" }
@@ -413,8 +459,8 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
   // Dividir: dos cartas del mismo valor pasan a ser dos manos con la misma
   // apuesta, cada una recibe otra carta. Con ases, una carta por mano y se plantan.
   function bjSplit(viewerId, id) {
-    const session = bjActive(viewerId, id)
-    if (!session) return { ok: false, reason: "no-game" }
+    const { session, error } = bjPlaying(viewerId, id)
+    if (error) return { ok: false, reason: error }
     if (!bjCanSplit(session)) return { ok: false, reason: "bad-move" }
     const [hand] = session.state.hands
     if (!bjCharge(viewerId, session, hand.bet, "dividir")) return { ok: false, reason: "insufficient" }
@@ -425,6 +471,52 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
     return { ok: true, game: bjAdvance(viewerId, session) }
   }
 
+  function bjOffer(viewerId, id) {
+    const session = bjActive(viewerId, id)
+    return session && session.state.offer ? session : null
+  }
+
+  // Cobrar el bote de la oferta.
+  function bjTake(viewerId, id) {
+    const session = bjOffer(viewerId, id)
+    if (!session) return { ok: false, reason: "no-game" }
+    save(session)
+    const payout = payAmount(viewerId, session, session.state.offer.pot)
+    return { ok: true, game: bjPublic({ ...session, status: "cashed", payout }) }
+  }
+
+  // Carta mas alta contra Hikki con una baraja nueva; los empates se repiten.
+  function bjGamble(viewerId, id) {
+    const session = bjOffer(viewerId, id)
+    if (!session) return { ok: false, reason: "no-game" }
+    const offer = session.state.offer
+    if (!canGamble(offer)) return { ok: false, reason: "bad-move" }
+    const deck = bjDeck()
+    const ties = []
+    let mine = deck.pop()
+    let hers = deck.pop()
+    while (highValue(mine.rank) === highValue(hers.rank) && deck.length >= 2) {
+      ties.push({ mine, hers })
+      mine = deck.pop()
+      hers = deck.pop()
+    }
+    const won = highValue(mine.rank) > highValue(hers.rank)
+    offer.last = { mine, hers, ties, won }
+    if (!won) {
+      offer.lost = true
+      save(session, "lost")
+      return { ok: true, outcome: "lose", game: bjPublic({ ...session, status: "lost", payout: 0 }) }
+    }
+    offer.pot *= 2
+    offer.round += 1
+    save(session)
+    if (!canGamble(offer)) {
+      const payout = payAmount(viewerId, session, offer.pot)
+      return { ok: true, outcome: "win", auto: true, game: bjPublic({ ...session, status: "cashed", payout }) }
+    }
+    return { ok: true, outcome: "win", game: bjPublic(session) }
+  }
+
   // Partidas a medias (para seguir tras recargar la pagina).
   function active(viewerId) {
     const hilo = load(viewerId, "hilo")
@@ -433,7 +525,7 @@ function createRiskGames({ platform, getChannel, now = Date.now, random = Math.r
     return { hilo: hilo ? hiloPublic(hilo) : null, mines: mines ? minesPublic(mines) : null, blackjack: blackjack ? bjPublic(blackjack) : null }
   }
 
-  return { hiloStart, hiloGuess, hiloCashout, minesStart, minesReveal, minesCashout, bjStart, bjHit, bjStand, bjDouble, bjSplit, active }
+  return { hiloStart, hiloGuess, hiloCashout, minesStart, minesReveal, minesCashout, bjStart, bjHit, bjStand, bjDouble, bjSplit, bjTake, bjGamble, active }
 }
 
-module.exports = { createRiskGames, minesMultiplier, hiloStep, handTotal, isBlackjack, MINES_OPTIONS, MINES_CELLS, HILO_TOP, HILO_MAX_STEPS }
+module.exports = { createRiskGames, minesMultiplier, hiloStep, handTotal, isBlackjack, highValue, MINES_OPTIONS, MINES_CELLS, HILO_TOP, HILO_MAX_STEPS, GAMBLE_MAX_ROUNDS, GAMBLE_CAP_TIMES }

@@ -12,6 +12,46 @@
 
 const { findLiveEffect, EFFECT_GLOBAL_SPACING_MS } = require("./live-effects.js")
 
+const PREDICTION_COMMANDS = ["!prediccion", "!predicción", "!pred", "!op1", "!op2", "!op3", "!op4", "!cerrarpred", "!cancelarpred"]
+const PREDICTION_DEFAULT_SECONDS = 120
+
+// "!prediccion [segundos] pregunta | respuesta 1 | respuesta 2 ..." -> { question, options, seconds }
+function parsePrediction(text) {
+  const body = text.replace(/^!\S+\s*/, "")
+  // Un numero al principio solo son segundos si cabe en el rango (30-900); si no, es parte de la pregunta.
+  const found = /^(\d{2,3})\s+/.exec(body)
+  const match = found && Number(found[1]) >= 30 && Number(found[1]) <= 900 ? found : null
+  const seconds = match ? Number(match[1]) : PREDICTION_DEFAULT_SECONDS
+  const [question, ...options] = (match ? body.slice(match[0].length) : body).split("|").map(part => part.trim())
+  return { question, options, seconds }
+}
+
+// Ejecuta un comando de prediccion y devuelve la respuesta para el chat.
+function predictionCommand(service, cmd, text) {
+  try {
+    if (cmd === "!prediccion" || cmd === "!predicción" || cmd === "!pred") {
+      const input = parsePrediction(text)
+      if (!input.question || input.options.length < 2) return "Uso: !prediccion ¿Pregunta? | Respuesta 1 | Respuesta 2 (hasta 4; opcional: segundos al principio)"
+      const { prediction } = service.create(input)
+      const list = prediction.options.map((option, index) => `!op${index + 1} ${option.label}`).join(" · ")
+      return `Nueva predicción: ${prediction.question} (${list}). Apuesta tus puntos en la página de canje: tienes ${input.seconds} s.`
+    }
+    const active = service.summary().prediction
+    if (!active || (active.status !== "open" && active.status !== "locked")) return "No hay ninguna predicción activa."
+    if (cmd === "!cerrarpred") { service.lock(active.id); return `Apuestas cerradas: ${active.question} (bote de ${active.pool.toLocaleString("es")} puntos).` }
+    if (cmd === "!cancelarpred") { service.cancel(active.id); return `Predicción cancelada: se devolvieron ${active.pool.toLocaleString("es")} puntos.` }
+    const index = Number(cmd.slice(3)) - 1
+    if (!active.options[index]) return `Esa predicción solo tiene ${active.options.length} respuestas.`
+    if (active.status === "open") return "Las apuestas siguen abiertas: ciérralas con !cerrarpred (o espera a que acabe el tiempo) y luego elige la ganadora."
+    const { prediction } = service.resolve(active.id, index)
+    const winner = prediction.options[index]
+    if (!winner.bettors) return `Ganó "${winner.label}", pero nadie la eligió: se devolvieron todos los puntos.`
+    return `Ganó "${winner.label}": ${winner.bettors} ${winner.bettors === 1 ? "viewer se lleva" : "viewers se reparten"} ${prediction.pool.toLocaleString("es")} puntos.`
+  } catch (error) {
+    return error.message
+  }
+}
+
 function createCommandEngine(overrides = {}) {
   const economy = overrides.economy || require("../../services/economy.js")
   const games = overrides.games || require("../../services/games.js")
@@ -33,6 +73,7 @@ function createCommandEngine(overrides = {}) {
   const jail = () => overrides.jail || require("../../services/jail.js").getDefaultJail()
   const gachapon = () => overrides.gachapon || require("../../services/gachapon.js").getDefaultGachapon()
   const plinko = () => overrides.plinko || require("../../services/plinko.js").getDefaultPlinko()
+  const predictions = () => overrides.predictions || require("../../services/predictions.js").getDefaultPredictions()
   const commandConfig = overrides.commandConfig || { evaluate: () => ({ allowed: true }), record: () => {} }
 
   const now = overrides.now || Date.now
@@ -325,6 +366,14 @@ function createCommandEngine(overrides = {}) {
         "special-only": `@${display} de ese personaje solo tienes copias con rango subido o funda. Esas se regalan con un tradeo en la página de canje.`,
       }
       if (reasons[result.reason]) say(reasons[result.reason])
+      return
+    }
+
+    // Predicciones con puntos: las crea y resuelve el streamer o un mod; se apuesta en la pagina de canje.
+    if (PREDICTION_COMMANDS.includes(cmd)) {
+      if (!isMod()) { say(`@${display} ${cmd} es solo para el streamer y los mods.`); return }
+      say(predictionCommand(predictions(), cmd, trimmed))
+      notify("predictions:update", {})
       return
     }
 
